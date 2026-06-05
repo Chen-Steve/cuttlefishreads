@@ -306,5 +306,80 @@ export async function createChapter(
     .eq("id", novelId);
 
   revalidatePath("/admin");
-  redirect("/admin");
+  redirect(`/admin/novels/${novelId}/chapters`);
+}
+
+export async function updateChapter(
+  chapterId: string,
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
+  const title = String(formData.get("title") ?? "").trim();
+  const content = String(formData.get("content") ?? "").trim();
+
+  if (!title) return { error: "Chapter title is required." };
+  if (!content) return { error: "Chapter content is required." };
+
+  const access = String(formData.get("access") ?? "free");
+  const isFree = access !== "paid";
+  const coinCost = isFree ? 0 : Math.floor(Number(formData.get("coinCost") ?? 0));
+
+  if (!isFree && (!Number.isFinite(coinCost) || coinCost < 1)) {
+    return { error: "Paid chapters need a coin cost of at least 1." };
+  }
+
+  const numberRaw = Math.floor(Number(formData.get("number") ?? 0));
+  const number = Number.isFinite(numberRaw) && numberRaw >= 1 ? numberRaw : undefined;
+
+  const unlockAtRaw = String(formData.get("unlockAt") ?? "").trim();
+  let unlockAt: string | null = null;
+  if (unlockAtRaw) {
+    const date = new Date(unlockAtRaw);
+    if (Number.isNaN(date.getTime())) {
+      return { error: "Auto-unlock date is invalid." };
+    }
+    unlockAt = date.toISOString();
+  }
+
+  const admin = createAdminClient();
+
+  const { data: existing } = await admin
+    .from("chapters")
+    .select("id, novel_id")
+    .eq("id", chapterId)
+    .maybeSingle();
+
+  if (!existing) return { error: "Chapter not found." };
+
+  const { error } = await admin
+    .from("chapters")
+    .update({
+      title,
+      content,
+      is_free: isFree,
+      coin_cost: coinCost,
+      unlock_at: unlockAt,
+      ...(number !== undefined ? { number } : {}),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", chapterId);
+
+  if (error) {
+    if (error.code === "23505") {
+      return { error: `Chapter ${number} already exists for this novel.` };
+    }
+    return { error: error.message };
+  }
+
+  await admin
+    .from("novels")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", existing.novel_id);
+
+  revalidatePath("/admin");
+  revalidatePath("/novels", "layout");
+  redirect(`/admin/novels/${existing.novel_id}/chapters`);
 }

@@ -3,24 +3,45 @@
 import { useActionState, useRef, useState } from "react";
 import { Bold, Italic, Pilcrow } from "lucide-react";
 
-import { createChapter, type AdminState } from "../actions";
+import { createChapter, updateChapter, type AdminState } from "../actions";
 
 const inputClass =
   "h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25";
 const labelClass = "text-xs font-medium text-muted";
 
+export type ChapterFormInitial = {
+  chapterId: string;
+  number: number;
+  title: string;
+  content: string;
+  isFree: boolean;
+  coinCost: number;
+  unlockAt: string | null;
+};
+
 export function ChapterForm({
   novelId,
   novelTitle,
+  initial,
 }: {
   novelId: string;
   novelTitle: string;
+  initial?: ChapterFormInitial;
 }) {
+  const isEdit = Boolean(initial);
+
+  const boundAction = isEdit
+    ? updateChapter.bind(null, initial!.chapterId)
+    : createChapter;
+
   const [state, action, pending] = useActionState<AdminState, FormData>(
-    createChapter,
+    boundAction,
     {},
   );
-  const [access, setAccess] = useState<"free" | "paid">("free");
+
+  const [access, setAccess] = useState<"free" | "paid">(
+    initial && !initial.isFree ? "paid" : "free",
+  );
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
   function wrapSelection(before: string, after: string) {
@@ -35,6 +56,16 @@ export function ChapterForm({
     el.setSelectionRange(cursor, cursor);
   }
 
+  // Format a UTC ISO string to the value expected by datetime-local inputs
+  // (YYYY-MM-DDTHH:MM in local time).
+  function toDatetimeLocal(iso: string | null): string {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
   return (
     <form action={action} className="flex flex-col gap-4">
       {state.error && (
@@ -46,7 +77,6 @@ export function ChapterForm({
         </p>
       )}
 
-      {/* Hidden novel binding */}
       <input type="hidden" name="novelId" value={novelId} />
 
       <div className="flex items-center gap-3 rounded-xl border border-border bg-background px-3.5 py-2.5">
@@ -63,6 +93,7 @@ export function ChapterForm({
             name="number"
             type="number"
             min={1}
+            defaultValue={initial?.number ?? ""}
             placeholder="Auto"
             className="h-9 w-24 rounded-lg border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
           />
@@ -77,6 +108,7 @@ export function ChapterForm({
           id="chapter-title"
           name="title"
           required
+          defaultValue={initial?.title ?? ""}
           placeholder="Salt and Lamplight"
           className={inputClass}
         />
@@ -122,6 +154,7 @@ export function ChapterForm({
             ref={contentRef}
             required
             rows={16}
+            defaultValue={initial?.content ?? ""}
             placeholder="Write the chapter here. Separate paragraphs with a blank line."
             className="block w-full resize-y bg-transparent px-3.5 py-3 text-sm leading-relaxed text-foreground outline-none placeholder:text-muted/70"
           />
@@ -169,7 +202,7 @@ export function ChapterForm({
             name="coinCost"
             type="number"
             min={1}
-            defaultValue={5}
+            defaultValue={initial?.coinCost ?? 5}
             className={`${inputClass} sm:w-44`}
           />
         </div>
@@ -184,6 +217,7 @@ export function ChapterForm({
           id="chapter-unlock"
           name="unlockAt"
           type="datetime-local"
+          defaultValue={toDatetimeLocal(initial?.unlockAt ?? null)}
           className={`${inputClass} sm:w-72`}
         />
         <span className="text-xs text-muted">
@@ -196,7 +230,9 @@ export function ChapterForm({
         disabled={pending}
         className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit"
       >
-        {pending ? "Publishing…" : "Publish chapter"}
+        {pending
+          ? isEdit ? "Saving…" : "Publishing…"
+          : isEdit ? "Save changes" : "Publish chapter"}
       </button>
     </form>
   );
