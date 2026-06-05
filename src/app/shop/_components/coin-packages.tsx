@@ -1,0 +1,241 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+import {
+  type CoinPackage,
+  type OrderInput,
+  MIN_COINS,
+  CENTS_PER_COIN,
+  centsToAmountString,
+} from "@/lib/coin-packages";
+import { CoinIcon } from "./coin-icon";
+import { usePayPal } from "./use-paypal";
+
+export function CoinPackages({
+  packages,
+  clientId,
+}: {
+  packages: readonly CoinPackage[];
+  clientId?: string;
+}) {
+  const router = useRouter();
+  const { ready, startPurchase } = usePayPal(clientId);
+
+  const [customCoins, setCustomCoins] = useState<number | "">(MIN_COINS);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const validCustomCoins =
+    typeof customCoins === "number" && customCoins >= MIN_COINS
+      ? customCoins
+      : null;
+  const customPriceCents = validCustomCoins
+    ? validCustomCoins * CENTS_PER_COIN
+    : null;
+
+  const paymentsEnabled = Boolean(clientId) && ready;
+
+  async function buy(input: OrderInput, id: string) {
+    if (!paymentsEnabled || pendingId) return;
+    setError(null);
+    setSuccess(null);
+    setPendingId(id);
+
+    const createOrder = async () => {
+      const res = await fetch("/api/paypal/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not start the payment.");
+      return { orderId: data.id as string };
+    };
+
+    try {
+      await startPurchase(createOrder, {
+        onApprove: async (data) => {
+          const res = await fetch("/api/paypal/capture-order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: data.orderId }),
+          });
+          const result = await res.json();
+          if (!res.ok) {
+            throw new Error(result.error ?? "Payment could not be completed.");
+          }
+          setSuccess(`Success! ${result.coins} coins added to your balance.`);
+          router.refresh();
+        },
+        onCancel: () => setPendingId(null),
+        onError: () => {
+          setError("Something went wrong with PayPal. Please try again.");
+          setPendingId(null);
+        },
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Payment failed.");
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  const buyLabel = (id: string) =>
+    !clientId
+      ? "Unavailable"
+      : !ready
+        ? "Loading…"
+        : pendingId === id
+          ? "Processing…"
+          : "Buy with PayPal";
+
+  return (
+    <>
+      {/* Status banners */}
+      {error && (
+        <p
+          role="alert"
+          className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600"
+        >
+          {error}
+        </p>
+      )}
+      {success && (
+        <p
+          role="status"
+          className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-sm text-emerald-700"
+        >
+          {success}
+        </p>
+      )}
+
+      {/* Preset packages */}
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {packages.map((pkg) => {
+          const totalCoins = pkg.coins + pkg.bonusCoins;
+          const dollars = pkg.price / 100;
+
+          return (
+            <div
+              key={pkg.id}
+              className={`relative flex flex-col rounded-2xl border bg-surface p-5 shadow-sm transition-shadow hover:shadow-md ${
+                pkg.highlight ? "border-accent" : "border-border"
+              }`}
+            >
+              {pkg.highlight && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent px-3 py-0.5 text-xs font-semibold text-white">
+                  Best deal
+                </span>
+              )}
+
+              <p className="text-sm font-semibold text-foreground">{pkg.label}</p>
+              <p className="mt-0.5 text-xs text-muted">{pkg.description}</p>
+
+              <div className="mt-4 flex items-end gap-1.5">
+                <CoinIcon className="mb-0.5 size-6 text-amber-500" />
+                <span className="text-3xl font-bold tracking-tight text-foreground">
+                  {totalCoins}
+                </span>
+                <span className="mb-0.5 text-sm text-muted">coins</span>
+              </div>
+
+              {pkg.bonusCoins > 0 && (
+                <p className="mt-1 text-xs font-medium text-accent">
+                  +{pkg.bonusCoins} bonus coins included
+                </p>
+              )}
+
+              <p className="mt-3 text-2xl font-semibold text-foreground">
+                ${dollars.toFixed(2)}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => buy({ packageId: pkg.id }, pkg.id)}
+                disabled={!paymentsEnabled || pendingId !== null}
+                className={`mt-5 inline-flex h-10 w-full items-center justify-center rounded-xl text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 ${
+                  pkg.highlight
+                    ? "bg-accent text-white hover:bg-accent-hover"
+                    : "border border-border bg-background text-foreground hover:bg-surface"
+                }`}
+              >
+                {buyLabel(pkg.id)}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Custom amount */}
+      <div className="mt-6 rounded-2xl border border-border bg-surface p-5 sm:p-6">
+        <p className="text-sm font-semibold text-foreground">Custom amount</p>
+        <p className="mt-0.5 text-xs text-muted">
+          Buy exactly the coins you need — minimum {MIN_COINS}.
+        </p>
+
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="custom-coins" className="text-xs font-medium text-muted">
+              Number of coins
+            </label>
+            <div className="relative">
+              <CoinIcon className="absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-amber-500" />
+              <input
+                id="custom-coins"
+                type="number"
+                min={MIN_COINS}
+                step={1}
+                value={customCoins}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setCustomCoins(raw === "" ? "" : parseInt(raw, 10));
+                }}
+                placeholder={String(MIN_COINS)}
+                className="h-11 w-full rounded-xl border border-border bg-background py-0 pr-3.5 pl-9 text-sm text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25 sm:w-44"
+              />
+            </div>
+            {typeof customCoins === "number" &&
+              customCoins > 0 &&
+              customCoins < MIN_COINS && (
+                <p className="text-xs text-red-500">
+                  Minimum is {MIN_COINS} coins.
+                </p>
+              )}
+          </div>
+
+          <div className="flex h-11 items-center gap-1.5">
+            <span className="text-sm text-muted">Price:</span>
+            <span className="text-lg font-semibold text-foreground">
+              {customPriceCents != null
+                ? `$${centsToAmountString(customPriceCents)}`
+                : "—"}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              validCustomCoins &&
+              buy({ customCoins: validCustomCoins }, "pack_custom")
+            }
+            disabled={
+              !paymentsEnabled || pendingId !== null || validCustomCoins === null
+            }
+            className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 sm:ml-auto"
+          >
+            {buyLabel("pack_custom")}
+          </button>
+        </div>
+      </div>
+
+      <p className="mt-4 text-xs text-muted">
+        {clientId
+          ? "Secure payment via PayPal. Prices in USD. Rate: 20 coins = $5.00."
+          : "Payments are temporarily unavailable."}
+      </p>
+    </>
+  );
+}

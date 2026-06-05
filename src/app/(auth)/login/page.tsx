@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AuthForm } from "../_components/auth-form";
+import { login } from "../actions";
 
 export const metadata: Metadata = {
   title: "Login",
@@ -8,6 +9,7 @@ export const metadata: Metadata = {
 export default function LoginPage() {
   return (
     <AuthForm
+      action={login}
       title="Welcome back"
       subtitle="Sign in to pick up where you left off."
       fields={[

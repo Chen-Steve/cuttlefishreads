@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AuthForm } from "../_components/auth-form";
+import { requestPasswordReset } from "../actions";
 
 export const metadata: Metadata = {
   title: "Forgot Password",
@@ -8,6 +9,7 @@ export const metadata: Metadata = {
 export default function ForgotPasswordPage() {
   return (
     <AuthForm
+      action={requestPasswordReset}
       title="Reset your password"
       subtitle="Enter your email and we'll send you a link to set a new password."
       fields={[

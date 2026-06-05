@@ -3,17 +3,108 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, LogIn, Library, Search, X } from "lucide-react";
+import { BookOpen, ChevronDown, LogIn, LogOut, Library, Search, ShoppingBag, User, X } from "lucide-react";
 
+import { signOut } from "@/app/(auth)/actions";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+const baseNavItems = [
   { href: "/library", label: "Library", icon: Library },
   { href: "/novels", label: "Novels", icon: BookOpen },
-  { href: "/login", label: "Login / Sign Up", icon: LogIn },
 ] as const;
 
-export function SiteHeader() {
+function AccountDropdown({ username }: { username?: string | null }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium leading-none text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:px-3"
+      >
+        <User className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
+        <span className="hidden max-w-32 truncate lg:inline">
+          {username || "Account"}
+        </span>
+        <ChevronDown
+          className={cn("size-3.5 shrink-0 transition-transform duration-150", open && "rotate-180")}
+          strokeWidth={1.75}
+          aria-hidden
+        />
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-30 mt-1.5 min-w-36 overflow-hidden rounded-xl border border-border bg-surface shadow-md"
+        >
+          <Link
+            href="/account"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
+          >
+            <User className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
+            Account
+          </Link>
+
+          <Link
+            href="/shop"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
+          >
+            <ShoppingBag className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
+            Shop
+          </Link>
+
+          <div className="mx-2 border-t border-border" />
+
+          <form action={signOut}>
+            <button
+              type="submit"
+              role="menuitem"
+              className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
+            >
+              <LogOut className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
+              Sign out
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function SiteHeader({
+  isAuthenticated = false,
+  username = null,
+}: {
+  isAuthenticated?: boolean;
+  username?: string | null;
+}) {
   const [searchOpen, setSearchOpen] = useState(false);
   const mobileInputRef = useRef<HTMLInputElement>(null);
 
@@ -31,6 +122,10 @@ export function SiteHeader() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [searchOpen]);
+
+  const navItems = isAuthenticated
+    ? baseNavItems
+    : [...baseNavItems, { href: "/login", label: "Login / Sign Up", icon: LogIn }];
 
   return (
     <header className="border-b border-border bg-background">
@@ -110,6 +205,8 @@ export function SiteHeader() {
               <span className="hidden lg:inline">{label}</span>
             </Link>
           ))}
+
+          {isAuthenticated ? <AccountDropdown username={username} /> : null}
         </nav>
 
         {/* Expanded mobile search — overlays the bar when open */}
