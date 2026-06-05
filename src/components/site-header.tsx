@@ -3,9 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, ChevronDown, LogIn, LogOut, Library, Search, ShoppingBag, User, X } from "lucide-react";
+import { BookOpen, ChevronDown, Coins, LogIn, LogOut, Library, Search, Settings, ShoppingBag, User, X } from "lucide-react";
 
-import { signOut } from "@/app/(auth)/actions";
+import { signOut } from "@/app/(main)/(auth)/actions";
 import { cn } from "@/lib/utils";
 
 const baseNavItems = [
@@ -13,7 +13,15 @@ const baseNavItems = [
   { href: "/novels", label: "Novels", icon: BookOpen },
 ] as const;
 
-function AccountDropdown({ username }: { username?: string | null }) {
+function AccountDropdown({
+  username,
+  coins = 0,
+  isAdmin = false,
+}: {
+  username?: string | null;
+  coins?: number;
+  isAdmin?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -42,14 +50,14 @@ function AccountDropdown({ username }: { username?: string | null }) {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium leading-none text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:px-3"
+        className="inline-flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium leading-none text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:h-9 sm:px-3"
       >
-        <User className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
+        <User className="size-5 shrink-0 sm:size-4" strokeWidth={1.75} aria-hidden />
         <span className="hidden max-w-32 truncate lg:inline">
           {username || "Account"}
         </span>
         <ChevronDown
-          className={cn("size-3.5 shrink-0 transition-transform duration-150", open && "rotate-180")}
+          className={cn("size-4 shrink-0 transition-transform duration-150 sm:size-3.5", open && "rotate-180")}
           strokeWidth={1.75}
           aria-hidden
         />
@@ -58,8 +66,16 @@ function AccountDropdown({ username }: { username?: string | null }) {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-30 mt-1.5 min-w-36 overflow-hidden rounded-xl border border-border bg-surface shadow-md"
+          className="absolute right-0 top-full z-30 mt-1.5 min-w-40 overflow-hidden rounded-xl border border-border bg-surface shadow-md"
         >
+          <div className="flex items-center gap-2 border-b border-border px-3.5 py-2.5">
+            <Coins className="size-4 shrink-0 text-amber-500" strokeWidth={1.75} aria-hidden />
+            <span className="text-sm font-semibold text-foreground">
+              {coins.toLocaleString()}
+            </span>
+            <span className="text-sm text-muted">coins</span>
+          </div>
+
           <Link
             href="/account"
             role="menuitem"
@@ -79,6 +95,18 @@ function AccountDropdown({ username }: { username?: string | null }) {
             <ShoppingBag className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
             Shop
           </Link>
+
+          {isAdmin && (
+            <Link
+              href="/admin"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
+            >
+              <Settings className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
+              Admin
+            </Link>
+          )}
 
           <div className="mx-2 border-t border-border" />
 
@@ -101,9 +129,13 @@ function AccountDropdown({ username }: { username?: string | null }) {
 export function SiteHeader({
   isAuthenticated = false,
   username = null,
+  coins = 0,
+  isAdmin = false,
 }: {
   isAuthenticated?: boolean;
   username?: string | null;
+  coins?: number;
+  isAdmin?: boolean;
 }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const mobileInputRef = useRef<HTMLInputElement>(null);
@@ -188,25 +220,27 @@ export function SiteHeader({
             onClick={() => setSearchOpen(true)}
             aria-label="Open search"
             aria-expanded={searchOpen}
-            className="inline-flex size-9 items-center justify-center rounded-xl text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:hidden"
+            className="inline-flex size-10 items-center justify-center rounded-xl text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:hidden"
           >
-            <Search className="size-4" strokeWidth={1.75} aria-hidden />
+            <Search className="size-5" strokeWidth={1.75} aria-hidden />
           </button>
 
           {navItems.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium leading-none text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:px-3"
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium leading-none text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:h-9 sm:px-3"
             >
-              <span className="flex size-4 shrink-0 items-center justify-center">
-                <Icon className="size-4" strokeWidth={1.75} aria-hidden />
+              <span className="flex size-5 shrink-0 items-center justify-center sm:size-4">
+                <Icon className="size-5 sm:size-4" strokeWidth={1.75} aria-hidden />
               </span>
               <span className="hidden lg:inline">{label}</span>
             </Link>
           ))}
 
-          {isAuthenticated ? <AccountDropdown username={username} /> : null}
+          {isAuthenticated ? (
+            <AccountDropdown username={username} coins={coins} isAdmin={isAdmin} />
+          ) : null}
         </nav>
 
         {/* Expanded mobile search — overlays the bar when open */}
@@ -218,9 +252,9 @@ export function SiteHeader({
             searchOpen ? "flex" : "hidden"
           )}
         >
-          <label className="flex h-9 w-full cursor-text items-center gap-2 rounded-full border border-border bg-surface py-0 pr-3 pl-3.5 shadow-sm transition-colors focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25">
+          <label className="flex h-10 w-full cursor-text items-center gap-2 rounded-full border border-border bg-surface py-0 pr-3 pl-3.5 shadow-sm transition-colors focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25">
             <Search
-              className="size-4 shrink-0 text-muted"
+              className="size-5 shrink-0 text-muted"
               strokeWidth={1.75}
               aria-hidden
             />
@@ -237,9 +271,9 @@ export function SiteHeader({
             type="button"
             onClick={() => setSearchOpen(false)}
             aria-label="Close search"
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
-            <X className="size-4" strokeWidth={1.75} aria-hidden />
+            <X className="size-5" strokeWidth={1.75} aria-hidden />
           </button>
         </form>
       </div>

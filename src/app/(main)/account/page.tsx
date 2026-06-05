@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { PageContainer } from "@/components/page-container";
 import { createClient } from "@/utils/supabase/server";
-import { signOut } from "@/app/(auth)/actions";
+import { signOut } from "@/app/(main)/(auth)/actions";
 import {
   CUSTOM_PACKAGE_ID,
   getPackageById,

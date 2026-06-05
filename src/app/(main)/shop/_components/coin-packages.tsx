@@ -113,7 +113,7 @@ export function CoinPackages({
       )}
 
       {/* Preset packages */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
         {packages.map((pkg) => {
           const totalCoins = pkg.coins + pkg.bonusCoins;
           const dollars = pkg.price / 100;
@@ -134,12 +134,12 @@ export function CoinPackages({
               <p className="text-sm font-semibold text-foreground">{pkg.label}</p>
               <p className="mt-0.5 text-xs text-muted">{pkg.description}</p>
 
-              <div className="mt-4 flex items-end gap-1.5">
-                <CoinIcon className="mb-0.5 size-6 text-amber-500" />
-                <span className="text-3xl font-bold tracking-tight text-foreground">
+              <div className="mt-4 flex h-8 items-end gap-1.5">
+                <CoinIcon className="size-7 shrink-0 text-amber-500" />
+                <span className="translate-y-[3px] text-3xl font-bold leading-none tracking-tight tabular-nums text-foreground">
                   {totalCoins}
                 </span>
-                <span className="mb-0.5 text-sm text-muted">coins</span>
+                <span className="text-sm leading-none text-muted">coins</span>
               </div>
 
               {pkg.bonusCoins > 0 && (
@@ -233,7 +233,7 @@ export function CoinPackages({
 
       <p className="mt-4 text-xs text-muted">
         {clientId
-          ? "Secure payment via PayPal. Prices in USD. Rate: 20 coins = $5.00."
+          ? "Secure payment via PayPal. Prices in USD."
           : "Payments are temporarily unavailable."}
       </p>
     </>

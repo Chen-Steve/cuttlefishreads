@@ -40,6 +40,15 @@ export const COIN_PACKAGES: readonly CoinPackage[] = [
     highlight: false,
   },
   {
+    id: "pack_regular",
+    label: "Regular",
+    description: "17 % more coins",
+    price: 15_00,
+    coins: 60,
+    bonusCoins: 10,
+    highlight: false,
+  },
+  {
     id: "pack_enthusiast",
     label: "Enthusiast",
     description: "17 % more coins",
