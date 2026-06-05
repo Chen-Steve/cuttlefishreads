@@ -7,8 +7,8 @@ export const metadata: Metadata = {
   title: "Novels",
 };
 
-export default function NovelsPage() {
-  const novels = getNovels();
+export default async function NovelsPage() {
+  const novels = await getNovels();
 
   return (
     <PageContainer as="section">
@@ -17,7 +17,7 @@ export default function NovelsPage() {
           All novels
         </h1>
         <p className="mt-1 text-sm text-muted">
-          {novels.length} titles in the collection
+          {novels.length} title{novels.length !== 1 ? "s" : ""} in the collection
         </p>
       </header>
       <NovelGrid novels={novels} />

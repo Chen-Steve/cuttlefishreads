@@ -33,3 +33,57 @@ export async function unlockChapter(
   revalidatePath(`/novels/${novelSlug}/${chapterNumber}`);
   return { unlocked: data === true };
 }
+
+export type BookmarkState = { error?: string; bookmarked?: boolean };
+
+// Adds or removes a novel from the signed-in user's library. Returns the new
+// bookmarked state so the client can update its UI optimistically.
+export async function toggleBookmark(
+  novelSlug: string,
+): Promise<BookmarkState> {
+  const supabase = createClient(await cookies());
+
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims) {
+    return { error: "Please sign in to bookmark novels." };
+  }
+
+  const { data: novel, error: novelError } = await supabase
+    .from("novels")
+    .select("id")
+    .eq("slug", novelSlug)
+    .maybeSingle();
+
+  if (novelError || !novel) {
+    return { error: "Novel not found." };
+  }
+
+  const { data: existing } = await supabase
+    .from("bookmarks")
+    .select("id")
+    .eq("novel_slug", novelSlug)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase
+      .from("bookmarks")
+      .delete()
+      .eq("id", existing.id);
+    if (error) return { error: error.message };
+
+    revalidatePath(`/novels/${novelSlug}`);
+    revalidatePath("/library");
+    return { bookmarked: false };
+  }
+
+  const { error } = await supabase.from("bookmarks").insert({
+    user_id: auth.claims.sub,
+    novel_id: novel.id,
+    novel_slug: novelSlug,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath(`/novels/${novelSlug}`);
+  revalidatePath("/library");
+  return { bookmarked: true };
+}

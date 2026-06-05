@@ -3,7 +3,9 @@
 import { useActionState } from "react";
 
 import { GENRES } from "@/lib/constants";
-import { createNovel, type AdminState } from "../actions";
+import { cn } from "@/lib/utils";
+import { createNovel, updateNovel, type AdminState } from "../actions";
+import { DeleteNovelButton } from "./delete-novel-button";
 
 const STATUSES = [
   { value: "ongoing", label: "Ongoing" },
@@ -15,9 +17,22 @@ const inputClass =
   "h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25";
 const labelClass = "text-xs font-medium text-muted";
 
-export function NovelForm() {
+export type NovelFormValues = {
+  id: string;
+  title: string;
+  original_author: string | null;
+  translator: string | null;
+  description: string | null;
+  cover_url: string | null;
+  genres: string[];
+  tags: string[];
+  status: string;
+};
+
+export function NovelForm({ novel }: { novel?: NovelFormValues }) {
+  const isEdit = Boolean(novel);
   const [state, action, pending] = useActionState<AdminState, FormData>(
-    createNovel,
+    isEdit ? updateNovel.bind(null, novel!.id) : createNovel,
     {},
   );
 
@@ -40,6 +55,7 @@ export function NovelForm() {
           id="novel-title"
           name="title"
           required
+          defaultValue={novel?.title}
           placeholder="The Lantern of Quiet Tides"
           className={inputClass}
         />
@@ -53,6 +69,7 @@ export function NovelForm() {
           <input
             id="novel-author"
             name="originalAuthor"
+            defaultValue={novel?.original_author ?? ""}
             placeholder="Original author name"
             className={inputClass}
           />
@@ -64,6 +81,7 @@ export function NovelForm() {
           <input
             id="novel-translator"
             name="translator"
+            defaultValue={novel?.translator ?? ""}
             placeholder="Translator name"
             className={inputClass}
           />
@@ -78,6 +96,7 @@ export function NovelForm() {
           id="novel-description"
           name="description"
           rows={4}
+          defaultValue={novel?.description ?? ""}
           placeholder="A short synopsis…"
           className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
         />
@@ -95,6 +114,7 @@ export function NovelForm() {
                 type="checkbox"
                 name="genres"
                 value={genre}
+                defaultChecked={novel?.genres.includes(genre)}
                 className="size-3.5 accent-accent"
               />
               {genre}
@@ -111,6 +131,7 @@ export function NovelForm() {
           <input
             id="novel-tags"
             name="tags"
+            defaultValue={novel?.tags.join(", ") ?? ""}
             placeholder="cultivation, slow burn, strong lead"
             className={inputClass}
           />
@@ -120,7 +141,12 @@ export function NovelForm() {
           <label htmlFor="novel-status" className={labelClass}>
             Status
           </label>
-          <select id="novel-status" name="status" className={inputClass}>
+          <select
+            id="novel-status"
+            name="status"
+            defaultValue={novel?.status ?? "ongoing"}
+            className={inputClass}
+          >
             {STATUSES.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
@@ -134,6 +160,14 @@ export function NovelForm() {
         <label htmlFor="novel-cover" className={labelClass}>
           Cover image
         </label>
+        {novel?.cover_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={novel.cover_url}
+            alt=""
+            className="h-32 w-24 rounded-lg object-cover ring-1 ring-black/5"
+          />
+        )}
         <input
           id="novel-cover"
           name="cover"
@@ -141,15 +175,33 @@ export function NovelForm() {
           accept="image/*"
           className="block w-full text-sm text-muted file:mr-4 file:rounded-lg file:border-0 file:bg-accent file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-accent-hover"
         />
+        {isEdit && (
+          <span className="text-xs text-muted">Leave empty to keep the current cover.</span>
+        )}
       </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit"
+      <div
+        className={
+          isEdit
+            ? "flex items-center justify-between gap-4"
+            : undefined
+        }
       >
-        {pending ? "Creating…" : "Create novel"}
-      </button>
+        <button
+          type="submit"
+          disabled={pending}
+          className={cn(
+            "inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit",
+            !isEdit && "w-full",
+          )}
+        >
+          {pending ? (isEdit ? "Saving…" : "Creating…") : isEdit ? "Save changes" : "Create novel"}
+        </button>
+
+        {isEdit && novel && (
+          <DeleteNovelButton novelId={novel.id} title={novel.title} />
+        )}
+      </div>
     </form>
   );
 }

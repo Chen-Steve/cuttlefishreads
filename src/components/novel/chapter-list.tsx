@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import type { Chapter } from "@/types";
+import { ChapterLockBadge } from "./chapter-lock-badge";
 
 export function ChapterList({
   slug,
@@ -36,6 +37,7 @@ export function ChapterList({
                 {chapter.publishedAt}
               </span>
             </span>
+            {chapter.locked ? <ChapterLockBadge chapter={chapter} /> : null}
             <ChevronRight
               className="size-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5"
               strokeWidth={1.75}

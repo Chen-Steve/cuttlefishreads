@@ -5,9 +5,12 @@ import { PageContainer } from "@/components/page-container";
 import { getFeaturedNovels, getNovels } from "@/lib/data";
 import { SITE } from "@/lib/constants";
 
-export default function Home() {
-  const featured = getFeaturedNovels();
-  const latest = getNovels().slice(0, 5);
+export default async function Home() {
+  const [featured, all] = await Promise.all([
+    getFeaturedNovels(),
+    getNovels(),
+  ]);
+  const latest = all.slice(0, 5);
 
   return (
     <PageContainer>

@@ -18,6 +18,7 @@ export function NovelCard({ novel }: { novel: Novel }) {
       <NovelCover
         title={novel.title}
         slug={novel.slug}
+        coverUrl={novel.coverUrl}
         className="transition-transform duration-300 group-hover:-translate-y-0.5"
       />
       <div className="flex flex-col gap-1.5 px-1">

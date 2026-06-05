@@ -2,16 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { notFound } from "next/navigation";
+
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { ChapterForm } from "../../../../_components/chapter-form";
+import { NovelForm } from "../../../_components/novel-form";
 
 export const metadata: Metadata = {
-  title: "Admin",
+  title: "Admin — Edit Novel",
   robots: { index: false, follow: false },
 };
 
-export default async function AddChapterPage({
+export default async function EditNovelPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -21,7 +22,9 @@ export default async function AddChapterPage({
   const admin = createAdminClient();
   const { data: novel } = await admin
     .from("novels")
-    .select("id, title")
+    .select(
+      "id, title, original_author, translator, description, cover_url, genres, tags, status",
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -30,15 +33,14 @@ export default async function AddChapterPage({
   return (
     <PageContainer as="div" width="prose">
       <Link
-        href={`/admin/novels/${id}/chapters`}
+        href="/admin"
         className="inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
       >
         <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
-        Back to chapters
+        Back to novels
       </Link>
-
       <div className="mt-4 rounded-2xl border border-border bg-surface p-5 sm:p-6">
-        <ChapterForm novelId={novel.id} novelTitle={novel.title} />
+        <NovelForm novel={novel} />
       </div>
     </PageContainer>
   );

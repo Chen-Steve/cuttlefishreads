@@ -29,12 +29,32 @@ function initials(title: string) {
 export function NovelCover({
   title,
   slug,
+  coverUrl,
   className,
 }: {
   title: string;
   slug: string;
+  coverUrl?: string;
   className?: string;
 }) {
+  if (coverUrl) {
+    return (
+      <div
+        className={cn(
+          "relative aspect-[3/4] overflow-hidden rounded-lg shadow-sm ring-1 ring-black/5",
+          className,
+        )}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={coverUrl}
+          alt={title}
+          className="h-full w-full object-cover"
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(

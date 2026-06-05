@@ -86,6 +86,18 @@ function AccountDropdown({
             Account
           </Link>
 
+          {username ? (
+            <Link
+              href={`/u/${username}`}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
+            >
+              <Library className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
+              Public profile
+            </Link>
+          ) : null}
+
           <Link
             href="/shop"
             role="menuitem"

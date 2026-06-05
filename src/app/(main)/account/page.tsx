@@ -59,7 +59,16 @@ export default async function AccountPage() {
         <div className="flex items-center justify-between gap-4 py-3.5">
           <dt className="text-sm text-muted">Username</dt>
           <dd className="text-sm font-medium text-foreground">
-            {profile?.username ?? "—"}
+            {profile?.username ? (
+              <Link
+                href={`/u/${profile.username}`}
+                className="text-accent transition-colors hover:text-accent-hover"
+              >
+                {profile.username}
+              </Link>
+            ) : (
+              "—"
+            )}
           </dd>
         </div>
         <div className="flex items-center justify-between gap-4 py-3.5">

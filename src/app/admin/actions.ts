@@ -134,6 +134,101 @@ export async function createNovel(
   redirect("/admin");
 }
 
+export async function updateNovel(
+  novelId: string,
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return { error: "Title is required." };
+
+  const originalAuthor = String(formData.get("originalAuthor") ?? "").trim();
+  const translator = String(formData.get("translator") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const statusRaw = String(formData.get("status") ?? "ongoing");
+  const status: NovelStatus = NOVEL_STATUSES.includes(statusRaw as NovelStatus)
+    ? (statusRaw as NovelStatus)
+    : "ongoing";
+  const genres = parseGenres(formData);
+  const tags = parseTags(String(formData.get("tags") ?? ""));
+  const cover = formData.get("cover");
+
+  const admin = createAdminClient();
+
+  const { data: existing } = await admin
+    .from("novels")
+    .select("id, slug, cover_url")
+    .eq("id", novelId)
+    .maybeSingle();
+
+  if (!existing) return { error: "That novel no longer exists." };
+
+  let coverUrl = existing.cover_url;
+  if (cover instanceof File && cover.size > 0) {
+    try {
+      const uploaded = await uploadCover(admin, existing.slug, cover);
+      if (uploaded) coverUrl = uploaded;
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Cover upload failed." };
+    }
+  }
+
+  const { error } = await admin
+    .from("novels")
+    .update({
+      title,
+      original_author: originalAuthor || null,
+      translator: translator || null,
+      description: description || null,
+      cover_url: coverUrl,
+      genres,
+      tags,
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", novelId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+  revalidatePath("/novels");
+  revalidatePath(`/novels/${existing.slug}`);
+  redirect("/admin");
+}
+
+export async function deleteNovel(novelId: string): Promise<AdminState> {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
+  const admin = createAdminClient();
+
+  const { data: existing } = await admin
+    .from("novels")
+    .select("slug")
+    .eq("id", novelId)
+    .maybeSingle();
+
+  if (!existing) return { error: "That novel no longer exists." };
+
+  const { error } = await admin.from("novels").delete().eq("id", novelId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+  revalidatePath("/novels");
+  revalidatePath(`/novels/${existing.slug}`);
+  redirect("/admin");
+}
+
 export async function createChapter(
   _prev: AdminState,
   formData: FormData,

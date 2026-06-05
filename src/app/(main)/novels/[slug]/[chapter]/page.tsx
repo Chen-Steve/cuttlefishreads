@@ -2,30 +2,23 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
-import { ReaderNav } from "@/components/reader";
+import { ChapterUnlockGate, ReaderNav } from "@/components/reader";
 import {
   getAdjacentChapters,
   getChapter,
-  getChapters,
   getNovel,
-  getNovels,
+  getUserCoins,
+  isUserAuthenticated,
 } from "@/lib/data";
-
-export function generateStaticParams() {
-  return getNovels().flatMap((novel) =>
-    getChapters(novel.slug).map((chapter) => ({
-      slug: novel.slug,
-      chapter: String(chapter.number),
-    })),
-  );
-}
 
 export async function generateMetadata({
   params,
 }: PageProps<"/novels/[slug]/[chapter]">): Promise<Metadata> {
   const { slug, chapter } = await params;
-  const novel = getNovel(slug);
-  const current = getChapter(slug, Number(chapter));
+  const [novel, current] = await Promise.all([
+    getNovel(slug),
+    getChapter(slug, Number(chapter)),
+  ]);
   if (!novel || !current) {
     return { title: "Chapter not found" };
   }
@@ -37,14 +30,19 @@ export default async function ChapterReaderPage({
 }: PageProps<"/novels/[slug]/[chapter]">) {
   const { slug, chapter } = await params;
   const chapterNumber = Number(chapter);
-  const novel = getNovel(slug);
-  const current = getChapter(slug, chapterNumber);
+
+  const [novel, current, { previous, next }, userCoins, isLoggedIn] =
+    await Promise.all([
+      getNovel(slug),
+      getChapter(slug, chapterNumber),
+      getAdjacentChapters(slug, chapterNumber),
+      getUserCoins(),
+      isUserAuthenticated(),
+    ]);
 
   if (!novel || !current || Number.isNaN(chapterNumber)) {
     notFound();
   }
-
-  const { previous, next } = getAdjacentChapters(slug, chapterNumber);
 
   return (
     <PageContainer as="article" width="narrow">
@@ -61,11 +59,22 @@ export default async function ChapterReaderPage({
         <p className="mt-1 text-pretty text-base text-muted">{current.title}</p>
       </header>
 
-      <div className="space-y-5 text-base leading-7 text-foreground/90 sm:text-[1.05rem] sm:leading-8">
-        {current.content.map((paragraph, index) => (
-          <p key={index}>{paragraph}</p>
-        ))}
-      </div>
+      {current.locked ? (
+        <ChapterUnlockGate
+          novelSlug={slug}
+          chapterNumber={chapterNumber}
+          coinCost={current.coinCost}
+          unlockAt={current.unlockAt}
+          userCoins={userCoins}
+          isLoggedIn={isLoggedIn}
+        />
+      ) : (
+        <div className="space-y-5 text-base leading-7 text-foreground/90 sm:text-[1.05rem] sm:leading-8">
+          {current.content.map((paragraph, index) => (
+            <p key={index}>{paragraph}</p>
+          ))}
+        </div>
+      )}
 
       <hr className="my-10 border-border" />
 

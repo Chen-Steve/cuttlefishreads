@@ -2,10 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BookOpen } from "lucide-react";
-import { ChapterList, NovelCover } from "@/components/novel";
+import { BookmarkButton, ChapterList, NovelCover } from "@/components/novel";
 import { PageContainer } from "@/components/page-container";
 import { Badge } from "@/components/ui/badge";
-import { getChapters, getNovel, getNovels } from "@/lib/data";
+import {
+  getChapters,
+  getNovel,
+  isNovelBookmarked,
+  isUserAuthenticated,
+} from "@/lib/data";
 
 const statusLabel = {
   ongoing: "Ongoing",
@@ -13,15 +18,11 @@ const statusLabel = {
   hiatus: "Hiatus",
 } as const;
 
-export function generateStaticParams() {
-  return getNovels().map((novel) => ({ slug: novel.slug }));
-}
-
 export async function generateMetadata({
   params,
 }: PageProps<"/novels/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const novel = getNovel(slug);
+  const novel = await getNovel(slug);
   return { title: novel?.title ?? "Novel not found" };
 }
 
@@ -29,14 +30,24 @@ export default async function NovelDetailPage({
   params,
 }: PageProps<"/novels/[slug]">) {
   const { slug } = await params;
-  const novel = getNovel(slug);
+  const [novel, chapters, bookmarked, isLoggedIn] = await Promise.all([
+    getNovel(slug),
+    getChapters(slug),
+    isNovelBookmarked(slug),
+    isUserAuthenticated(),
+  ]);
 
   if (!novel) {
     notFound();
   }
 
-  const chapters = getChapters(slug);
   const firstChapter = chapters[0];
+  const authorLine = [
+    novel.translator && `Translated by ${novel.translator}`,
+    novel.originalAuthor && `Original by ${novel.originalAuthor}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <PageContainer as="article" width="prose">
@@ -44,13 +55,18 @@ export default async function NovelDetailPage({
         <NovelCover
           title={novel.title}
           slug={novel.slug}
+          coverUrl={novel.coverUrl}
           className="w-32 shrink-0 self-center sm:w-40 sm:self-start"
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <h1 className="text-xl font-bold tracking-tight text-balance text-foreground sm:text-3xl">
             {novel.title}
           </h1>
-          <p className="mt-1 text-sm text-muted">by {novel.author}</p>
+          {authorLine ? (
+            <p className="mt-1 text-sm text-muted">{authorLine}</p>
+          ) : (
+            <p className="mt-1 text-sm text-muted">by {novel.author}</p>
+          )}
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Badge className="border-accent/30 text-accent">
@@ -61,19 +77,28 @@ export default async function NovelDetailPage({
             ))}
           </div>
 
-          <p className="mt-5 text-sm leading-relaxed text-foreground/90">
-            {novel.synopsis}
-          </p>
-
-          {firstChapter ? (
-            <Link
-              href={`/novels/${novel.slug}/${firstChapter.number}`}
-              className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:w-fit"
-            >
-              <BookOpen className="size-4" strokeWidth={1.75} aria-hidden />
-              Start reading
-            </Link>
+          {novel.synopsis ? (
+            <p className="mt-5 text-sm leading-relaxed text-foreground/90">
+              {novel.synopsis}
+            </p>
           ) : null}
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-start">
+            {firstChapter ? (
+              <Link
+                href={`/novels/${novel.slug}/${firstChapter.number}`}
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:w-fit"
+              >
+                <BookOpen className="size-4" strokeWidth={1.75} aria-hidden />
+                Start reading
+              </Link>
+            ) : null}
+            <BookmarkButton
+              novelSlug={novel.slug}
+              initialBookmarked={bookmarked}
+              isLoggedIn={isLoggedIn}
+            />
+          </div>
         </div>
       </div>
 

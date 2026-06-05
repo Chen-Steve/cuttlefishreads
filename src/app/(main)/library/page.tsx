@@ -8,8 +8,8 @@ export const metadata: Metadata = {
   title: "Library",
 };
 
-export default function LibraryPage() {
-  const novels = getLibraryNovels();
+export default async function LibraryPage() {
+  const novels = await getLibraryNovels();
 
   return (
     <PageContainer as="section">

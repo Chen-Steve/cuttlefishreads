@@ -13,7 +13,7 @@ export default async function SearchPage({
 }: PageProps<"/search">) {
   const { q } = await searchParams;
   const query = typeof q === "string" ? q : "";
-  const results = query ? searchNovels(query) : [];
+  const results = query ? await searchNovels(query) : [];
 
   return (
     <PageContainer as="section">

@@ -1,0 +1,140 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Coins, Lock } from "lucide-react";
+
+import { unlockChapter } from "@/app/(main)/novels/actions";
+import { UnlockCountdown } from "@/components/reader/unlock-countdown";
+import { isScheduledUnlock } from "@/lib/unlock-countdown";
+
+export function ChapterUnlockGate({
+  novelSlug,
+  chapterNumber,
+  coinCost,
+  unlockAt,
+  userCoins,
+  isLoggedIn,
+}: {
+  novelSlug: string;
+  chapterNumber: number;
+  coinCost: number;
+  unlockAt: string | null;
+  userCoins: number;
+  isLoggedIn: boolean;
+}) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const scheduled = isScheduledUnlock(unlockAt);
+  const canUnlockEarly = scheduled && coinCost > 0;
+  const canAfford = userCoins >= coinCost;
+
+  function handleUnlock() {
+    setError(null);
+    startTransition(async () => {
+      const result = await unlockChapter(novelSlug, chapterNumber);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-surface px-6 py-10 text-center">
+      <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-amber-500/10">
+        <Lock className="size-5 text-amber-600" strokeWidth={1.75} aria-hidden />
+      </div>
+      <h2 className="mt-4 text-lg font-semibold text-foreground">
+        This chapter is locked
+      </h2>
+
+      {scheduled && unlockAt ? (
+        <>
+          <div className="mt-4 flex justify-center">
+            <UnlockCountdown unlockAt={unlockAt} variant="prominent" />
+          </div>
+          {canUnlockEarly ? (
+            <p className="mt-4 text-sm text-muted">
+              Or unlock early with{" "}
+              <span className="inline-flex items-center gap-1 font-semibold text-amber-600">
+                {coinCost}
+                <Coins className="size-3.5" strokeWidth={1.75} aria-hidden />
+              </span>{" "}
+              coins.
+            </p>
+          ) : (
+            <p className="mt-4 text-sm text-muted">
+              This chapter will unlock automatically when the timer reaches zero.
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="mt-2 text-sm text-muted">
+          Unlock with{" "}
+          <span className="inline-flex items-center gap-1 font-semibold text-amber-600">
+            {coinCost}
+            <Coins className="size-3.5" strokeWidth={1.75} aria-hidden />
+          </span>{" "}
+          coins to continue reading.
+        </p>
+      )}
+
+      {error && (
+        <p
+          role="alert"
+          className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600"
+        >
+          {error}
+        </p>
+      )}
+
+      {(!scheduled || canUnlockEarly) && (
+        <div className="mt-6 flex flex-col items-center gap-3">
+          {!isLoggedIn ? (
+            <Link
+              href="/login"
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
+            >
+              Sign in to unlock
+            </Link>
+          ) : (
+            <>
+              <p className="text-xs text-muted">
+                Your balance:{" "}
+                <span className="font-semibold text-foreground">
+                  {userCoins.toLocaleString()} coins
+                </span>
+              </p>
+              {canAfford ? (
+                <button
+                  type="button"
+                  onClick={handleUnlock}
+                  disabled={pending}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {pending
+                    ? "Unlocking…"
+                    : canUnlockEarly
+                      ? `Unlock early for ${coinCost} coins`
+                      : `Unlock for ${coinCost} coins`}
+                </button>
+              ) : (
+                <Link
+                  href="/shop"
+                  className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
+                >
+                  Buy coins
+                </Link>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
