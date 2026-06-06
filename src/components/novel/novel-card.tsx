@@ -12,10 +12,13 @@ const statusLabel: Record<Novel["status"], string> = {
 export function NovelCard({
   novel,
   compact = false,
+  hideAuthor = false,
 }: {
   novel: Novel;
   /** Title and genres only — hides author and status. */
   compact?: boolean;
+  /** Hides the author/translator line while keeping status and genres. */
+  hideAuthor?: boolean;
 }) {
   return (
     <Link
@@ -32,7 +35,7 @@ export function NovelCard({
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
           {novel.title}
         </h3>
-        {!compact ? (
+        {!compact && !hideAuthor ? (
           <p className="text-xs text-muted">{novel.author}</p>
         ) : null}
         {novel.genres.length > 0 || !compact ? (

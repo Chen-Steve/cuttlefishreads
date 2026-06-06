@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { NovelGrid } from "@/components/novel";
+import { LibraryGrid } from "@/components/library/library-grid";
 import { PageContainer } from "@/components/page-container";
 import { getLibraryNovels } from "@/lib/data";
 
@@ -23,7 +23,7 @@ export default async function LibraryPage() {
       </header>
 
       {novels.length > 0 ? (
-        <NovelGrid novels={novels} />
+        <LibraryGrid novels={novels} />
       ) : (
         <div className="rounded-xl border border-dashed border-border bg-surface px-4 py-12 text-center sm:py-16">
           <p className="text-sm text-muted">Your library is empty.</p>

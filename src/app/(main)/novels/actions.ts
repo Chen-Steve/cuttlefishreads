@@ -111,6 +111,39 @@ export async function toggleBookmark(
   return { bookmarked: true };
 }
 
+export type RemoveBookmarksState = { error?: string; removed?: number };
+
+// Removes one or more bookmarks from the signed-in user's library.
+export async function removeBookmarks(
+  novelSlugs: string[],
+): Promise<RemoveBookmarksState> {
+  const supabase = createClient(await cookies());
+
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims) {
+    return { error: "Please sign in to manage your library." };
+  }
+
+  const slugs = [...new Set(novelSlugs.map((slug) => slug.trim()).filter(Boolean))];
+  if (slugs.length === 0) {
+    return { error: "No bookmarks selected." };
+  }
+
+  const { error } = await supabase
+    .from("bookmarks")
+    .delete()
+    .eq("user_id", auth.claims.sub)
+    .in("novel_slug", slugs);
+
+  if (error) return { error: error.message };
+
+  for (const slug of slugs) {
+    revalidatePath(`/novels/${slug}`);
+  }
+  revalidatePath("/library");
+  return { removed: slugs.length };
+}
+
 export type CommentState = { error?: string; comment?: NovelComment };
 
 export async function createComment(
