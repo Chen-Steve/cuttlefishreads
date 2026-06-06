@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { MessageSquare } from "lucide-react";
 
 import { loadMoreComments } from "@/app/(main)/novels/actions";
@@ -34,11 +34,6 @@ export function CommentsPanel({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    setComments(initialComments);
-    setHasMore(initialHasMore);
-  }, [initialComments, initialHasMore]);
-
   function handleLoadMore() {
     setError(null);
     startTransition(async () => {
@@ -62,6 +57,9 @@ export function CommentsPanel({
         mode={mode}
         chapterNumber={chapterNumber}
         readableChapters={readableChapters}
+        onCommentCreated={(comment) =>
+          setComments((prev) => [comment, ...prev])
+        }
       />
 
       {comments.length > 0 ? (
@@ -73,6 +71,18 @@ export function CommentsPanel({
                 isLoggedIn={isLoggedIn}
                 mode={mode}
                 chapterTitles={chapterTitles}
+                onDeleted={(id) =>
+                  setComments((prev) => prev.filter((c) => c.id !== id))
+                }
+                onUpdated={(id, body) =>
+                  setComments((prev) =>
+                    prev.map((c) =>
+                      c.id === id
+                        ? { ...c, body, updatedAt: new Date().toISOString() }
+                        : c,
+                    ),
+                  )
+                }
               />
             </li>
           ))}

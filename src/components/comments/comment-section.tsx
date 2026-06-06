@@ -33,6 +33,7 @@ export async function CommentSection({
 
     return (
       <CommentsPanel
+        key={`${novelSlug}-${chapterNumber}`}
         mode="chapter"
         novelSlug={novelSlug}
         initialComments={comments}
@@ -51,6 +52,7 @@ export async function CommentSection({
 
   return (
     <CommentsPanel
+      key={novelSlug}
       mode="novel"
       novelSlug={novelSlug}
       initialComments={comments}

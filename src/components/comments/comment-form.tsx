@@ -7,6 +7,7 @@ import { ChevronDown, MessageSquare } from "lucide-react";
 import { createComment } from "@/app/(main)/novels/actions";
 import { cn } from "@/lib/utils";
 import type { ReadableChapter } from "@/lib/data";
+import type { NovelComment } from "@/types";
 
 const MAX_COMMENT_LENGTH = 2000;
 
@@ -16,12 +17,14 @@ export function CommentForm({
   mode,
   chapterNumber,
   readableChapters = [],
+  onCommentCreated,
 }: {
   novelSlug: string;
   isLoggedIn: boolean;
   mode: "novel" | "chapter";
   chapterNumber?: number;
   readableChapters?: ReadableChapter[];
+  onCommentCreated?: (comment: NovelComment) => void;
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -77,7 +80,9 @@ export function CommentForm({
       }
       setBody("");
       setSelectedChapter("");
-      router.refresh();
+      if (result.comment) {
+        onCommentCreated?.(result.comment);
+      }
     });
   }
 

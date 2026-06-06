@@ -350,6 +350,47 @@ export async function searchNovels(query: string): Promise<Novel[]> {
   });
 }
 
+export type NovelTitleMatch = Pick<Novel, "slug" | "title" | "coverUrl">;
+
+function titleMatchScore(title: string, query: string): number {
+  const lowerTitle = title.toLowerCase();
+  if (lowerTitle === query) return 0;
+  if (lowerTitle.startsWith(query)) return 1;
+
+  const wordIndex = lowerTitle
+    .split(/\s+/)
+    .findIndex((word) => word.startsWith(query));
+  if (wordIndex >= 0) return 10 + wordIndex;
+
+  const containsIndex = lowerTitle.indexOf(query);
+  if (containsIndex >= 0) return 100 + containsIndex;
+
+  return Number.POSITIVE_INFINITY;
+}
+
+export async function getClosestNovelTitleMatch(
+  query: string,
+): Promise<NovelTitleMatch | null> {
+  const q = query.trim().toLowerCase();
+  if (!q) return null;
+
+  const novels = await getNovels();
+  const [match] = novels
+    .map((novel) => ({
+      novel,
+      score: titleMatchScore(novel.title, q),
+    }))
+    .filter(({ score }) => Number.isFinite(score))
+    .sort((a, b) => {
+      if (a.score !== b.score) return a.score - b.score;
+      return a.novel.title.length - b.novel.title.length;
+    });
+
+  if (!match) return null;
+  const { slug, title, coverUrl } = match.novel;
+  return { slug, title, coverUrl };
+}
+
 export async function getUserCoins(): Promise<number> {
   const supabase = createClient(await cookies());
   const { data: auth } = await supabase.auth.getClaims();

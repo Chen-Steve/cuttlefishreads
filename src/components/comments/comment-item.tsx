@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Pencil, Trash2, User } from "lucide-react";
 
 import { deleteComment, updateComment } from "@/app/(main)/novels/actions";
@@ -26,13 +25,16 @@ export function CommentItem({
   isLoggedIn,
   mode,
   chapterTitles,
+  onDeleted,
+  onUpdated,
 }: {
   comment: NovelComment;
   isLoggedIn: boolean;
   mode: "novel" | "chapter";
   chapterTitles: Record<number, string>;
+  onDeleted?: (id: string) => void;
+  onUpdated?: (id: string, body: string) => void;
 }) {
-  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [body, setBody] = useState(comment.body);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -52,7 +54,7 @@ export function CommentItem({
         return;
       }
       setConfirmingDelete(false);
-      router.refresh();
+      onDeleted?.(comment.id);
     });
   }
 
@@ -65,7 +67,7 @@ export function CommentItem({
         return;
       }
       setEditing(false);
-      router.refresh();
+      onUpdated?.(comment.id, body.trim());
     });
   }
 

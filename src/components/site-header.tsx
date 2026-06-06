@@ -8,10 +8,124 @@ import { BookOpen, ChevronDown, Coins, LogIn, LogOut, Library, Search, Settings,
 import { signOut } from "@/app/(main)/(auth)/actions";
 import { cn } from "@/lib/utils";
 
+type SearchMatch = {
+  slug: string;
+  title: string;
+  coverUrl?: string;
+};
+
 const baseNavItems = [
   { href: "/library", label: "Library", icon: Library },
   { href: "/novels", label: "Novels", icon: BookOpen },
 ] as const;
+
+function HeaderSearch({
+  inputRef,
+  onMatchClick,
+  className,
+  labelClassName,
+  inputClassName,
+  iconClassName,
+}: {
+  inputRef?: React.Ref<HTMLInputElement>;
+  onMatchClick?: () => void;
+  className?: string;
+  labelClassName: string;
+  inputClassName: string;
+  iconClassName: string;
+}) {
+  const [query, setQuery] = useState("");
+  const [suggestion, setSuggestion] = useState<{
+    query: string;
+    match: SearchMatch | null;
+  } | null>(null);
+  const [focused, setFocused] = useState(false);
+  const trimmedQuery = query.trim();
+  const match =
+    suggestion?.query === trimmedQuery ? suggestion.match : null;
+  const showMatch = focused && trimmedQuery.length > 0 && match;
+
+  useEffect(() => {
+    if (!trimmedQuery) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `/api/search-suggestions?q=${encodeURIComponent(trimmedQuery)}`,
+          { signal: controller.signal },
+        );
+        if (!response.ok) return;
+
+        const data = (await response.json()) as { match?: SearchMatch | null };
+        setSuggestion({ query: trimmedQuery, match: data.match ?? null });
+      } catch (error) {
+        if ((error as DOMException).name !== "AbortError") {
+          setSuggestion({ query: trimmedQuery, match: null });
+        }
+      }
+    }, 150);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [trimmedQuery]);
+
+  return (
+    <form className={cn("relative", className)} role="search" action="/search">
+      <label className={labelClassName}>
+        <Search
+          className={iconClassName}
+          strokeWidth={1.75}
+          aria-hidden
+        />
+        <input
+          ref={inputRef}
+          type="search"
+          name="q"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => window.setTimeout(() => setFocused(false), 100)}
+          placeholder="Search by title..."
+          className={inputClassName}
+          aria-label="Search"
+          autoComplete="off"
+        />
+      </label>
+
+      {showMatch ? (
+        <Link
+          href={`/novels/${match.slug}`}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={onMatchClick}
+          className="absolute top-full right-0 left-0 z-30 mt-2 flex items-center gap-3 rounded-xl border border-border bg-surface p-2.5 text-left shadow-md transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          <span className="relative size-11 shrink-0 overflow-hidden rounded-lg bg-background">
+            {match.coverUrl ? (
+              <Image
+                src={match.coverUrl}
+                alt=""
+                fill
+                sizes="44px"
+                className="object-cover"
+              />
+            ) : null}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-semibold text-foreground">
+              {match.title}
+            </span>
+            <span className="block text-xs text-muted">Closest title match</span>
+          </span>
+        </Link>
+      ) : null}
+    </form>
+  );
+}
 
 function AccountDropdown({
   username,
@@ -198,26 +312,12 @@ export function SiteHeader({
         </Link>
 
         {/* Full search bar — shown from sm up */}
-        <form
+        <HeaderSearch
           className="mx-auto hidden w-full max-w-md flex-1 sm:block"
-          role="search"
-          action="/search"
-        >
-          <label className="flex h-9 w-full cursor-text items-center gap-2 rounded-full border border-border bg-surface py-0 pr-4 pl-3.5 shadow-sm transition-colors focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25">
-            <Search
-              className="size-4 shrink-0 text-muted"
-              strokeWidth={1.75}
-              aria-hidden
-            />
-            <input
-              type="search"
-              name="q"
-              placeholder="Search novels, authors…"
-              className="min-w-0 flex-1 border-0 bg-transparent py-0 text-sm font-medium leading-none text-foreground outline-none placeholder:font-medium placeholder:leading-none placeholder:text-muted/80"
-              aria-label="Search"
-            />
-          </label>
-        </form>
+          labelClassName="flex h-9 w-full cursor-text items-center gap-2 rounded-full border border-border bg-surface py-0 pr-4 pl-3.5 shadow-sm transition-colors focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25"
+          inputClassName="min-w-0 flex-1 border-0 bg-transparent py-0 text-sm font-medium leading-none text-foreground outline-none placeholder:font-medium placeholder:leading-none placeholder:text-muted/80"
+          iconClassName="size-4 shrink-0 text-muted"
+        />
 
         {/* Spacer pushes nav to the right on mobile (where the inline form is hidden) */}
         <div className="flex-1 sm:hidden" />
@@ -256,29 +356,20 @@ export function SiteHeader({
         </nav>
 
         {/* Expanded mobile search — overlays the bar when open */}
-        <form
-          role="search"
-          action="/search"
+        <div
           className={cn(
             "absolute inset-x-2 z-20 items-center gap-2 bg-background sm:!hidden",
-            searchOpen ? "flex" : "hidden"
+            searchOpen ? "flex" : "hidden",
           )}
         >
-          <label className="flex h-10 w-full cursor-text items-center gap-2 rounded-full border border-border bg-surface py-0 pr-3 pl-3.5 shadow-sm transition-colors focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25">
-            <Search
-              className="size-5 shrink-0 text-muted"
-              strokeWidth={1.75}
-              aria-hidden
-            />
-            <input
-              ref={mobileInputRef}
-              type="search"
-              name="q"
-              placeholder="Search novels, authors…"
-              className="min-w-0 flex-1 border-0 bg-transparent py-0 text-sm font-medium leading-none text-foreground outline-none placeholder:font-medium placeholder:leading-none placeholder:text-muted/80"
-              aria-label="Search"
-            />
-          </label>
+          <HeaderSearch
+            inputRef={mobileInputRef}
+            onMatchClick={() => setSearchOpen(false)}
+            className="min-w-0 flex-1"
+            labelClassName="flex h-10 w-full cursor-text items-center gap-2 rounded-full border border-border bg-surface py-0 pr-3 pl-3.5 shadow-sm transition-colors focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25"
+            inputClassName="min-w-0 flex-1 border-0 bg-transparent py-0 text-sm font-medium leading-none text-foreground outline-none placeholder:font-medium placeholder:leading-none placeholder:text-muted/80"
+            iconClassName="size-5 shrink-0 text-muted"
+          />
           <button
             type="button"
             onClick={() => setSearchOpen(false)}
@@ -287,7 +378,7 @@ export function SiteHeader({
           >
             <X className="size-5" strokeWidth={1.75} aria-hidden />
           </button>
-        </form>
+        </div>
       </div>
     </header>
   );

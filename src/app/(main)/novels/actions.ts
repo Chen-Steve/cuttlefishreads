@@ -111,7 +111,7 @@ export async function toggleBookmark(
   return { bookmarked: true };
 }
 
-export type CommentState = { error?: string };
+export type CommentState = { error?: string; comment?: NovelComment };
 
 export async function createComment(
   novelSlug: string,
@@ -145,18 +145,45 @@ export async function createComment(
     return { error: "Novel not found." };
   }
 
-  const { error } = await supabase.from("novel_comments").insert({
-    user_id: auth.claims.sub,
-    novel_id: novel.id,
-    novel_slug: novelSlug,
-    chapter_number: chapterNumber ?? null,
-    body: body.trim(),
-  });
+  const { data: inserted, error } = await supabase
+    .from("novel_comments")
+    .insert({
+      user_id: auth.claims.sub,
+      novel_id: novel.id,
+      novel_slug: novelSlug,
+      chapter_number: chapterNumber ?? null,
+      body: body.trim(),
+    })
+    .select("id, novel_slug, chapter_number, body, user_id, created_at, updated_at")
+    .single();
 
-  if (error) return { error: error.message };
+  if (error || !inserted) {
+    return { error: error?.message ?? "Failed to post comment." };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", auth.claims.sub)
+    .maybeSingle();
 
   revalidateCommentPaths(novelSlug, chapterNumber);
-  return {};
+
+  return {
+    comment: {
+      id: inserted.id,
+      novelSlug: inserted.novel_slug,
+      chapterNumber: inserted.chapter_number,
+      body: inserted.body,
+      userId: inserted.user_id,
+      username: profile?.username ?? "Unknown",
+      likeCount: 0,
+      likedByCurrentUser: false,
+      isOwn: true,
+      createdAt: inserted.created_at,
+      updatedAt: inserted.updated_at,
+    },
+  };
 }
 
 export async function updateComment(
