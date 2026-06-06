@@ -108,7 +108,7 @@ export function ChapterContentsDropdown({
                     isCurrent ? "text-accent" : "text-foreground",
                   )}
                 >
-                  {chapter.title}
+                  {chapter.title || `Chapter ${chapter.number}`}
                 </span>
                 {chapter.locked ? (
                   <Lock

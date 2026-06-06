@@ -32,10 +32,13 @@ export async function generateMetadata({
     };
   }
 
-  const title = `${novel.title} - Chapter ${current.number}: ${current.title}`;
+  const chapterLabel = current.title
+    ? `Chapter ${current.number}: ${current.title}`
+    : `Chapter ${current.number}`;
+  const title = `${novel.title} - ${chapterLabel}`;
   const description = current.locked
-    ? `Read ${novel.title} on Cuttlefish Reads. Chapter ${current.number}, ${current.title}, is available with unlock access.`
-    : `Read ${novel.title} Chapter ${current.number}: ${current.title} on Cuttlefish Reads. ${novelDescription(novel)}`;
+    ? `Read ${novel.title} on Cuttlefish Reads. ${chapterLabel} is available with unlock access.`
+    : `Read ${novel.title} ${chapterLabel} on Cuttlefish Reads. ${novelDescription(novel)}`;
   const path = `/novels/${novel.slug}/${current.number}`;
 
   return {
@@ -102,7 +105,9 @@ export default async function ChapterReaderPage({
           {novel.title}
         </Link>
         <h1 className="text-xl font-bold tracking-tight text-balance text-foreground sm:text-2xl">
-          Chapter {current.number}: {current.title}
+          {current.title
+            ? `Chapter ${current.number}: ${current.title}`
+            : `Chapter ${current.number}`}
         </h1>
         <div className="mt-4">
           <ReaderNav

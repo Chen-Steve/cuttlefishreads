@@ -32,7 +32,7 @@ export function ChapterList({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium text-foreground">
-                {chapter.title}
+                {chapter.title || `Chapter ${chapter.number}`}
               </span>
               {!(chapter.locked && isScheduledUnlock(chapter.unlockAt)) ? (
                 <span className="block text-xs text-muted">

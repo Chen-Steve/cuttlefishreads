@@ -95,11 +95,11 @@ export function ChapterForm({
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <label htmlFor="chapter-title" className={labelClass}>
             Chapter title
+            <span className="ml-1 font-normal opacity-60">(optional)</span>
           </label>
           <input
             id="chapter-title"
             name="title"
-            required
             defaultValue={initial?.title ?? ""}
             placeholder="Salt and Lamplight"
             className={inputClass}

@@ -23,7 +23,10 @@ export async function CommentSection({
   ]);
 
   const chapterTitles = Object.fromEntries(
-    summaries.map((chapter) => [chapter.number, chapter.title]),
+    summaries.map((chapter) => [
+      chapter.number,
+      chapter.title || `Chapter ${chapter.number}`,
+    ]),
   );
 
   if (mode === "chapter") {

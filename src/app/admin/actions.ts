@@ -267,7 +267,6 @@ export async function createChapter(
   const content = String(formData.get("content") ?? "").trim();
 
   if (!novelId) return { error: "Choose a novel." };
-  if (!title) return { error: "Chapter title is required." };
   if (!content) return { error: "Chapter content is required." };
 
   const access = String(formData.get("access") ?? "free");
@@ -431,7 +430,6 @@ export async function updateChapter(
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
 
-  if (!title) return { error: "Chapter title is required." };
   if (!content) return { error: "Chapter content is required." };
 
   const access = String(formData.get("access") ?? "free");

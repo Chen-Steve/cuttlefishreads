@@ -123,7 +123,7 @@ export default async function ChaptersListPage({
 
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
-                    <span className="truncate">{chapter.title}</span>
+                    <span className="truncate">{chapter.title || `Chapter ${chapter.number}`}</span>
                     {chapter.is_published ? (
                       <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
                         Published
