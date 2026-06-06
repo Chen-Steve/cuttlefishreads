@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
 import { createClient } from "@/utils/supabase/server";
 import { signOut } from "@/app/(main)/(auth)/actions";
+import { UsernameForm } from "./_components/username-form";
 import {
   CUSTOM_PACKAGE_ID,
   getPackageById,
@@ -73,20 +74,21 @@ export default async function AccountPage() {
       </h1>
 
       <dl className="mt-6 max-w-md divide-y divide-border rounded-2xl border border-border bg-surface px-5 py-1">
-        <div className="flex items-center justify-between gap-4 py-3.5">
-          <dt className="text-sm text-muted">Username</dt>
-          <dd className="text-sm font-medium text-foreground">
-            {profile?.username ? (
-              <Link
-                href={`/u/${profile.username}`}
-                className="text-accent transition-colors hover:text-accent-hover"
-              >
-                {profile.username}
-              </Link>
-            ) : (
-              "—"
+        <div className="flex flex-col gap-3 py-3.5">
+          <div className="flex items-center justify-between gap-4">
+            <dt className="text-sm text-muted">Username</dt>
+            {profile?.username && (
+              <dd className="text-sm font-medium">
+                <Link
+                  href={`/u/${profile.username}`}
+                  className="text-accent transition-colors hover:text-accent-hover"
+                >
+                  {profile.username}
+                </Link>
+              </dd>
             )}
-          </dd>
+          </div>
+          <UsernameForm currentUsername={profile?.username ?? null} />
         </div>
         <div className="flex items-center justify-between gap-4 py-3.5">
           <dt className="text-sm text-muted">Email</dt>
