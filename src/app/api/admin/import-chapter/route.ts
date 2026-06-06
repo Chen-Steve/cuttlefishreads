@@ -1,9 +1,7 @@
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { isAdminEmail } from "@/lib/admin";
+import { getAdminAccess } from "@/lib/access";
 import { scrapeChapter } from "@/lib/scraper/chapter";
 import { translateChapter } from "@/lib/translate";
 
@@ -20,15 +18,9 @@ type ImportBody = {
   coinCost?: number;
 };
 
-async function isAdmin(): Promise<boolean> {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-  const email = data?.claims?.email as string | undefined;
-  return Boolean(data?.claims) && isAdminEmail(email);
-}
-
 export async function POST(request: Request) {
-  if (!(await isAdmin())) {
+  const access = await getAdminAccess();
+  if (!access?.hasWorkspace) {
     return Response.json({ ok: false, error: "Not authorized." }, { status: 403 });
   }
 
@@ -57,11 +49,14 @@ export async function POST(request: Request) {
 
   const { data: novel } = await admin
     .from("novels")
-    .select("id, slug")
+    .select("id, slug, publisher_id")
     .eq("id", novelId)
     .maybeSingle();
   if (!novel) {
     return Response.json({ ok: false, error: "That novel no longer exists." }, { status: 404 });
+  }
+  if (!access.isMasterAdmin && novel.publisher_id !== access.userId) {
+    return Response.json({ ok: false, error: "Not authorized." }, { status: 403 });
   }
 
   // Scrape first — cheap, and we always need the "next chapter" link even when

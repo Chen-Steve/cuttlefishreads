@@ -1,17 +1,30 @@
 import type { Metadata } from "next";
 import { AuthForm } from "../_components/auth-form";
-import { signup } from "../actions";
+import { signup, signInWithGoogle } from "../actions";
 
 export const metadata: Metadata = {
   title: "Sign Up",
 };
 
-export default function SignupPage() {
+export default async function SignupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ redirect?: string }>;
+}) {
+  const { redirect: redirectTo } = await searchParams;
+  const safeRedirect =
+    redirectTo?.startsWith("/") ? redirectTo : undefined;
+
   return (
     <AuthForm
       action={signup}
+      hiddenFields={safeRedirect ? { redirectTo: safeRedirect } : undefined}
       title="Create your account"
-      subtitle="Start your shelf and follow the stories you love."
+      subtitle={
+        safeRedirect === "/apply"
+          ? "Create a free account and you'll be taken straight to the translator application."
+          : "Start your shelf and follow the stories you love."
+      }
       fields={[
         {
           name: "username",
@@ -46,6 +59,8 @@ export default function SignupPage() {
       footerPrompt="Already have an account?"
       footerHref="/login"
       footerLinkLabel="Sign in"
+      googleAction={signInWithGoogle}
+      googleRedirectTo={safeRedirect}
     />
   );
 }

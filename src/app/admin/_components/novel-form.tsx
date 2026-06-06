@@ -30,7 +30,13 @@ export type NovelFormValues = {
   publisher_username: string | null;
 };
 
-export function NovelForm({ novel }: { novel?: NovelFormValues }) {
+export function NovelForm({
+  novel,
+  canEditAttribution = true,
+}: {
+  novel?: NovelFormValues;
+  canEditAttribution?: boolean;
+}) {
   const isEdit = Boolean(novel);
   const [state, action, pending] = useActionState<AdminState, FormData>(
     isEdit ? updateNovel.bind(null, novel!.id) : createNovel,
@@ -62,32 +68,40 @@ export function NovelForm({ novel }: { novel?: NovelFormValues }) {
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="novel-author" className={labelClass}>
-            Original author
-          </label>
-          <input
-            id="novel-author"
-            name="originalAuthor"
-            defaultValue={novel?.original_author ?? ""}
-            placeholder="Original author name"
-            className={inputClass}
-          />
+      {canEditAttribution && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="novel-author" className={labelClass}>
+              Original author
+            </label>
+            <input
+              id="novel-author"
+              name="originalAuthor"
+              defaultValue={novel?.original_author ?? ""}
+              placeholder="Original author name"
+              className={inputClass}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="novel-translator" className={labelClass}>
+              Translator
+            </label>
+            <input
+              id="novel-translator"
+              name="translator"
+              defaultValue={novel?.translator ?? ""}
+              placeholder="Translator name"
+              className={inputClass}
+            />
+          </div>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="novel-translator" className={labelClass}>
-            Translator
-          </label>
-          <input
-            id="novel-translator"
-            name="translator"
-            defaultValue={novel?.translator ?? ""}
-            placeholder="Translator name"
-            className={inputClass}
-          />
-        </div>
-      </div>
+      )}
+
+      {!canEditAttribution && (
+        <p className="rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs text-muted">
+          This novel will be credited to you as the translator.
+        </p>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="novel-description" className={labelClass}>
@@ -157,21 +171,23 @@ export function NovelForm({ novel }: { novel?: NovelFormValues }) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="novel-publisher" className={labelClass}>
-          Publisher username
-        </label>
-        <input
-          id="novel-publisher"
-          name="publisherUsername"
-          defaultValue={novel?.publisher_username ?? ""}
-          placeholder="Username of the publisher (leave blank for none)"
-          className={inputClass}
-        />
-        <span className="text-xs text-muted">
-          The publisher can read all chapters of this novel for free.
-        </span>
-      </div>
+      {canEditAttribution && (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="novel-publisher" className={labelClass}>
+            Publisher username
+          </label>
+          <input
+            id="novel-publisher"
+            name="publisherUsername"
+            defaultValue={novel?.publisher_username ?? ""}
+            placeholder="Username of the publisher (leave blank for none)"
+            className={inputClass}
+          />
+          <span className="text-xs text-muted">
+            The publisher can read all chapters of this novel for free.
+          </span>
+        </div>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="novel-cover" className={labelClass}>

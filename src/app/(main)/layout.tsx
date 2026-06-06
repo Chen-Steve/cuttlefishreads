@@ -24,7 +24,24 @@ export default async function MainLayout({
       .maybeSingle();
     username = profile?.username ?? null;
     coins = profile?.coins ?? 0;
+
+    // Master admin check (env-based, always available).
     isAdmin = isAdminEmail(data.claims.email as string | undefined);
+
+    // Translator role check — only possible after translators.sql has been run.
+    // Fail silently so a missing column never breaks the header for everyone.
+    if (!isAdmin) {
+      try {
+        const { data: roleRow } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", data.claims.sub)
+          .maybeSingle();
+        if (roleRow?.role === "translator") isAdmin = true;
+      } catch {
+        // column not yet added — ignore
+      }
+    }
   }
 
   return (

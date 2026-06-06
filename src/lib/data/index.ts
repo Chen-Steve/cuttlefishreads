@@ -213,6 +213,30 @@ export async function getFeaturedNovels(): Promise<Novel[]> {
   return novels.slice(0, 3);
 }
 
+// Records a unique view for a novel. The visitor key is the logged-in user id
+// when available, otherwise the anonymous cf_vid cookie (set in middleware).
+// The unique (novel_id, visitor_key) constraint dedupes repeat views, so this
+// is a no-op after the first view from a given visitor.
+export async function recordNovelView(slug: string): Promise<void> {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const { data: auth } = await supabase.auth.getClaims();
+  const userId = (auth?.claims?.sub as string | undefined) ?? null;
+  const visitorKey = userId ?? cookieStore.get("cf_vid")?.value ?? null;
+  if (!visitorKey) return;
+
+  const novel = await fetchNovelIdBySlug(slug);
+  if (!novel) return;
+
+  const admin = createAdminClient();
+  await admin
+    .from("novel_views")
+    .upsert(
+      { novel_id: novel.id, novel_slug: slug, visitor_key: visitorKey },
+      { onConflict: "novel_id,visitor_key", ignoreDuplicates: true },
+    );
+}
+
 export async function getBookmarkedSlugs(): Promise<Set<string>> {
   const supabase = createClient(await cookies());
   const { data: auth } = await supabase.auth.getClaims();
@@ -446,15 +470,24 @@ type DbLikeRow = {
   user_id: string;
 };
 
-type CurrentUser = { id: string; isAdmin: boolean };
+type CurrentUser = { id: string; isAdmin: boolean; role: "user" | "translator" };
 
 async function getCurrentUser(): Promise<CurrentUser | null> {
   const supabase = createClient(await cookies());
   const { data: auth } = await supabase.auth.getClaims();
   if (!auth?.claims) return null;
+
+  const id = auth.claims.sub as string;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", id)
+    .maybeSingle();
+
   return {
-    id: auth.claims.sub as string,
+    id,
     isAdmin: isAdminEmail(auth.claims.email as string | undefined),
+    role: profile?.role === "translator" ? "translator" : "user",
   };
 }
 

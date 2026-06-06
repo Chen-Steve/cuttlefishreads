@@ -4,6 +4,7 @@ import { PlusCircle } from "lucide-react";
 
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { getAdminAccess } from "@/lib/access";
 import { NovelsGrid, type NovelRow } from "./_components/novels-grid";
 
 export const metadata: Metadata = {
@@ -16,12 +17,20 @@ type RawNovel = Omit<NovelRow, "chapter_count"> & {
 };
 
 export default async function AdminPage() {
+  const access = await getAdminAccess();
   const admin = createAdminClient();
-  const { data } = await admin
+
+  let query = admin
     .from("novels")
     .select("id, title, slug, status, cover_url, genres, updated_at, chapters(count)")
-    .order("updated_at", { ascending: false })
-    .returns<RawNovel[]>();
+    .order("updated_at", { ascending: false });
+
+  // Translators only see novels they own; master admins see everything.
+  if (access && !access.isMasterAdmin) {
+    query = query.eq("publisher_id", access.userId);
+  }
+
+  const { data } = await query.returns<RawNovel[]>();
 
   const novels: NovelRow[] = (data ?? []).map((n) => ({
     id: n.id,

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Feather } from "lucide-react";
 import { SITE } from "@/lib/constants";
 
 const linkGroups = [
@@ -16,6 +17,13 @@ const linkGroups = [
     links: [
       { href: "/login", label: "Login" },
       { href: "/signup", label: "Sign up" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { href: "/privacy", label: "Privacy policy" },
+      { href: "/terms", label: "Terms of service" },
     ],
   },
 ];
@@ -48,9 +56,16 @@ export function SiteFooter() {
             <p className="mt-4 text-sm leading-relaxed text-muted">
               {SITE.description}.
             </p>
+            <Link
+              href="/apply"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent transition-colors hover:bg-accent/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              <Feather className="size-3.5" strokeWidth={1.75} aria-hidden />
+              Apply to join
+            </Link>
           </div>
 
-          <div className="grid grid-cols-2 gap-10 sm:gap-16">
+          <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 sm:gap-16">
             {linkGroups.map((group) => (
               <nav key={group.title} aria-label={group.title}>
                 <h2 className="text-sm font-semibold text-foreground">

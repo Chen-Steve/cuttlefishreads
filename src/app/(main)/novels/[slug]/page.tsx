@@ -16,6 +16,7 @@ import {
   getNovel,
   isNovelBookmarked,
   isUserAuthenticated,
+  recordNovelView,
 } from "@/lib/data";
 import { novelDescription } from "@/lib/seo";
 
@@ -92,6 +93,9 @@ export default async function NovelDetailPage({
   if (!novel) {
     notFound();
   }
+
+  // Fire-and-forget unique view tracking; never block rendering on it.
+  void recordNovelView(slug);
 
   const firstChapter = chapters[0];
   const authorLine = [

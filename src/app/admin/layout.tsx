@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
-import { createClient } from "@/utils/supabase/server";
-import { isAdminEmail } from "@/lib/admin";
+import { getAdminAccess } from "@/lib/access";
+import { AdminNav } from "./_components/admin-nav";
 
 export const metadata: Metadata = {
   robots: {
@@ -17,11 +16,15 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
+  const access = await getAdminAccess();
 
-  if (!data?.claims) redirect("/login");
-  if (!isAdminEmail(data.claims.email as string | undefined)) notFound();
+  if (!access) redirect("/login");
+  if (!access.hasWorkspace) notFound();
 
-  return <main className="flex-1">{children}</main>;
+  return (
+    <main className="flex-1">
+      <AdminNav isMasterAdmin={access.isMasterAdmin} />
+      {children}
+    </main>
+  );
 }

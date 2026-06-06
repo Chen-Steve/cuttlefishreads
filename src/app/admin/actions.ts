@@ -1,12 +1,10 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { isAdminEmail } from "@/lib/admin";
+import { getAdminAccess, type AdminAccess } from "@/lib/access";
 import { slugify } from "@/lib/utils";
 import { GENRES, type Genre } from "@/lib/constants";
 
@@ -15,15 +13,28 @@ export type AdminState = { error?: string };
 const NOVEL_STATUSES = ["ongoing", "completed", "hiatus"] as const;
 type NovelStatus = (typeof NOVEL_STATUSES)[number];
 
-async function requireAdmin(): Promise<AdminState | null> {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-  const email = data?.claims?.email as string | undefined;
-  if (!data?.claims || !isAdminEmail(email)) {
+type WorkspaceAuth = { access?: AdminAccess; error?: string };
+
+// Allows master admins and approved translators into the shared workspace.
+async function requireWorkspace(): Promise<WorkspaceAuth> {
+  const access = await getAdminAccess();
+  if (!access?.hasWorkspace) {
     return { error: "You are not authorized to perform this action." };
   }
-  return null;
+  return { access };
 }
+
+// Translators may only act on novels they own (publisher_id === their id).
+// Master admins can act on any novel.
+function ownsNovel(access: AdminAccess, publisherId: string | null): boolean {
+  return access.isMasterAdmin || publisherId === access.userId;
+}
+
+type ChapterWithNovel = {
+  id: string;
+  novel_id: string;
+  novels: { publisher_id: string | null } | null;
+};
 
 function parseGenres(formData: FormData): Genre[] {
   const allowed = new Set<string>(GENRES);
@@ -72,14 +83,13 @@ export async function createNovel(
   _prev: AdminState,
   formData: FormData,
 ): Promise<AdminState> {
-  const denied = await requireAdmin();
-  if (denied) return denied;
+  const auth = await requireWorkspace();
+  if (!auth.access) return { error: auth.error };
+  const { access } = auth;
 
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { error: "Title is required." };
 
-  const originalAuthor = String(formData.get("originalAuthor") ?? "").trim();
-  const translator = String(formData.get("translator") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const statusRaw = String(formData.get("status") ?? "ongoing");
   const status: NovelStatus = NOVEL_STATUSES.includes(statusRaw as NovelStatus)
@@ -88,19 +98,33 @@ export async function createNovel(
   const genres = parseGenres(formData);
   const tags = parseTags(String(formData.get("tags") ?? ""));
   const cover = formData.get("cover");
-  const publisherUsername = String(formData.get("publisherUsername") ?? "").trim();
 
   const admin = createAdminClient();
 
+  // Translators get fixed attribution: the novel is theirs, the translator name
+  // is their own username, and there is no separate original-author field. Only
+  // master admins can set attribution and a publisher manually.
+  let originalAuthor: string;
+  let translator: string;
   let publisherId: string | null = null;
-  if (publisherUsername) {
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("username", publisherUsername)
-      .maybeSingle();
-    if (!profile) return { error: `No user found with username "${publisherUsername}".` };
-    publisherId = profile.id;
+
+  if (access.isMasterAdmin) {
+    originalAuthor = String(formData.get("originalAuthor") ?? "").trim();
+    translator = String(formData.get("translator") ?? "").trim();
+    const publisherUsername = String(formData.get("publisherUsername") ?? "").trim();
+    if (publisherUsername) {
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("id")
+        .eq("username", publisherUsername)
+        .maybeSingle();
+      if (!profile) return { error: `No user found with username "${publisherUsername}".` };
+      publisherId = profile.id;
+    }
+  } else {
+    originalAuthor = "";
+    translator = access.username ?? "";
+    publisherId = access.userId;
   }
 
   const base = slugify(title) || "novel";
@@ -152,14 +176,13 @@ export async function updateNovel(
   _prev: AdminState,
   formData: FormData,
 ): Promise<AdminState> {
-  const denied = await requireAdmin();
-  if (denied) return denied;
+  const auth = await requireWorkspace();
+  if (!auth.access) return { error: auth.error };
+  const { access } = auth;
 
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { error: "Title is required." };
 
-  const originalAuthor = String(formData.get("originalAuthor") ?? "").trim();
-  const translator = String(formData.get("translator") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const statusRaw = String(formData.get("status") ?? "ongoing");
   const status: NovelStatus = NOVEL_STATUSES.includes(statusRaw as NovelStatus)
@@ -168,28 +191,45 @@ export async function updateNovel(
   const genres = parseGenres(formData);
   const tags = parseTags(String(formData.get("tags") ?? ""));
   const cover = formData.get("cover");
-  const publisherUsername = String(formData.get("publisherUsername") ?? "").trim();
 
   const admin = createAdminClient();
 
-  let publisherId: string | null = null;
-  if (publisherUsername) {
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("username", publisherUsername)
-      .maybeSingle();
-    if (!profile) return { error: `No user found with username "${publisherUsername}".` };
-    publisherId = profile.id;
-  }
-
   const { data: existing } = await admin
     .from("novels")
-    .select("id, slug, cover_url")
+    .select("id, slug, cover_url, original_author, translator, publisher_id")
     .eq("id", novelId)
     .maybeSingle();
 
   if (!existing) return { error: "That novel no longer exists." };
+  if (!ownsNovel(access, existing.publisher_id)) {
+    return { error: "You can only manage your own novels." };
+  }
+
+  // Translators cannot change attribution or the owning publisher — those stay
+  // pinned to their account. Master admins can edit everything.
+  let originalAuthor: string;
+  let translator: string;
+  let publisherId: string | null;
+
+  if (access.isMasterAdmin) {
+    originalAuthor = String(formData.get("originalAuthor") ?? "").trim();
+    translator = String(formData.get("translator") ?? "").trim();
+    const publisherUsername = String(formData.get("publisherUsername") ?? "").trim();
+    publisherId = null;
+    if (publisherUsername) {
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("id")
+        .eq("username", publisherUsername)
+        .maybeSingle();
+      if (!profile) return { error: `No user found with username "${publisherUsername}".` };
+      publisherId = profile.id;
+    }
+  } else {
+    originalAuthor = "";
+    translator = access.username ?? existing.translator ?? "";
+    publisherId = existing.publisher_id;
+  }
 
   let coverUrl = existing.cover_url;
   if (cover instanceof File && cover.size > 0) {
@@ -229,18 +269,21 @@ export async function updateNovel(
 }
 
 export async function deleteNovel(novelId: string): Promise<AdminState> {
-  const denied = await requireAdmin();
-  if (denied) return denied;
+  const auth = await requireWorkspace();
+  if (!auth.access) return { error: auth.error };
 
   const admin = createAdminClient();
 
   const { data: existing } = await admin
     .from("novels")
-    .select("slug")
+    .select("slug, publisher_id")
     .eq("id", novelId)
     .maybeSingle();
 
   if (!existing) return { error: "That novel no longer exists." };
+  if (!ownsNovel(auth.access, existing.publisher_id)) {
+    return { error: "You can only manage your own novels." };
+  }
 
   const { error } = await admin.from("novels").delete().eq("id", novelId);
 
@@ -259,8 +302,8 @@ export async function createChapter(
   _prev: AdminState,
   formData: FormData,
 ): Promise<AdminState> {
-  const denied = await requireAdmin();
-  if (denied) return denied;
+  const auth = await requireWorkspace();
+  if (!auth.access) return { error: auth.error };
 
   const novelId = String(formData.get("novelId") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
@@ -291,10 +334,13 @@ export async function createChapter(
 
   const { data: novel } = await admin
     .from("novels")
-    .select("id, title")
+    .select("id, title, publisher_id")
     .eq("id", novelId)
     .maybeSingle();
   if (!novel) return { error: "That novel no longer exists." };
+  if (!ownsNovel(auth.access, novel.publisher_id)) {
+    return { error: "You can only manage your own novels." };
+  }
 
   let number = Math.floor(Number(formData.get("number") ?? 0));
   if (!Number.isFinite(number) || number < 1) {
@@ -338,17 +384,20 @@ export async function setChapterPublished(
   chapterId: string,
   published: boolean,
 ): Promise<AdminState> {
-  const denied = await requireAdmin();
-  if (denied) return denied;
+  const auth = await requireWorkspace();
+  if (!auth.access) return { error: auth.error };
 
   const admin = createAdminClient();
 
   const { data: existing } = await admin
     .from("chapters")
-    .select("id, novel_id")
+    .select("id, novel_id, novels(publisher_id)")
     .eq("id", chapterId)
-    .maybeSingle();
+    .maybeSingle<ChapterWithNovel>();
   if (!existing) return { error: "Chapter not found." };
+  if (!ownsNovel(auth.access, existing.novels?.publisher_id ?? null)) {
+    return { error: "You can only manage your own novels." };
+  }
 
   const { error } = await admin
     .from("chapters")
@@ -369,10 +418,20 @@ export async function setChapterPublished(
 }
 
 export async function publishAllChapters(novelId: string): Promise<AdminState> {
-  const denied = await requireAdmin();
-  if (denied) return denied;
+  const auth = await requireWorkspace();
+  if (!auth.access) return { error: auth.error };
 
   const admin = createAdminClient();
+
+  const { data: novel } = await admin
+    .from("novels")
+    .select("publisher_id")
+    .eq("id", novelId)
+    .maybeSingle();
+  if (!novel) return { error: "That novel no longer exists." };
+  if (!ownsNovel(auth.access, novel.publisher_id)) {
+    return { error: "You can only manage your own novels." };
+  }
 
   const { error } = await admin
     .from("chapters")
@@ -394,17 +453,20 @@ export async function publishAllChapters(novelId: string): Promise<AdminState> {
 }
 
 export async function deleteChapter(chapterId: string): Promise<AdminState> {
-  const denied = await requireAdmin();
-  if (denied) return denied;
+  const auth = await requireWorkspace();
+  if (!auth.access) return { error: auth.error };
 
   const admin = createAdminClient();
 
   const { data: existing } = await admin
     .from("chapters")
-    .select("id, novel_id")
+    .select("id, novel_id, novels(publisher_id)")
     .eq("id", chapterId)
-    .maybeSingle();
+    .maybeSingle<ChapterWithNovel>();
   if (!existing) return { error: "Chapter not found." };
+  if (!ownsNovel(auth.access, existing.novels?.publisher_id ?? null)) {
+    return { error: "You can only manage your own novels." };
+  }
 
   const { error } = await admin.from("chapters").delete().eq("id", chapterId);
   if (error) return { error: error.message };
@@ -424,8 +486,8 @@ export async function updateChapter(
   _prev: AdminState,
   formData: FormData,
 ): Promise<AdminState> {
-  const denied = await requireAdmin();
-  if (denied) return denied;
+  const auth = await requireWorkspace();
+  if (!auth.access) return { error: auth.error };
 
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
@@ -457,11 +519,14 @@ export async function updateChapter(
 
   const { data: existing } = await admin
     .from("chapters")
-    .select("id, novel_id")
+    .select("id, novel_id, novels(publisher_id)")
     .eq("id", chapterId)
-    .maybeSingle();
+    .maybeSingle<ChapterWithNovel>();
 
   if (!existing) return { error: "Chapter not found." };
+  if (!ownsNovel(auth.access, existing.novels?.publisher_id ?? null)) {
+    return { error: "You can only manage your own novels." };
+  }
 
   const { error } = await admin
     .from("chapters")

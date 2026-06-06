@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { getAdminAccess } from "@/lib/access";
 import { ChapterForm } from "../../../../../_components/chapter-form";
 
 export const metadata: Metadata = {
@@ -29,10 +30,11 @@ export default async function EditChapterPage({
 }) {
   const { id, chapterId } = await params;
 
+  const access = await getAdminAccess();
   const admin = createAdminClient();
 
   const [{ data: novel }, { data: chapter }] = await Promise.all([
-    admin.from("novels").select("id, title").eq("id", id).maybeSingle(),
+    admin.from("novels").select("id, title, publisher_id").eq("id", id).maybeSingle(),
     admin
       .from("chapters")
       .select("id, number, title, content, is_free, coin_cost, unlock_at")
@@ -42,6 +44,9 @@ export default async function EditChapterPage({
   ]);
 
   if (!novel || !chapter) notFound();
+  if (!access || (!access.isMasterAdmin && novel.publisher_id !== access.userId)) {
+    notFound();
+  }
 
   const row = chapter as ChapterRow;
 

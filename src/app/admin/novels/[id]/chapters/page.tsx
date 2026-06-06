@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { getAdminAccess } from "@/lib/access";
 import {
   ChapterRowActions,
   PublishAllButton,
@@ -40,14 +41,18 @@ export default async function ChaptersListPage({
 }) {
   const { id } = await params;
 
+  const access = await getAdminAccess();
   const admin = createAdminClient();
   const { data: novel } = await admin
     .from("novels")
-    .select("id, title")
+    .select("id, title, publisher_id")
     .eq("id", id)
     .maybeSingle();
 
   if (!novel) notFound();
+  if (!access || (!access.isMasterAdmin && novel.publisher_id !== access.userId)) {
+    notFound();
+  }
 
   const { data: chapters } = await admin
     .from("chapters")

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { getAdminAccess } from "@/lib/access";
 import { NovelForm } from "../../../_components/novel-form";
 
 export const metadata: Metadata = {
@@ -19,6 +20,7 @@ export default async function EditNovelPage({
 }) {
   const { id } = await params;
 
+  const access = await getAdminAccess();
   const admin = createAdminClient();
   const { data: novel } = await admin
     .from("novels")
@@ -29,6 +31,9 @@ export default async function EditNovelPage({
     .maybeSingle();
 
   if (!novel) notFound();
+  if (!access || (!access.isMasterAdmin && novel.publisher_id !== access.userId)) {
+    notFound();
+  }
 
   let publisherUsername: string | null = null;
   if (novel.publisher_id) {
@@ -52,7 +57,7 @@ export default async function EditNovelPage({
         Back to novels
       </Link>
       <div className="mt-4 rounded-2xl border border-border bg-surface p-5 sm:p-6">
-        <NovelForm novel={novelFormValues} />
+        <NovelForm novel={novelFormValues} canEditAttribution={access.isMasterAdmin} />
       </div>
     </PageContainer>
   );

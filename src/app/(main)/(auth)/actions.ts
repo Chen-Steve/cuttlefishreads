@@ -19,6 +19,9 @@ export async function login(
     return { error: "Enter your email and password." };
   }
 
+  const redirectTo = String(formData.get("redirectTo") ?? "").trim();
+  const safeRedirect = redirectTo.startsWith("/") ? redirectTo : "/account";
+
   const supabase = createClient(await cookies());
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
@@ -27,7 +30,7 @@ export async function login(
   }
 
   revalidatePath("/", "layout");
-  redirect("/account");
+  redirect(safeRedirect);
 }
 
 export async function signup(
@@ -47,6 +50,9 @@ export async function signup(
     return { error: "Passwords do not match." };
   }
 
+  const redirectTo = String(formData.get("redirectTo") ?? "").trim();
+  const safeRedirect = redirectTo.startsWith("/") ? redirectTo : "/";
+
   const supabase = createClient(await cookies());
   const { error } = await supabase.auth.signUp({
     email,
@@ -61,7 +67,7 @@ export async function signup(
   }
 
   revalidatePath("/", "layout");
-  redirect("/");
+  redirect(safeRedirect);
 }
 
 export async function requestPasswordReset(
@@ -95,4 +101,26 @@ export async function signOut(): Promise<void> {
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/login");
+}
+
+export async function signInWithGoogle(redirectTo?: string): Promise<void> {
+  const origin = (await headers()).get("origin") ?? "";
+  const callbackUrl = new URL("/auth/callback", origin);
+  if (redirectTo?.startsWith("/")) {
+    callbackUrl.searchParams.set("next", redirectTo);
+  }
+
+  const supabase = createClient(await cookies());
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: callbackUrl.toString() },
+  });
+
+  if (error || !data.url) {
+    redirect(
+      `/login?error=${encodeURIComponent("Google sign-in failed. Please try again.")}`
+    );
+  }
+
+  redirect(data.url);
 }

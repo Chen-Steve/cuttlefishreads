@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { getAdminAccess } from "@/lib/access";
 import { ChapterForm } from "../../../../_components/chapter-form";
 
 export const metadata: Metadata = {
@@ -18,14 +19,18 @@ export default async function AddChapterPage({
 }) {
   const { id } = await params;
 
+  const access = await getAdminAccess();
   const admin = createAdminClient();
   const { data: novel } = await admin
     .from("novels")
-    .select("id, title")
+    .select("id, title, publisher_id")
     .eq("id", id)
     .maybeSingle();
 
   if (!novel) notFound();
+  if (!access || (!access.isMasterAdmin && novel.publisher_id !== access.userId)) {
+    notFound();
+  }
 
   return (
     <PageContainer as="div" width="prose">
