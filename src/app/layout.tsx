@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { nationalPark } from "@/lib/fonts";
 import { SITE } from "@/lib/constants";
 import { siteUrl } from "@/lib/seo";
@@ -69,6 +70,19 @@ export default function RootLayout({
       lang="en"
       className={`${nationalPark.className} ${nationalPark.variable} h-full antialiased`}
     >
+      <Script
+        async
+        src="https://www.googletagmanager.com/gtag/js?id=G-LJ3SXGLR01"
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-LJ3SXGLR01');
+        `}
+      </Script>
       <body className="flex min-h-full flex-col bg-background text-foreground">
         {children}
       </body>
