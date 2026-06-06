@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BookOpen } from "lucide-react";
+import { CommentSection } from "@/components/comments";
 import { BookmarkButton, ChapterList, NovelCover } from "@/components/novel";
 import { PageContainer } from "@/components/page-container";
+import { renderInlineMarkdown, splitTextParagraphs } from "@/components/reader/chapter-content";
 import { Badge } from "@/components/ui/badge";
 import {
   getChapters,
@@ -94,6 +96,9 @@ export default async function NovelDetailPage({
   ]
     .filter(Boolean)
     .join(" · ");
+  const synopsisParagraphs = novel.synopsis
+    ? splitTextParagraphs(novel.synopsis)
+    : [];
 
   return (
     <PageContainer as="article" width="prose">
@@ -123,10 +128,14 @@ export default async function NovelDetailPage({
             ))}
           </div>
 
-          {novel.synopsis ? (
-            <p className="mt-5 text-sm leading-relaxed text-foreground/90">
-              {novel.synopsis}
-            </p>
+          {synopsisParagraphs.length > 0 ? (
+            <div className="mt-5 space-y-3 text-sm leading-relaxed text-foreground/90">
+              {synopsisParagraphs.map((paragraph, index) => (
+                <p key={index} className="whitespace-pre-wrap">
+                  {renderInlineMarkdown(paragraph)}
+                </p>
+              ))}
+            </div>
           ) : null}
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-start">
@@ -156,6 +165,13 @@ export default async function NovelDetailPage({
           </span>
         </h2>
         <ChapterList slug={novel.slug} chapters={chapters} />
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-4 text-lg font-semibold tracking-tight text-foreground">
+          Comments
+        </h2>
+        <CommentSection mode="novel" novelSlug={novel.slug} />
       </section>
     </PageContainer>
   );

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CommentSection } from "@/components/comments";
 import { PageContainer } from "@/components/page-container";
 import { ChapterContent, ChapterUnlockGate, ReaderNav } from "@/components/reader";
 import {
@@ -127,7 +128,22 @@ export default async function ChapterReaderPage({
         <ChapterContent paragraphs={current.content} />
       )}
 
-      <hr className="my-10 border-border" />
+      {!current.locked ? (
+        <>
+          <hr className="my-10 border-border" />
+
+          <section className="mb-10">
+            <h2 className="mb-4 text-lg font-semibold tracking-tight text-foreground">
+              Comments
+            </h2>
+            <CommentSection
+              mode="chapter"
+              novelSlug={slug}
+              chapterNumber={chapterNumber}
+            />
+          </section>
+        </>
+      ) : null}
 
       <ReaderNav
         slug={slug}

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 const inlineMarkdownPattern = /(\*\*[^*]+?\*\*|_[^_]+?_)/g;
 
-function renderInlineMarkdown(text: string): ReactNode[] {
+export function renderInlineMarkdown(text: string): ReactNode[] {
   return text.split(inlineMarkdownPattern).map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       return <strong key={index}>{part.slice(2, -2)}</strong>;
@@ -14,6 +14,15 @@ function renderInlineMarkdown(text: string): ReactNode[] {
 
     return part;
   });
+}
+
+export function splitTextParagraphs(text: string): string[] {
+  return text
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split(/\n\n+/)
+    .map((paragraph) => paragraph.replace(/\s+$/, ""))
+    .filter((paragraph) => paragraph.trim().length > 0);
 }
 
 export function ChapterContent({ paragraphs }: { paragraphs: string[] }) {

@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 
 import type { Genre } from "@/lib/constants";
-import type { Chapter, ChapterSummary, Novel } from "@/types";
+import type { Chapter, ChapterSummary, Novel, NovelComment } from "@/types";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -368,4 +368,198 @@ export async function isUserAuthenticated(): Promise<boolean> {
   const supabase = createClient(await cookies());
   const { data } = await supabase.auth.getClaims();
   return Boolean(data?.claims);
+}
+
+type DbCommentRow = {
+  id: string;
+  novel_slug: string;
+  chapter_number: number | null;
+  body: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type DbLikeRow = {
+  comment_id: string;
+  user_id: string;
+};
+
+async function getCurrentUserId(): Promise<string | null> {
+  const supabase = createClient(await cookies());
+  const { data: auth } = await supabase.auth.getClaims();
+  return auth?.claims?.sub ?? null;
+}
+
+async function fetchProfileUsernames(
+  userIds: string[],
+): Promise<Map<string, string>> {
+  if (userIds.length === 0) return new Map();
+
+  const supabase = createClient(await cookies());
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, username")
+    .in("id", userIds);
+
+  if (error) {
+    console.error("fetchProfileUsernames:", error);
+    return new Map();
+  }
+
+  return new Map(
+    (data ?? []).map((profile) => [
+      profile.id,
+      profile.username ?? "Unknown",
+    ]),
+  );
+}
+
+function mapCommentRows(
+  rows: DbCommentRow[],
+  likes: DbLikeRow[],
+  usernames: Map<string, string>,
+  currentUserId: string | null,
+): NovelComment[] {
+  const likeCountByComment = new Map<string, number>();
+  const likedByCurrentUser = new Set<string>();
+
+  for (const like of likes) {
+    likeCountByComment.set(
+      like.comment_id,
+      (likeCountByComment.get(like.comment_id) ?? 0) + 1,
+    );
+    if (currentUserId && like.user_id === currentUserId) {
+      likedByCurrentUser.add(like.comment_id);
+    }
+  }
+
+  return rows.map((row) => ({
+    id: row.id,
+    novelSlug: row.novel_slug,
+    chapterNumber: row.chapter_number,
+    body: row.body,
+    userId: row.user_id,
+    username: usernames.get(row.user_id) ?? "Unknown",
+    likeCount: likeCountByComment.get(row.id) ?? 0,
+    likedByCurrentUser: likedByCurrentUser.has(row.id),
+    isOwn: currentUserId === row.user_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }));
+}
+
+async function fetchCommentLikes(commentIds: string[]): Promise<DbLikeRow[]> {
+  if (commentIds.length === 0) return [];
+
+  const supabase = createClient(await cookies());
+  const { data, error } = await supabase
+    .from("novel_comment_likes")
+    .select("comment_id, user_id")
+    .in("comment_id", commentIds);
+
+  if (error) {
+    console.error("fetchCommentLikes:", error);
+    return [];
+  }
+
+  return data ?? [];
+}
+
+export async function getChapterComments(
+  slug: string,
+  chapterNumber: number,
+): Promise<NovelComment[]> {
+  const supabase = createClient(await cookies());
+  const currentUserId = await getCurrentUserId();
+
+  const { data, error } = await supabase
+    .from("novel_comments")
+    .select(
+      "id, novel_slug, chapter_number, body, user_id, created_at, updated_at",
+    )
+    .eq("novel_slug", slug)
+    .eq("chapter_number", chapterNumber)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("getChapterComments:", error);
+    return [];
+  }
+
+  const rows = (data ?? []) as DbCommentRow[];
+  const userIds = [...new Set(rows.map((row) => row.user_id))];
+  const [likes, usernames] = await Promise.all([
+    fetchCommentLikes(rows.map((row) => row.id)),
+    fetchProfileUsernames(userIds),
+  ]);
+  return mapCommentRows(rows, likes, usernames, currentUserId);
+}
+
+export type NovelCommentsResult = {
+  comments: NovelComment[];
+  hasMore: boolean;
+};
+
+export async function getNovelComments(
+  slug: string,
+  options: { limit?: number; offset?: number } = {},
+): Promise<NovelCommentsResult> {
+  const limit = options.limit ?? 50;
+  const offset = options.offset ?? 0;
+  const supabase = createClient(await cookies());
+  const currentUserId = await getCurrentUserId();
+
+  const { data, error } = await supabase
+    .from("novel_comments")
+    .select(
+      "id, novel_slug, chapter_number, body, user_id, created_at, updated_at",
+    )
+    .eq("novel_slug", slug)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit);
+
+  if (error) {
+    console.error("getNovelComments:", error);
+    return { comments: [], hasMore: false };
+  }
+
+  const rows = (data ?? []) as DbCommentRow[];
+  const hasMore = rows.length > limit;
+  const pageRows = hasMore ? rows.slice(0, limit) : rows;
+  const userIds = [...new Set(pageRows.map((row) => row.user_id))];
+  const [likes, usernames] = await Promise.all([
+    fetchCommentLikes(pageRows.map((row) => row.id)),
+    fetchProfileUsernames(userIds),
+  ]);
+
+  return {
+    comments: mapCommentRows(pageRows, likes, usernames, currentUserId),
+    hasMore,
+  };
+}
+
+export type ReadableChapter = {
+  number: number;
+  title: string;
+};
+
+export async function getReadableChapters(
+  slug: string,
+): Promise<ReadableChapter[]> {
+  const chapters = await getChapters(slug);
+  return chapters
+    .filter((chapter) => !chapter.locked)
+    .map((chapter) => ({
+      number: chapter.number,
+      title: chapter.title,
+    }));
+}
+
+export async function isChapterReadable(
+  slug: string,
+  chapterNumber: number,
+): Promise<boolean> {
+  const chapter = await getChapter(slug, chapterNumber);
+  return Boolean(chapter && !chapter.locked);
 }

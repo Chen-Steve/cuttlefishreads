@@ -43,4 +43,18 @@ export interface User {
   library: string[];
 }
 
+export interface NovelComment {
+  id: string;
+  novelSlug: string;
+  chapterNumber: number | null;
+  body: string;
+  userId: string;
+  username: string;
+  likeCount: number;
+  likedByCurrentUser: boolean;
+  isOwn: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type { Genre };

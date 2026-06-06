@@ -3,7 +3,30 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
+import { getNovelComments, isChapterReadable } from "@/lib/data";
+import type { NovelComment } from "@/types";
 import { createClient } from "@/utils/supabase/server";
+
+const MAX_COMMENT_LENGTH = 2000;
+
+function validateCommentBody(body: string): string | null {
+  const trimmed = body.trim();
+  if (!trimmed) return "Comment cannot be empty.";
+  if (trimmed.length > MAX_COMMENT_LENGTH) {
+    return `Comment must be ${MAX_COMMENT_LENGTH} characters or fewer.`;
+  }
+  return null;
+}
+
+function revalidateCommentPaths(
+  novelSlug: string,
+  chapterNumber?: number | null,
+) {
+  revalidatePath(`/novels/${novelSlug}`);
+  if (chapterNumber != null) {
+    revalidatePath(`/novels/${novelSlug}/${chapterNumber}`);
+  }
+}
 
 export type UnlockState = { error?: string; unlocked?: boolean };
 
@@ -86,4 +109,188 @@ export async function toggleBookmark(
   revalidatePath(`/novels/${novelSlug}`);
   revalidatePath("/library");
   return { bookmarked: true };
+}
+
+export type CommentState = { error?: string };
+
+export async function createComment(
+  novelSlug: string,
+  body: string,
+  chapterNumber?: number | null,
+): Promise<CommentState> {
+  const supabase = createClient(await cookies());
+
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims) {
+    return { error: "Please sign in to comment." };
+  }
+
+  const bodyError = validateCommentBody(body);
+  if (bodyError) return { error: bodyError };
+
+  if (chapterNumber != null) {
+    const readable = await isChapterReadable(novelSlug, chapterNumber);
+    if (!readable) {
+      return { error: "You can only comment on chapters you can read." };
+    }
+  }
+
+  const { data: novel, error: novelError } = await supabase
+    .from("novels")
+    .select("id")
+    .eq("slug", novelSlug)
+    .maybeSingle();
+
+  if (novelError || !novel) {
+    return { error: "Novel not found." };
+  }
+
+  const { error } = await supabase.from("novel_comments").insert({
+    user_id: auth.claims.sub,
+    novel_id: novel.id,
+    novel_slug: novelSlug,
+    chapter_number: chapterNumber ?? null,
+    body: body.trim(),
+  });
+
+  if (error) return { error: error.message };
+
+  revalidateCommentPaths(novelSlug, chapterNumber);
+  return {};
+}
+
+export async function updateComment(
+  commentId: string,
+  body: string,
+): Promise<CommentState> {
+  const supabase = createClient(await cookies());
+
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims) {
+    return { error: "Please sign in to edit comments." };
+  }
+
+  const bodyError = validateCommentBody(body);
+  if (bodyError) return { error: bodyError };
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("novel_comments")
+    .select("novel_slug, chapter_number")
+    .eq("id", commentId)
+    .eq("user_id", auth.claims.sub)
+    .maybeSingle();
+
+  if (fetchError || !existing) {
+    return { error: "Comment not found." };
+  }
+
+  const { error } = await supabase
+    .from("novel_comments")
+    .update({
+      body: body.trim(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", commentId)
+    .eq("user_id", auth.claims.sub);
+
+  if (error) return { error: error.message };
+
+  revalidateCommentPaths(existing.novel_slug, existing.chapter_number);
+  return {};
+}
+
+export async function deleteComment(commentId: string): Promise<CommentState> {
+  const supabase = createClient(await cookies());
+
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims) {
+    return { error: "Please sign in to delete comments." };
+  }
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("novel_comments")
+    .select("novel_slug, chapter_number")
+    .eq("id", commentId)
+    .eq("user_id", auth.claims.sub)
+    .maybeSingle();
+
+  if (fetchError || !existing) {
+    return { error: "Comment not found." };
+  }
+
+  const { error } = await supabase
+    .from("novel_comments")
+    .delete()
+    .eq("id", commentId)
+    .eq("user_id", auth.claims.sub);
+
+  if (error) return { error: error.message };
+
+  revalidateCommentPaths(existing.novel_slug, existing.chapter_number);
+  return {};
+}
+
+export type LikeState = { error?: string; liked?: boolean };
+
+export async function toggleCommentLike(commentId: string): Promise<LikeState> {
+  const supabase = createClient(await cookies());
+
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims) {
+    return { error: "Please sign in to like comments." };
+  }
+
+  const { data: comment, error: commentError } = await supabase
+    .from("novel_comments")
+    .select("id, user_id, novel_slug, chapter_number")
+    .eq("id", commentId)
+    .maybeSingle();
+
+  if (commentError || !comment) {
+    return { error: "Comment not found." };
+  }
+
+  const { data: existing } = await supabase
+    .from("novel_comment_likes")
+    .select("id")
+    .eq("comment_id", commentId)
+    .eq("user_id", auth.claims.sub)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase
+      .from("novel_comment_likes")
+      .delete()
+      .eq("id", existing.id);
+    if (error) return { error: error.message };
+
+    revalidateCommentPaths(comment.novel_slug, comment.chapter_number);
+    return { liked: false };
+  }
+
+  const { error } = await supabase.from("novel_comment_likes").insert({
+    user_id: auth.claims.sub,
+    comment_id: commentId,
+  });
+  if (error) return { error: error.message };
+
+  revalidateCommentPaths(comment.novel_slug, comment.chapter_number);
+  return { liked: true };
+}
+
+export type LoadMoreCommentsState = {
+  error?: string;
+  comments?: NovelComment[];
+  hasMore?: boolean;
+};
+
+export async function loadMoreComments(
+  novelSlug: string,
+  offset: number,
+): Promise<LoadMoreCommentsState> {
+  const result = await getNovelComments(novelSlug, { limit: 50, offset });
+  return {
+    comments: result.comments,
+    hasMore: result.hasMore,
+  };
 }
