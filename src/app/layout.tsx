@@ -43,9 +43,6 @@ export const metadata: Metadata = {
     description: SITE.seoDescription,
     images: ["/cuttle.png"],
   },
-  verification: {
-    google: "2KUBSqgtMFqO85PxbI9vc_QYd1ZRQ2u05kSDa-yKv74",
-  },
   robots: {
     index: true,
     follow: true,
