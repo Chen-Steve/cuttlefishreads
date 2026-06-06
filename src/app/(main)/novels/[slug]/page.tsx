@@ -11,6 +11,7 @@ import {
   isNovelBookmarked,
   isUserAuthenticated,
 } from "@/lib/data";
+import { novelDescription } from "@/lib/seo";
 
 const statusLabel = {
   ongoing: "Ongoing",
@@ -23,7 +24,52 @@ export async function generateMetadata({
 }: PageProps<"/novels/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const novel = await getNovel(slug);
-  return { title: novel?.title ?? "Novel not found" };
+  if (!novel) {
+    return {
+      title: "Novel not found",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  const description = novelDescription(novel);
+  const path = `/novels/${novel.slug}`;
+
+  return {
+    title: `${novel.title} - Read Chapters Online`,
+    description,
+    alternates: {
+      canonical: path,
+    },
+    openGraph: {
+      title: `${novel.title} | Cuttlefish Reads`,
+      description,
+      url: path,
+      siteName: "Cuttlefish Reads",
+      type: "book",
+      images: novel.coverUrl
+        ? [
+            {
+              url: novel.coverUrl,
+              alt: `${novel.title} cover`,
+            },
+          ]
+        : [
+            {
+              url: "/cuttle.png",
+              alt: "Cuttlefish Reads",
+            },
+          ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${novel.title} | Cuttlefish Reads`,
+      description,
+      images: [novel.coverUrl ?? "/cuttle.png"],
+    },
+  };
 }
 
 export default async function NovelDetailPage({

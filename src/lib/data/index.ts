@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 
 import type { Genre } from "@/lib/constants";
-import type { Chapter, Novel } from "@/types";
+import type { Chapter, ChapterSummary, Novel } from "@/types";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -33,9 +33,11 @@ type DbChapter = {
 
 function splitContent(text: string): string[] {
   return text
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
     .split(/\n\n+/)
-    .map((p) => p.trim())
-    .filter(Boolean);
+    .map((paragraph) => paragraph.replace(/\s+$/, ""))
+    .filter((paragraph) => paragraph.trim().length > 0);
 }
 
 function formatDate(value: string): string {
@@ -153,6 +155,28 @@ async function fetchDbChapters(novelId: string): Promise<DbChapter[]> {
   return (data ?? []) as DbChapter[];
 }
 
+async function fetchDbChapterSummaries(
+  novelId: string,
+): Promise<
+  Pick<
+    DbChapter,
+    "number" | "title" | "is_free" | "coin_cost" | "unlock_at"
+  >[]
+> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("chapters")
+    .select("number, title, is_free, coin_cost, unlock_at")
+    .eq("novel_id", novelId)
+    .order("number", { ascending: true });
+
+  if (error) {
+    console.error("fetchDbChapterSummaries:", error);
+    return [];
+  }
+  return data ?? [];
+}
+
 export async function getNovels(): Promise<Novel[]> {
   const rows = await fetchNovelRows();
   return rows.map(mapNovel);
@@ -265,6 +289,25 @@ export async function getChapters(slug: string): Promise<Chapter[]> {
   ]);
 
   return rows.map((row) => mapChapter(slug, row, unlocked));
+}
+
+export async function getChapterSummaries(
+  slug: string,
+): Promise<ChapterSummary[]> {
+  const novelId = await fetchNovelIdBySlug(slug);
+  if (!novelId) return [];
+
+  const [rows, unlocked] = await Promise.all([
+    fetchDbChapterSummaries(novelId),
+    getUnlockedChapterNumbers(slug),
+  ]);
+
+  return rows.map((row) => ({
+    number: row.number,
+    title: row.title,
+    locked:
+      !isNaturallyFree(row) && !unlocked.has(row.number),
+  }));
 }
 
 export async function getChapter(

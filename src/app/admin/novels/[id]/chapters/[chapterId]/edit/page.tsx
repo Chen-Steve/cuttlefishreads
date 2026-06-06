@@ -62,7 +62,6 @@ export default async function EditChapterPage({
       <div className="mt-5 rounded-2xl border border-border bg-surface p-5 sm:p-6">
         <ChapterForm
           novelId={novel.id}
-          novelTitle={novel.title}
           initial={{
             chapterId: row.id,
             number: row.number,

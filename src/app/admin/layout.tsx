@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import { createClient } from "@/utils/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function AdminLayout({
   children,

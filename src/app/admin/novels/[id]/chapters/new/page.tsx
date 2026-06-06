@@ -38,7 +38,7 @@ export default async function AddChapterPage({
       </Link>
 
       <div className="mt-4 rounded-2xl border border-border bg-surface p-5 sm:p-6">
-        <ChapterForm novelId={novel.id} novelTitle={novel.title} />
+        <ChapterForm novelId={novel.id} />
       </div>
     </PageContainer>
   );

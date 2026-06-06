@@ -35,8 +35,10 @@ export default async function MainLayout({
         coins={coins}
         isAdmin={isAdmin}
       />
-      <main className="flex-1">{children}</main>
-      <SiteFooter />
+      <div className="contents [&:has([data-hide-main-footer])_footer]:hidden">
+        <main className="flex-1">{children}</main>
+        <SiteFooter />
+      </div>
     </>
   );
 }

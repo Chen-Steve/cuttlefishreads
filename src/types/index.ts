@@ -30,6 +30,12 @@ export interface Chapter {
   locked: boolean;
 }
 
+export interface ChapterSummary {
+  number: number;
+  title: string;
+  locked: boolean;
+}
+
 export interface User {
   id: string;
   username: string;

@@ -1,9 +1,17 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { ArrowRight, Library } from "lucide-react";
 import { NovelGrid } from "@/components/novel";
 import { PageContainer } from "@/components/page-container";
 import { getFeaturedNovels, getNovels } from "@/lib/data";
 import { SITE } from "@/lib/constants";
+import { publicPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = publicPageMetadata({
+  title: "Read Popular and Niche Novels Online",
+  description: SITE.seoDescription,
+  path: "/",
+});
 
 export default async function Home() {
   const [featured, all] = await Promise.all([
@@ -14,7 +22,7 @@ export default async function Home() {
 
   return (
     <PageContainer>
-      <section className="relative overflow-hidden rounded-2xl border border-border bg-surface px-5 py-10 sm:px-10 sm:py-16">
+      <section className="relative hidden overflow-hidden rounded-2xl border border-border bg-surface px-5 py-10 sm:block sm:px-10 sm:py-16">
         <span className="absolute inset-0 opacity-[0.06] [background-image:repeating-linear-gradient(135deg,transparent,transparent_14px,var(--accent)_14px,var(--accent)_15px)]" />
         <div className="relative max-w-2xl">
           <p className="text-xs font-medium uppercase tracking-widest text-accent sm:text-sm">
@@ -46,12 +54,17 @@ export default async function Home() {
         </div>
       </section>
 
-      <Section title="Featured" href="/novels" linkLabel="View all">
-        <NovelGrid novels={featured} />
+      <Section
+        title="Featured"
+        href="/novels"
+        linkLabel="View all"
+        className="mt-3 sm:mt-12"
+      >
+        <NovelGrid novels={featured} compact />
       </Section>
 
       <Section title="Recently updated" href="/novels" linkLabel="View all">
-        <NovelGrid novels={latest} />
+        <NovelGrid novels={latest} compact />
       </Section>
     </PageContainer>
   );
@@ -62,14 +75,16 @@ function Section({
   href,
   linkLabel,
   children,
+  className = "mt-10 sm:mt-12",
 }: {
   title: string;
   href: string;
   linkLabel: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="mt-10 sm:mt-12">
+    <section className={className}>
       <div className="mb-4 flex items-end justify-between gap-4 sm:mb-5">
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
           {title}

@@ -21,11 +21,9 @@ export type ChapterFormInitial = {
 
 export function ChapterForm({
   novelId,
-  novelTitle,
   initial,
 }: {
   novelId: string;
-  novelTitle: string;
   initial?: ChapterFormInitial;
 }) {
   const isEdit = Boolean(initial);
@@ -79,12 +77,8 @@ export function ChapterForm({
 
       <input type="hidden" name="novelId" value={novelId} />
 
-      <div className="flex items-center gap-3 rounded-xl border border-border bg-background px-3.5 py-2.5">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted">Novel</p>
-          <p className="truncate text-sm font-medium text-foreground">{novelTitle}</p>
-        </div>
-        <div className="flex flex-col gap-1.5">
+      <div className="flex gap-3">
+        <div className="flex shrink-0 flex-col gap-1.5">
           <label htmlFor="chapter-number" className={labelClass}>
             Chapter #
           </label>
@@ -95,23 +89,22 @@ export function ChapterForm({
             min={1}
             defaultValue={initial?.number ?? ""}
             placeholder="Auto"
-            className="h-9 w-24 rounded-lg border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
+            className="h-11 w-24 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
           />
         </div>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="chapter-title" className={labelClass}>
-          Chapter title
-        </label>
-        <input
-          id="chapter-title"
-          name="title"
-          required
-          defaultValue={initial?.title ?? ""}
-          placeholder="Salt and Lamplight"
-          className={inputClass}
-        />
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <label htmlFor="chapter-title" className={labelClass}>
+            Chapter title
+          </label>
+          <input
+            id="chapter-title"
+            name="title"
+            required
+            defaultValue={initial?.title ?? ""}
+            placeholder="Salt and Lamplight"
+            className={inputClass}
+          />
+        </div>
       </div>
 
       <div className="flex flex-col gap-1.5">

@@ -1,10 +1,58 @@
 import type { Metadata } from "next";
 import { nationalPark } from "@/lib/fonts";
+import { SITE } from "@/lib/constants";
+import { siteUrl } from "@/lib/seo";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Cuttlefish Reads",
-  description: "A calm place to discover and read novels",
+  metadataBase: siteUrl,
+  title: {
+    default: `${SITE.name} | Read Popular and Niche Novels Online`,
+    template: `%s | ${SITE.name}`,
+  },
+  description: SITE.seoDescription,
+  applicationName: SITE.name,
+  keywords: [
+    "Cuttlefish Reads",
+    "cuttlefishreads",
+    "web novels",
+    "read novels online",
+    "translated novels",
+    "light novels",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: `${SITE.name} | Read Popular and Niche Novels Online`,
+    description: SITE.seoDescription,
+    url: "/",
+    siteName: SITE.name,
+    type: "website",
+    images: [
+      {
+        url: "/cuttle.png",
+        alt: SITE.name,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: `${SITE.name} | Read Popular and Niche Novels Online`,
+    description: SITE.seoDescription,
+    images: ["/cuttle.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   icons: {
     icon: "/cuttle.ico",
     apple: "/cuttle.png",

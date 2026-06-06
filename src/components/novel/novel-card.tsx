@@ -9,7 +9,14 @@ const statusLabel: Record<Novel["status"], string> = {
   hiatus: "Hiatus",
 };
 
-export function NovelCard({ novel }: { novel: Novel }) {
+export function NovelCard({
+  novel,
+  compact = false,
+}: {
+  novel: Novel;
+  /** Title and genres only — hides author and status. */
+  compact?: boolean;
+}) {
   return (
     <Link
       href={`/novels/${novel.slug}`}
@@ -21,19 +28,29 @@ export function NovelCard({ novel }: { novel: Novel }) {
         coverUrl={novel.coverUrl}
         className="transition-transform duration-300 group-hover:-translate-y-0.5"
       />
-      <div className="flex flex-col gap-1.5 px-1">
+      <div className="flex min-w-0 flex-col gap-1.5 px-1">
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
           {novel.title}
         </h3>
-        <p className="text-xs text-muted">{novel.author}</p>
-        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-          <Badge className="border-accent/30 text-accent">
-            {statusLabel[novel.status]}
-          </Badge>
-          {novel.genres.slice(0, 1).map((genre) => (
-            <Badge key={genre}>{genre}</Badge>
-          ))}
-        </div>
+        {!compact ? (
+          <p className="text-xs text-muted">{novel.author}</p>
+        ) : null}
+        {novel.genres.length > 0 || !compact ? (
+          <div className="mt-1 -mx-1 min-w-0 overflow-x-auto px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex w-max min-w-full flex-nowrap items-center gap-1.5">
+              {!compact ? (
+                <Badge className="shrink-0 border-accent/30 text-accent">
+                  {statusLabel[novel.status]}
+                </Badge>
+              ) : null}
+              {novel.genres.slice(0, 2).map((genre) => (
+                <Badge key={genre} className="shrink-0">
+                  {genre}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </Link>
   );

@@ -2,14 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
-import { ChapterUnlockGate, ReaderNav } from "@/components/reader";
+import { ChapterContent, ChapterUnlockGate, ReaderNav } from "@/components/reader";
 import {
   getAdjacentChapters,
   getChapter,
+  getChapterSummaries,
   getNovel,
   getUserCoins,
   isUserAuthenticated,
 } from "@/lib/data";
+import { novelDescription } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -20,9 +22,51 @@ export async function generateMetadata({
     getChapter(slug, Number(chapter)),
   ]);
   if (!novel || !current) {
-    return { title: "Chapter not found" };
+    return {
+      title: "Chapter not found",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
   }
-  return { title: `${novel.title} — ${current.title}` };
+
+  const title = `${novel.title} - Chapter ${current.number}: ${current.title}`;
+  const description = current.locked
+    ? `Read ${novel.title} on Cuttlefish Reads. Chapter ${current.number}, ${current.title}, is available with unlock access.`
+    : `Read ${novel.title} Chapter ${current.number}: ${current.title} on Cuttlefish Reads. ${novelDescription(novel)}`;
+  const path = `/novels/${novel.slug}/${current.number}`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: path,
+    },
+    openGraph: {
+      title,
+      description,
+      url: path,
+      siteName: "Cuttlefish Reads",
+      type: "article",
+      images: [
+        {
+          url: novel.coverUrl ?? "/cuttle.png",
+          alt: novel.coverUrl ? `${novel.title} cover` : "Cuttlefish Reads",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [novel.coverUrl ?? "/cuttle.png"],
+    },
+    robots: {
+      index: !current.locked,
+      follow: true,
+    },
+  };
 }
 
 export default async function ChapterReaderPage({
@@ -31,11 +75,12 @@ export default async function ChapterReaderPage({
   const { slug, chapter } = await params;
   const chapterNumber = Number(chapter);
 
-  const [novel, current, { previous, next }, userCoins, isLoggedIn] =
+  const [novel, current, { previous, next }, chapters, userCoins, isLoggedIn] =
     await Promise.all([
       getNovel(slug),
       getChapter(slug, chapterNumber),
       getAdjacentChapters(slug, chapterNumber),
+      getChapterSummaries(slug),
       getUserCoins(),
       isUserAuthenticated(),
     ]);
@@ -46,17 +91,25 @@ export default async function ChapterReaderPage({
 
   return (
     <PageContainer as="article" width="narrow">
-      <header className="mb-8 text-center">
+      <span data-hide-main-footer hidden />
+      <header className="mb-4 text-center">
         <Link
           href={`/novels/${slug}`}
           className="text-sm font-medium text-balance text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
-          {novel.title}
         </Link>
-        <h1 className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-          Chapter {current.number}
+        <h1 className=" text-xl font-bold tracking-tight text-balance text-foreground sm:text-2xl">
+          Chapter {current.number}: {current.title}
         </h1>
-        <p className="mt-1 text-pretty text-base text-muted">{current.title}</p>
+        <div className="mt-4">
+          <ReaderNav
+            slug={slug}
+            previous={previous}
+            next={next}
+            chapters={chapters}
+            currentChapter={chapterNumber}
+          />
+        </div>
       </header>
 
       {current.locked ? (
@@ -69,16 +122,19 @@ export default async function ChapterReaderPage({
           isLoggedIn={isLoggedIn}
         />
       ) : (
-        <div className="space-y-5 text-base leading-7 text-foreground/90 sm:text-[1.05rem] sm:leading-8">
-          {current.content.map((paragraph, index) => (
-            <p key={index}>{paragraph}</p>
-          ))}
-        </div>
+        <ChapterContent paragraphs={current.content} />
       )}
 
       <hr className="my-10 border-border" />
 
-      <ReaderNav slug={slug} previous={previous} next={next} />
+      <ReaderNav
+        slug={slug}
+        previous={previous}
+        next={next}
+        chapters={chapters}
+        currentChapter={chapterNumber}
+        menuPlacement="up"
+      />
     </PageContainer>
   );
 }

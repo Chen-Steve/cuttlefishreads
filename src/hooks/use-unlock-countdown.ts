@@ -13,12 +13,15 @@ export function useUnlockCountdown(
   onExpire?: () => void,
 ) {
   const onExpireRef = useRef(onExpire);
-  onExpireRef.current = onExpire;
 
   const scheduled = isScheduledUnlock(unlockAt);
   const [remainingMs, setRemainingMs] = useState(() =>
     unlockAt && scheduled ? getUnlockRemainingMs(unlockAt) : 0,
   );
+
+  useEffect(() => {
+    onExpireRef.current = onExpire;
+  }, [onExpire]);
 
   useEffect(() => {
     if (!unlockAt || !isScheduledUnlock(unlockAt)) return;
