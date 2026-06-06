@@ -309,6 +309,91 @@ export async function createChapter(
   redirect(`/admin/novels/${novelId}/chapters`);
 }
 
+export async function setChapterPublished(
+  chapterId: string,
+  published: boolean,
+): Promise<AdminState> {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
+  const admin = createAdminClient();
+
+  const { data: existing } = await admin
+    .from("chapters")
+    .select("id, novel_id")
+    .eq("id", chapterId)
+    .maybeSingle();
+  if (!existing) return { error: "Chapter not found." };
+
+  const { error } = await admin
+    .from("chapters")
+    .update({ is_published: published, updated_at: new Date().toISOString() })
+    .eq("id", chapterId);
+
+  if (error) return { error: error.message };
+
+  await admin
+    .from("novels")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", existing.novel_id);
+
+  revalidatePath(`/admin/novels/${existing.novel_id}/chapters`);
+  revalidatePath("/novels", "layout");
+  revalidatePath("/");
+  return {};
+}
+
+export async function publishAllChapters(novelId: string): Promise<AdminState> {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
+  const admin = createAdminClient();
+
+  const { error } = await admin
+    .from("chapters")
+    .update({ is_published: true, updated_at: new Date().toISOString() })
+    .eq("novel_id", novelId)
+    .eq("is_published", false);
+
+  if (error) return { error: error.message };
+
+  await admin
+    .from("novels")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", novelId);
+
+  revalidatePath(`/admin/novels/${novelId}/chapters`);
+  revalidatePath("/novels", "layout");
+  revalidatePath("/");
+  return {};
+}
+
+export async function deleteChapter(chapterId: string): Promise<AdminState> {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
+  const admin = createAdminClient();
+
+  const { data: existing } = await admin
+    .from("chapters")
+    .select("id, novel_id")
+    .eq("id", chapterId)
+    .maybeSingle();
+  if (!existing) return { error: "Chapter not found." };
+
+  const { error } = await admin.from("chapters").delete().eq("id", chapterId);
+  if (error) return { error: error.message };
+
+  await admin
+    .from("novels")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", existing.novel_id);
+
+  revalidatePath(`/admin/novels/${existing.novel_id}/chapters`);
+  revalidatePath("/novels", "layout");
+  return {};
+}
+
 export async function updateChapter(
   chapterId: string,
   _prev: AdminState,

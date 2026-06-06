@@ -146,6 +146,7 @@ async function fetchDbChapters(novelId: string): Promise<DbChapter[]> {
       "id, number, title, content, is_free, coin_cost, unlock_at, published_at",
     )
     .eq("novel_id", novelId)
+    .eq("is_published", true)
     .order("number", { ascending: true });
 
   if (error) {
@@ -168,6 +169,7 @@ async function fetchDbChapterSummaries(
     .from("chapters")
     .select("number, title, is_free, coin_cost, unlock_at")
     .eq("novel_id", novelId)
+    .eq("is_published", true)
     .order("number", { ascending: true });
 
   if (error) {

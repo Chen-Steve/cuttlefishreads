@@ -95,10 +95,12 @@ export default async function ChapterReaderPage({
       <header className="mb-4 text-center">
         <Link
           href={`/novels/${slug}`}
-          className="text-sm font-medium text-balance text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          title={novel.title}
+          className="mx-auto block max-w-full truncate text-sm font-medium text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
+          {novel.title}
         </Link>
-        <h1 className=" text-xl font-bold tracking-tight text-balance text-foreground sm:text-2xl">
+        <h1 className="text-xl font-bold tracking-tight text-balance text-foreground sm:text-2xl">
           Chapter {current.number}: {current.title}
         </h1>
         <div className="mt-4">
