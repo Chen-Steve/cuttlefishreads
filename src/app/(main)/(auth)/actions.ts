@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/utils/supabase/server";
+import { absoluteUrl } from "@/lib/seo";
 
 export type AuthState = { error?: string; message?: string };
 
@@ -104,8 +105,7 @@ export async function signOut(): Promise<void> {
 }
 
 export async function signInWithGoogle(redirectTo?: string): Promise<void> {
-  const origin = (await headers()).get("origin") ?? "";
-  const callbackUrl = new URL("/auth/callback", origin);
+  const callbackUrl = new URL(absoluteUrl("/auth/callback"));
   if (redirectTo?.startsWith("/")) {
     callbackUrl.searchParams.set("next", redirectTo);
   }
