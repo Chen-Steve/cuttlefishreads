@@ -29,7 +29,7 @@ export function ChapterContent({ paragraphs }: { paragraphs: string[] }) {
   return (
     <div className="space-y-5 text-base leading-7 text-foreground/90 sm:text-[1.05rem] sm:leading-8">
       {paragraphs.map((paragraph, index) => (
-        <p key={index} className="whitespace-pre-wrap">
+        <p key={index}>
           {renderInlineMarkdown(paragraph)}
         </p>
       ))}

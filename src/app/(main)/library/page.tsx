@@ -2,14 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LibraryGrid } from "@/components/library/library-grid";
 import { PageContainer } from "@/components/page-container";
-import { getLibraryNovels } from "@/lib/data";
+import { getLibraryNovels, isUserAuthenticated } from "@/lib/data";
 
 export const metadata: Metadata = {
   title: "Library",
 };
 
 export default async function LibraryPage() {
-  const novels = await getLibraryNovels();
+  const [novels, loggedIn] = await Promise.all([
+    getLibraryNovels(),
+    isUserAuthenticated(),
+  ]);
 
   return (
     <PageContainer as="section">
@@ -17,12 +20,31 @@ export default async function LibraryPage() {
         <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
           My library
         </h1>
-        <p className="mt-1 text-sm text-muted">
-          Novels you are following
-        </p>
+        {loggedIn ? (
+          <p className="mt-1 text-sm text-muted">Novels you are following</p>
+        ) : null}
       </header>
 
-      {novels.length > 0 ? (
+      {!loggedIn ? (
+        <div className="rounded-xl border border-dashed border-border bg-surface px-4 py-12 text-center sm:py-16">
+          <p className="text-sm font-medium text-foreground">Sign in to build your library</p>
+          <p className="mt-1 text-sm text-muted">Bookmark novels and pick up where you left off.</p>
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <Link
+              href="/login"
+              className="inline-flex h-9 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/signup"
+              className="inline-flex h-9 items-center justify-center rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              Create account
+            </Link>
+          </div>
+        </div>
+      ) : novels.length > 0 ? (
         <LibraryGrid novels={novels} />
       ) : (
         <div className="rounded-xl border border-dashed border-border bg-surface px-4 py-12 text-center sm:py-16">

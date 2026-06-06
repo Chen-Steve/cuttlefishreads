@@ -23,12 +23,22 @@ export function CommentLikeButton({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  function handleClick() {
-    if (!isLoggedIn) {
-      router.push("/login");
-      return;
-    }
+  if (!isLoggedIn) {
+    return (
+      <button
+        type="button"
+        disabled
+        title="Sign in to like"
+        aria-label={`Like — sign in to like comments`}
+        className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-muted/50"
+      >
+        <Heart className="size-3.5" strokeWidth={1.75} aria-hidden />
+        {count > 0 ? count : "Like"}
+      </button>
+    );
+  }
 
+  function handleClick() {
     setError(null);
     const nextLiked = !liked;
     const nextCount = nextLiked ? count + 1 : count - 1;

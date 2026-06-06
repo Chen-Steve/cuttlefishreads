@@ -14,6 +14,7 @@ export interface Novel {
   status: "ongoing" | "completed" | "hiatus";
   chapterCount: number;
   updatedAt: string;
+  publisherId?: string;
 }
 
 export interface Chapter {
@@ -28,6 +29,8 @@ export interface Chapter {
   unlockAt: string | null;
   /** Whether the current user may read this chapter. */
   locked: boolean;
+  /** True when the chapter is accessible only because of admin/publisher bypass. */
+  adminAccess: boolean;
 }
 
 export interface ChapterSummary {

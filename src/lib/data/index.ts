@@ -4,6 +4,7 @@ import type { Genre } from "@/lib/constants";
 import type { Chapter, ChapterSummary, Novel, NovelComment } from "@/types";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { isAdminEmail } from "@/lib/admin";
 
 type DbNovel = {
   id: string;
@@ -17,6 +18,7 @@ type DbNovel = {
   tags: string[];
   status: string;
   updated_at: string;
+  publisher_id: string | null;
   chapters: { count: number }[];
 };
 
@@ -35,7 +37,7 @@ function splitContent(text: string): string[] {
   return text
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
-    .split(/\n\n+/)
+    .split(/\n+/)
     .map((paragraph) => paragraph.replace(/\s+$/, ""))
     .filter((paragraph) => paragraph.trim().length > 0);
 }
@@ -45,6 +47,7 @@ function formatDate(value: string): string {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -72,6 +75,7 @@ function mapNovel(row: DbNovel): Novel {
     status: row.status as Novel["status"],
     chapterCount: row.chapters?.[0]?.count ?? 0,
     updatedAt: row.updated_at,
+    publisherId: row.publisher_id ?? undefined,
   };
 }
 
@@ -79,9 +83,12 @@ function mapChapter(
   slug: string,
   row: DbChapter,
   unlockedNumbers: Set<number>,
+  bypassLock: boolean,
 ): Chapter {
   const naturallyFree = isNaturallyFree(row);
-  const locked = !naturallyFree && !unlockedNumbers.has(row.number);
+  const purchased = unlockedNumbers.has(row.number);
+  const locked = !naturallyFree && !purchased && !bypassLock;
+  const adminAccess = bypassLock && !naturallyFree && !purchased;
 
   return {
     id: row.id,
@@ -94,6 +101,7 @@ function mapChapter(
     coinCost: row.coin_cost,
     unlockAt: row.unlock_at,
     locked,
+    adminAccess,
   };
 }
 
@@ -117,7 +125,7 @@ async function fetchNovelRows(): Promise<DbNovel[]> {
   const { data, error } = await supabase
     .from("novels")
     .select(
-      "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, chapters(count)",
+      "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, chapters(count)",
     )
     .order("updated_at", { ascending: false });
 
@@ -128,14 +136,16 @@ async function fetchNovelRows(): Promise<DbNovel[]> {
   return (data ?? []) as DbNovel[];
 }
 
-async function fetchNovelIdBySlug(slug: string): Promise<string | null> {
+async function fetchNovelIdBySlug(
+  slug: string,
+): Promise<{ id: string; publisher_id: string | null } | null> {
   const supabase = createClient(await cookies());
   const { data } = await supabase
     .from("novels")
-    .select("id")
+    .select("id, publisher_id")
     .eq("slug", slug)
     .maybeSingle();
-  return data?.id ?? null;
+  return data ?? null;
 }
 
 async function fetchDbChapters(novelId: string): Promise<DbChapter[]> {
@@ -189,7 +199,7 @@ export async function getNovel(slug: string): Promise<Novel | undefined> {
   const { data, error } = await supabase
     .from("novels")
     .select(
-      "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, chapters(count)",
+      "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, chapters(count)",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -282,25 +292,35 @@ export async function getUserBookmarkedNovels(
 }
 
 export async function getChapters(slug: string): Promise<Chapter[]> {
-  const novelId = await fetchNovelIdBySlug(slug);
-  if (!novelId) return [];
+  const novel = await fetchNovelIdBySlug(slug);
+  if (!novel) return [];
+
+  const currentUser = await getCurrentUser();
+  const isPublisher =
+    novel.publisher_id !== null && currentUser?.id === novel.publisher_id;
+  const bypassLock = currentUser?.isAdmin === true || isPublisher;
 
   const [rows, unlocked] = await Promise.all([
-    fetchDbChapters(novelId),
+    fetchDbChapters(novel.id),
     getUnlockedChapterNumbers(slug),
   ]);
 
-  return rows.map((row) => mapChapter(slug, row, unlocked));
+  return rows.map((row) => mapChapter(slug, row, unlocked, bypassLock));
 }
 
 export async function getChapterSummaries(
   slug: string,
 ): Promise<ChapterSummary[]> {
-  const novelId = await fetchNovelIdBySlug(slug);
-  if (!novelId) return [];
+  const novel = await fetchNovelIdBySlug(slug);
+  if (!novel) return [];
+
+  const currentUser = await getCurrentUser();
+  const isPublisher =
+    novel.publisher_id !== null && currentUser?.id === novel.publisher_id;
+  const bypassLock = currentUser?.isAdmin === true || isPublisher;
 
   const [rows, unlocked] = await Promise.all([
-    fetchDbChapterSummaries(novelId),
+    fetchDbChapterSummaries(novel.id),
     getUnlockedChapterNumbers(slug),
   ]);
 
@@ -308,7 +328,7 @@ export async function getChapterSummaries(
     number: row.number,
     title: row.title,
     locked:
-      !isNaturallyFree(row) && !unlocked.has(row.number),
+      !isNaturallyFree(row) && !unlocked.has(row.number) && !bypassLock,
   }));
 }
 
@@ -426,10 +446,21 @@ type DbLikeRow = {
   user_id: string;
 };
 
-async function getCurrentUserId(): Promise<string | null> {
+type CurrentUser = { id: string; isAdmin: boolean };
+
+async function getCurrentUser(): Promise<CurrentUser | null> {
   const supabase = createClient(await cookies());
   const { data: auth } = await supabase.auth.getClaims();
-  return auth?.claims?.sub ?? null;
+  if (!auth?.claims) return null;
+  return {
+    id: auth.claims.sub as string,
+    isAdmin: isAdminEmail(auth.claims.email as string | undefined),
+  };
+}
+
+async function getCurrentUserId(): Promise<string | null> {
+  const user = await getCurrentUser();
+  return user?.id ?? null;
 }
 
 async function fetchProfileUsernames(

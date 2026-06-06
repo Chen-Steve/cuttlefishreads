@@ -33,7 +33,7 @@ export function UnlockCountdown({
         <Clock className="size-4 shrink-0 text-accent" strokeWidth={1.75} aria-hidden />
         <div className="text-left">
           <p className="text-xs font-medium text-muted">Free unlock in</p>
-          <p className="font-mono text-lg font-semibold tabular-nums text-accent">
+          <p className="font-mono text-lg font-semibold tabular-nums text-accent" suppressHydrationWarning>
             {label}
           </p>
         </div>
@@ -43,6 +43,7 @@ export function UnlockCountdown({
 
   return (
     <span
+      suppressHydrationWarning
       className={cn(
         "inline-flex shrink-0 items-center gap-1 rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-xs font-medium tabular-nums text-accent",
         className,

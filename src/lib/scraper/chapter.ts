@@ -12,7 +12,7 @@ export type ScrapedChapter = {
 };
 
 const BROWSER_UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
 // Matches a chapter page like /xiaoshuo/9389101/82601102/ but NOT the book
 // index /xiaoshuo/9389101/. We use this to know when the "next" link has
@@ -44,18 +44,40 @@ function cleanParagraph(text: string): string {
  * falls back to reasonable generic selectors.
  */
 export async function scrapeChapter(url: string): Promise<ScrapedChapter> {
+  const origin = (() => {
+    try {
+      const u = new URL(url);
+      return `${u.protocol}//${u.host}`;
+    } catch {
+      return undefined;
+    }
+  })();
+
   const res = await fetch(url, {
     headers: {
       "User-Agent": BROWSER_UA,
-      Accept: "text/html,application/xhtml+xml",
-      "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+      "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+      "Upgrade-Insecure-Requests": "1",
+      "Sec-Fetch-Dest": "document",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Site": "none",
+      "Sec-Fetch-User": "?1",
+      ...(origin ? { Referer: origin + "/" } : {}),
     },
     redirect: "follow",
     cache: "no-store",
   });
 
   if (!res.ok) {
-    throw new Error(`Source returned HTTP ${res.status} for ${url}`);
+    const body = await res.text().catch(() => "");
+    const snippet = body.slice(0, 200).replace(/\s+/g, " ").trim();
+    throw new Error(
+      `Source returned HTTP ${res.status} for ${url}${snippet ? ` — ${snippet}` : ""}`,
+    );
   }
 
   const html = await res.text();

@@ -200,13 +200,31 @@ export function ImportRunner({
           <label htmlFor="model" className={labelClass}>
             Gemini model
           </label>
-          <input
+          <select
             id="model"
             value={model}
             onChange={(e) => setModel(e.target.value)}
             disabled={running}
             className={inputClass}
-          />
+          >
+            <optgroup label="Gemini 3">
+              <option value="gemini-3-flash">gemini-3-flash</option>
+            </optgroup>
+            <optgroup label="Gemini 2.5">
+              <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+              <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+              <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+            </optgroup>
+            <optgroup label="Gemini 2.0">
+              <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+              <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
+            </optgroup>
+            <optgroup label="Gemini 1.5">
+              <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+              <option value="gemini-1.5-flash-8b">gemini-1.5-flash-8b</option>
+              <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+            </optgroup>
+          </select>
         </div>
 
         <div className="flex flex-col gap-1.5 sm:col-span-2">

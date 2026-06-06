@@ -27,6 +27,7 @@ export type NovelFormValues = {
   genres: string[];
   tags: string[];
   status: string;
+  publisher_username: string | null;
 };
 
 export function NovelForm({ novel }: { novel?: NovelFormValues }) {
@@ -154,6 +155,22 @@ export function NovelForm({ novel }: { novel?: NovelFormValues }) {
             ))}
           </select>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="novel-publisher" className={labelClass}>
+          Publisher username
+        </label>
+        <input
+          id="novel-publisher"
+          name="publisherUsername"
+          defaultValue={novel?.publisher_username ?? ""}
+          placeholder="Username of the publisher (leave blank for none)"
+          className={inputClass}
+        />
+        <span className="text-xs text-muted">
+          The publisher can read all chapters of this novel for free.
+        </span>
       </div>
 
       <div className="flex flex-col gap-1.5">

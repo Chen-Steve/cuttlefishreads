@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ShieldCheck } from "lucide-react";
+import { isScheduledUnlock } from "@/lib/unlock-countdown";
 import type { Chapter } from "@/types";
 import { ChapterLockBadge } from "./chapter-lock-badge";
 
@@ -33,11 +34,20 @@ export function ChapterList({
               <span className="block truncate text-sm font-medium text-foreground">
                 {chapter.title}
               </span>
-              <span className="block text-xs text-muted">
-                {chapter.publishedAt}
-              </span>
+              {!(chapter.locked && isScheduledUnlock(chapter.unlockAt)) ? (
+                <span className="block text-xs text-muted">
+                  {chapter.publishedAt}
+                </span>
+              ) : null}
             </span>
-            {chapter.locked ? <ChapterLockBadge chapter={chapter} /> : null}
+            {chapter.adminAccess ? (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-700">
+                <ShieldCheck className="size-3" strokeWidth={2} aria-hidden />
+                Admin access
+              </span>
+            ) : chapter.locked ? (
+              <ChapterLockBadge chapter={chapter} />
+            ) : null}
             <ChevronRight
               className="size-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5"
               strokeWidth={1.75}

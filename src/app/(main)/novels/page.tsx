@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { NovelGrid } from "@/components/novel";
+import { NovelsBrowser } from "@/components/novel";
 import { PageContainer } from "@/components/page-container";
 import { getNovels } from "@/lib/data";
 import { publicPageMetadata } from "@/lib/seo";
@@ -20,11 +20,8 @@ export default async function NovelsPage() {
         <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
           All novels
         </h1>
-        <p className="mt-1 text-sm text-muted">
-          {novels.length} title{novels.length !== 1 ? "s" : ""} in the collection
-        </p>
       </header>
-      <NovelGrid novels={novels} />
+      <NovelsBrowser novels={novels} />
     </PageContainer>
   );
 }

@@ -88,8 +88,20 @@ export async function createNovel(
   const genres = parseGenres(formData);
   const tags = parseTags(String(formData.get("tags") ?? ""));
   const cover = formData.get("cover");
+  const publisherUsername = String(formData.get("publisherUsername") ?? "").trim();
 
   const admin = createAdminClient();
+
+  let publisherId: string | null = null;
+  if (publisherUsername) {
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("username", publisherUsername)
+      .maybeSingle();
+    if (!profile) return { error: `No user found with username "${publisherUsername}".` };
+    publisherId = profile.id;
+  }
 
   const base = slugify(title) || "novel";
   let slug = base;
@@ -124,6 +136,7 @@ export async function createNovel(
     genres,
     tags,
     status,
+    publisher_id: publisherId,
   });
 
   if (error) {
@@ -155,8 +168,20 @@ export async function updateNovel(
   const genres = parseGenres(formData);
   const tags = parseTags(String(formData.get("tags") ?? ""));
   const cover = formData.get("cover");
+  const publisherUsername = String(formData.get("publisherUsername") ?? "").trim();
 
   const admin = createAdminClient();
+
+  let publisherId: string | null = null;
+  if (publisherUsername) {
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("username", publisherUsername)
+      .maybeSingle();
+    if (!profile) return { error: `No user found with username "${publisherUsername}".` };
+    publisherId = profile.id;
+  }
 
   const { data: existing } = await admin
     .from("novels")
@@ -187,6 +212,7 @@ export async function updateNovel(
       genres,
       tags,
       status,
+      publisher_id: publisherId,
       updated_at: new Date().toISOString(),
     })
     .eq("id", novelId);

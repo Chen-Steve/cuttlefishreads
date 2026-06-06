@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bookmark, BookmarkCheck } from "lucide-react";
+import { Bookmark, BookmarkCheck, LogIn } from "lucide-react";
 
 import { toggleBookmark } from "@/app/(main)/novels/actions";
 
@@ -20,12 +21,19 @@ export function BookmarkButton({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  function handleClick() {
-    if (!isLoggedIn) {
-      router.push("/login");
-      return;
-    }
+  if (!isLoggedIn) {
+    return (
+      <Link
+        href="/login"
+        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface px-5 text-sm font-semibold text-muted transition-colors hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:w-fit"
+      >
+        <LogIn className="size-4" strokeWidth={1.75} aria-hidden />
+        Sign in to add to library
+      </Link>
+    );
+  }
 
+  function handleClick() {
     setError(null);
     const next = !bookmarked;
     setBookmarked(next);
