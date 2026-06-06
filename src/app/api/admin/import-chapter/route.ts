@@ -19,8 +19,8 @@ type ImportBody = {
 };
 
 export async function POST(request: Request) {
-  const access = await getAdminAccess();
-  if (!access?.hasWorkspace) {
+  const adminAccess = await getAdminAccess();
+  if (!adminAccess?.hasWorkspace) {
     return Response.json({ ok: false, error: "Not authorized." }, { status: 403 });
   }
 
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
   if (!novel) {
     return Response.json({ ok: false, error: "That novel no longer exists." }, { status: 404 });
   }
-  if (!access.isMasterAdmin && novel.publisher_id !== access.userId) {
+  if (!adminAccess.isMasterAdmin && novel.publisher_id !== adminAccess.userId) {
     return Response.json({ ok: false, error: "Not authorized." }, { status: 403 });
   }
 
