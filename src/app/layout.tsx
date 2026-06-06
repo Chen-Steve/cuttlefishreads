@@ -58,6 +58,9 @@ export const metadata: Metadata = {
     icon: "/cuttle.ico",
     apple: "/cuttle.png",
   },
+  verification: {
+    google: "2KUBSqgtMFqO85PxbI9vc_QYd1ZRQ2u05kSDa-yKv74",
+  },
 };
 
 export default function RootLayout({
