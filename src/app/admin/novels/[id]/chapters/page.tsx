@@ -23,15 +23,25 @@ type ChapterRow = {
   is_free: boolean;
   coin_cost: number;
   is_published: boolean;
-  published_at: string;
+  unlock_at: string | null;
 };
 
-function formatDate(value: string) {
+function formatUnlockDate(value: string) {
   return new Date(value).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
+}
+
+function unlockLabel(chapter: Pick<ChapterRow, "is_free" | "unlock_at">) {
+  if (chapter.unlock_at) {
+    const date = formatUnlockDate(chapter.unlock_at);
+    const released = new Date(chapter.unlock_at) <= new Date();
+    return released ? `Released on ${date}` : `Releases on ${date}`;
+  }
+  if (chapter.is_free) return "Available now";
+  return "No release date";
 }
 
 export default async function ChaptersListPage({
@@ -56,7 +66,7 @@ export default async function ChaptersListPage({
 
   const { data: chapters } = await admin
     .from("chapters")
-    .select("id, number, title, is_free, coin_cost, is_published, published_at")
+    .select("id, number, title, is_free, coin_cost, is_published, unlock_at")
     .eq("novel_id", id)
     .order("number", { ascending: true })
     .returns<ChapterRow[]>();
@@ -142,7 +152,7 @@ export default async function ChaptersListPage({
                     )}
                   </p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted">
-                    <span>{formatDate(chapter.published_at)}</span>
+                    <span>{unlockLabel(chapter)}</span>
                     <span aria-hidden>·</span>
                     {chapter.is_free ? (
                       <span className="text-emerald-600">Free</span>
