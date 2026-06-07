@@ -5,15 +5,19 @@ import { BookOpen } from "lucide-react";
 import { CommentSection } from "@/components/comments";
 import {
   BookmarkButton,
+  BulkBuyChapters,
+  BulkBuyInfo,
   ChapterList,
   NovelCover,
   NovelDescription,
 } from "@/components/novel";
+import { getBulkBuyState } from "@/lib/bulk-buy";
 import { PageContainer } from "@/components/page-container";
 import { Badge } from "@/components/ui/badge";
 import {
   getChapters,
   getNovel,
+  getUserCoins,
   isNovelBookmarked,
   isUserAuthenticated,
   recordNovelView,
@@ -49,6 +53,11 @@ export async function generateMetadata({
     description,
     alternates: {
       canonical: path,
+      types: {
+        "application/rss+xml": [
+          { url: `${path}/feed.xml`, title: `${novel.title} updates` },
+        ],
+      },
     },
     openGraph: {
       title: `${novel.title} | Cuttlefish Reads`,
@@ -83,11 +92,12 @@ export default async function NovelDetailPage({
   params,
 }: PageProps<"/novels/[slug]">) {
   const { slug } = await params;
-  const [novel, chapters, bookmarked, isLoggedIn] = await Promise.all([
+  const [novel, chapters, bookmarked, isLoggedIn, userCoins] = await Promise.all([
     getNovel(slug),
     getChapters(slug),
     isNovelBookmarked(slug),
     isUserAuthenticated(),
+    getUserCoins(),
   ]);
 
   if (!novel) {
@@ -98,6 +108,7 @@ export default async function NovelDetailPage({
   void recordNovelView(slug);
 
   const firstChapter = chapters[0];
+  const bulkBuy = getBulkBuyState(chapters);
 
   return (
     <PageContainer as="article" width="prose">
@@ -167,13 +178,26 @@ export default async function NovelDetailPage({
       </div>
 
       <section className="mt-10">
-        <h2 className="mb-4 text-lg font-semibold tracking-tight text-foreground">
-          Chapters
-          <span className="ml-2 text-sm font-normal text-muted">
-            {chapters.length}
-          </span>
-        </h2>
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">
+            Chapters
+            <span className="ml-2 text-sm font-normal text-muted">
+              {chapters.length}
+            </span>
+          </h2>
+          <BulkBuyChapters
+            novelSlug={novel.slug}
+            chapters={chapters}
+            userCoins={userCoins}
+            isLoggedIn={isLoggedIn}
+          />
+        </div>
         <ChapterList slug={novel.slug} chapters={chapters} />
+        {!bulkBuy.eligible ? (
+          <div className="mt-4">
+            <BulkBuyInfo advancedCount={bulkBuy.advancedCount} />
+          </div>
+        ) : null}
       </section>
 
       <section className="mt-10">

@@ -102,6 +102,7 @@ function mapChapter(
     useGlobalTranslatorNote: row.use_global_translator_note ?? true,
     publishedAt: formatDate(row.published_at),
     isFree: naturallyFree,
+    isAdvanced: !row.is_free,
     coinCost: row.coin_cost,
     unlockAt: row.unlock_at,
     locked,

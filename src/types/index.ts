@@ -33,6 +33,8 @@ export interface Chapter {
   useGlobalTranslatorNote: boolean;
   publishedAt: string;
   isFree: boolean;
+  /** True when the chapter is published as paid (is_free = false in the database). */
+  isAdvanced: boolean;
   coinCost: number;
   unlockAt: string | null;
   /** Whether the current user may read this chapter. */

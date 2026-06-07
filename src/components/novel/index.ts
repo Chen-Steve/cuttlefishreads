@@ -5,3 +5,4 @@ export { NovelCover } from "./novel-cover";
 export { NovelDescription } from "./novel-description";
 export { ChapterList } from "./chapter-list";
 export { BookmarkButton } from "./bookmark-button";
+export { BulkBuyChapters, BulkBuyInfo } from "./bulk-buy-chapters";

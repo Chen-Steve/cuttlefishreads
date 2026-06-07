@@ -57,6 +57,41 @@ export async function unlockChapter(
   return { unlocked: data === true };
 }
 
+export type BulkUnlockState = {
+  error?: string;
+  unlockedCount?: number;
+  coinsSpent?: number;
+};
+
+// Unlocks every remaining purchasable advanced chapter for a novel at 10% off.
+// Pricing and eligibility are enforced inside bulk_unlock_chapters().
+export async function bulkUnlockChapters(
+  novelSlug: string,
+): Promise<BulkUnlockState> {
+  const supabase = createClient(await cookies());
+
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims) {
+    return { error: "Please sign in to unlock chapters." };
+  }
+
+  const { data, error } = await supabase.rpc("bulk_unlock_chapters", {
+    p_novel_slug: novelSlug,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const result = data as { unlocked_count: number; coins_spent: number } | null;
+  revalidatePath(`/novels/${novelSlug}`);
+
+  return {
+    unlockedCount: result?.unlocked_count ?? 0,
+    coinsSpent: result?.coins_spent ?? 0,
+  };
+}
+
 export type BookmarkState = { error?: string; bookmarked?: boolean };
 
 // Adds or removes a novel from the signed-in user's library. Returns the new
