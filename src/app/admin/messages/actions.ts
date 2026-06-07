@@ -172,6 +172,15 @@ export async function createChannel(
     return { error: error?.message ?? "Failed to create channel." };
   }
 
+  // Add the creator as a member so they can subscribe to the channel's Realtime
+  // topic immediately; other members self-heal when they open the page.
+  await admin
+    .from("chat_channel_members")
+    .upsert(
+      { channel_id: inserted.id, user_id: access.userId },
+      { onConflict: "channel_id,user_id", ignoreDuplicates: true },
+    );
+
   return {
     channel: {
       id: inserted.id,

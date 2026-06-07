@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { createClient } from "@/utils/supabase/client";
 import type { ChatChannel, ChatMember, ChatMessage } from "@/lib/messaging";
 import {
   createChannel,
@@ -30,7 +31,6 @@ import {
   toggleMessageLike,
 } from "../actions";
 
-const MESSAGE_POLL_MS = 4000;
 const CHANNEL_POLL_MS = 15000;
 const MAX_MESSAGE_LENGTH = 4000;
 
@@ -102,6 +102,11 @@ export function MessagesApp({
   const activeChannel = channels.find((c) => c.id === activeId) ?? null;
   const activeMessages = activeId ? (messagesByChannel[activeId] ?? []) : [];
 
+  const membersById = useMemo(
+    () => new Map(members.map((m) => [m.id, m.username])),
+    [members],
+  );
+
   const setChannelMessages = useCallback(
     (channelId: string, updater: (prev: ChatMessage[]) => ChatMessage[]) => {
       setMessagesByChannel((prev) => ({
@@ -128,25 +133,77 @@ export function MessagesApp({
     [messagesByChannel, setChannelMessages],
   );
 
-  // Poll the active conversation for new messages.
+  // Subscribe to the active conversation's private Realtime topic for live
+  // messages and likes (broadcast from the database). Replaces polling.
   useEffect(() => {
     if (!activeId) return;
-    let cancelled = false;
+    const channelId = activeId;
+    const supabase = createClient();
+    let active = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
-    const poll = async () => {
-      const current = messagesByChannel[activeId] ?? [];
-      const last = current[current.length - 1];
-      const result = await fetchMessages(activeId, last?.createdAt);
-      if (cancelled || !result.messages || result.messages.length === 0) return;
-      setChannelMessages(activeId, (prev) => [...prev, ...result.messages!]);
-    };
+    void (async () => {
+      // Authorize the WebSocket with the current session so private topics work.
+      await supabase.realtime.setAuth();
+      if (!active) return;
 
-    const id = setInterval(poll, MESSAGE_POLL_MS);
+      channel = supabase
+        .channel(`chat:${channelId}`, { config: { private: true } })
+        .on("broadcast", { event: "INSERT" }, ({ payload }) => {
+          const d = payload as {
+            id?: string;
+            channel_id?: string;
+            user_id?: string;
+            body?: string;
+            created_at?: string;
+            updated_at?: string;
+          };
+          if (!d?.id || !d.channel_id || !d.user_id) return;
+          const isOwn = d.user_id === currentUserId;
+          const message: ChatMessage = {
+            id: d.id,
+            channelId: d.channel_id,
+            userId: d.user_id,
+            username: isOwn ? "You" : (membersById.get(d.user_id) ?? "Unknown"),
+            body: d.body ?? "",
+            likeCount: 0,
+            likedByCurrentUser: false,
+            isOwn,
+            createdAt: d.created_at ?? new Date().toISOString(),
+            updatedAt: d.updated_at ?? d.created_at ?? new Date().toISOString(),
+          };
+          // dedupeById drops our own optimistic echo (same id).
+          setChannelMessages(d.channel_id, (prev) => [...prev, message]);
+        })
+        .on("broadcast", { event: "like" }, ({ payload }) => {
+          const d = payload as {
+            messageId?: string;
+            userId?: string;
+            op?: "insert" | "delete";
+          };
+          if (!d?.messageId) return;
+          // Our own likes are already applied optimistically.
+          if (d.userId === currentUserId) return;
+          const liked = d.op === "insert";
+          setChannelMessages(channelId, (prev) =>
+            prev.map((m) =>
+              m.id === d.messageId
+                ? {
+                    ...m,
+                    likeCount: Math.max(0, m.likeCount + (liked ? 1 : -1)),
+                  }
+                : m,
+            ),
+          );
+        })
+        .subscribe();
+    })();
+
     return () => {
-      cancelled = true;
-      clearInterval(id);
+      active = false;
+      if (channel) void supabase.removeChannel(channel);
     };
-  }, [activeId, messagesByChannel, setChannelMessages]);
+  }, [activeId, currentUserId, membersById, setChannelMessages]);
 
   // Periodically refresh the conversation list so DMs started by others appear.
   useEffect(() => {
@@ -612,7 +669,7 @@ function Thread({
         <div ref={bottomRef} />
       </div>
 
-      <Composer channelId={channel.id} onSend={onSend} />
+      <Composer key={channel.id} channelId={channel.id} onSend={onSend} />
     </section>
   );
 }
@@ -626,24 +683,19 @@ function MessageList({
   currentUserId: string;
   onLikeChange: (messageId: string, liked: boolean) => void;
 }) {
-  let lastDay = "";
-  let lastUser = "";
-  let lastTime = 0;
-
   return (
     <>
-      {messages.map((m) => {
+      {messages.map((m, i) => {
+        const prev = i > 0 ? messages[i - 1] : null;
         const day = formatDayLabel(m.createdAt);
-        const showDay = day !== lastDay;
+        const showDay = !prev || day !== formatDayLabel(prev.createdAt);
         const time = new Date(m.createdAt).getTime();
         // Group consecutive messages from the same person within 5 minutes.
         const grouped =
           !showDay &&
-          m.userId === lastUser &&
-          time - lastTime < 5 * 60 * 1000;
-        lastDay = day;
-        lastUser = m.userId;
-        lastTime = time;
+          !!prev &&
+          m.userId === prev.userId &&
+          time - new Date(prev.createdAt).getTime() < 5 * 60 * 1000;
 
         return (
           <div key={m.id}>
@@ -768,12 +820,6 @@ function Composer({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Reset the draft when switching conversations.
-  useEffect(() => {
-    setBody("");
-    setError(null);
-  }, [channelId]);
 
   function submit() {
     const trimmed = body.trim();

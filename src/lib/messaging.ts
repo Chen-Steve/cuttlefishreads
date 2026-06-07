@@ -121,6 +121,33 @@ export async function getWorkspaceMembers(
   });
 }
 
+// Group channels are open to every workspace member at the app layer, but
+// Realtime topic authorization is membership-based (the realtime.messages RLS
+// policy checks chat_channel_members). So each member needs a membership row to
+// subscribe to a group channel's broadcast topic. This self-heals on page load
+// for both master admins (env-only, not a DB role) and translators.
+export async function ensureGroupChannelMembership(
+  access: AdminAccess,
+): Promise<void> {
+  const admin = createAdminClient();
+
+  const { data: groupChannels } = await admin
+    .from("chat_channels")
+    .select("id")
+    .eq("kind", "channel");
+
+  if (!groupChannels || groupChannels.length === 0) return;
+
+  const rows = groupChannels.map((c) => ({
+    channel_id: c.id as string,
+    user_id: access.userId,
+  }));
+
+  await admin
+    .from("chat_channel_members")
+    .upsert(rows, { onConflict: "channel_id,user_id", ignoreDuplicates: true });
+}
+
 type ChannelRow = {
   id: string;
   kind: "channel" | "dm";
@@ -335,6 +362,10 @@ export async function getMessagingBootstrap(): Promise<{
 } | null> {
   const access = await getAdminAccess();
   if (!access?.hasWorkspace) return null;
+
+  // Ensure the current user can subscribe to every group channel's Realtime
+  // topic before we list conversations.
+  await ensureGroupChannelMembership(access);
 
   const [members, channels] = await Promise.all([
     getWorkspaceMembers(access),
