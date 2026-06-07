@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, ChevronDown, Coins, LogIn, LogOut, Library, Search, Settings, ShoppingBag, User, X } from "lucide-react";
+import { BookOpen, ChevronDown, Coins, LogIn, LogOut, Library, PenLine, Search, Settings, ShoppingBag, User, X } from "lucide-react";
 
 import { signOut } from "@/app/(main)/(auth)/actions";
 import { cn } from "@/lib/utils";
@@ -131,10 +131,12 @@ function AccountDropdown({
   username,
   coins = 0,
   isAdmin = false,
+  isMasterAdmin = false,
 }: {
   username?: string | null;
   coins?: number;
   isAdmin?: boolean;
+  isMasterAdmin?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -229,8 +231,12 @@ function AccountDropdown({
               onClick={() => setOpen(false)}
               className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
             >
-              <Settings className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
-              Admin
+              {isMasterAdmin ? (
+                <Settings className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
+              ) : (
+                <PenLine className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
+              )}
+              {isMasterAdmin ? "Admin" : "Workspace"}
             </Link>
           )}
 
@@ -257,11 +263,13 @@ export function SiteHeader({
   username = null,
   coins = 0,
   isAdmin = false,
+  isMasterAdmin = false,
 }: {
   isAuthenticated?: boolean;
   username?: string | null;
   coins?: number;
   isAdmin?: boolean;
+  isMasterAdmin?: boolean;
 }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const mobileInputRef = useRef<HTMLInputElement>(null);
@@ -351,7 +359,12 @@ export function SiteHeader({
           ))}
 
           {isAuthenticated ? (
-            <AccountDropdown username={username} coins={coins} isAdmin={isAdmin} />
+            <AccountDropdown
+              username={username}
+              coins={coins}
+              isAdmin={isAdmin}
+              isMasterAdmin={isMasterAdmin}
+            />
           ) : null}
         </nav>
 

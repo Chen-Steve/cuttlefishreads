@@ -14,6 +14,8 @@ export type ChapterFormInitial = {
   number: number;
   title: string;
   content: string;
+  translatorNote: string | null;
+  useGlobalTranslatorNote: boolean;
   isFree: boolean;
   coinCost: number;
   unlockAt: string | null;
@@ -39,6 +41,9 @@ export function ChapterForm({
 
   const [access, setAccess] = useState<"free" | "paid">(
     initial && !initial.isFree ? "paid" : "free",
+  );
+  const [noteMode, setNoteMode] = useState<"global" | "unique">(
+    initial?.useGlobalTranslatorNote === false ? "unique" : "global",
   );
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
@@ -156,6 +161,58 @@ export function ChapterForm({
           Blank lines start new paragraphs. **bold** and _italic_ are supported.
         </span>
       </div>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className={labelClass}>
+          Translator&apos;s note
+          <span className="ml-1 font-normal opacity-60">(optional)</span>
+        </legend>
+        <div className="flex flex-wrap gap-2">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2 text-sm font-medium text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:checked]:text-accent">
+            <input
+              type="radio"
+              name="noteMode"
+              value="global"
+              checked={noteMode === "global"}
+              onChange={() => setNoteMode("global")}
+              className="size-3.5 accent-accent"
+            />
+            Use global message
+          </label>
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2 text-sm font-medium text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:checked]:text-accent">
+            <input
+              type="radio"
+              name="noteMode"
+              value="unique"
+              checked={noteMode === "unique"}
+              onChange={() => setNoteMode("unique")}
+              className="size-3.5 accent-accent"
+            />
+            Write unique message
+          </label>
+        </div>
+        {noteMode === "global" ? (
+          <span className="text-xs text-muted">
+            Uses the global message from workspace Settings, with your Ko-fi /
+            Patreon links.
+          </span>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <textarea
+              id="chapter-note"
+              name="translatorNote"
+              rows={4}
+              defaultValue={initial?.translatorNote ?? ""}
+              placeholder="A short message just for this chapter."
+              className="block w-full resize-y rounded-xl border border-border bg-background px-3.5 py-3 text-sm leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
+            />
+            <span className="text-xs text-muted">
+              Shown above the comments on this chapter only. **bold** and _italic_
+              are supported.
+            </span>
+          </div>
+        )}
+      </fieldset>
 
       <fieldset className="flex flex-col gap-2">
         <legend className={labelClass}>Access</legend>

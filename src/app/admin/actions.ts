@@ -10,6 +10,62 @@ import { GENRES, type Genre } from "@/lib/constants";
 
 export type AdminState = { error?: string };
 
+export type SupportLinksState = { error?: string; message?: string };
+
+// Validates an optional support link. Empty is allowed (clears the link);
+// otherwise it must be an http(s) URL.
+function parseSupportLink(raw: string, label: string): string | null | { error: string } {
+  const value = raw.trim();
+  if (!value) return null;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return { error: `Enter a valid ${label} URL (including https://).` };
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return { error: `Your ${label} link must start with http:// or https://.` };
+  }
+  return url.toString();
+}
+
+export async function updateSupportLinks(
+  _prev: SupportLinksState,
+  formData: FormData,
+): Promise<SupportLinksState> {
+  const auth = await requireWorkspace();
+  if (!auth.access) return { error: auth.error };
+
+  const kofi = parseSupportLink(String(formData.get("kofiUrl") ?? ""), "Ko-fi");
+  if (kofi && typeof kofi === "object") return { error: kofi.error };
+
+  const patreon = parseSupportLink(
+    String(formData.get("patreonUrl") ?? ""),
+    "Patreon",
+  );
+  if (patreon && typeof patreon === "object") return { error: patreon.error };
+
+  const globalNote = String(formData.get("globalNote") ?? "").trim();
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("profiles")
+    .update({
+      translator_note: globalNote || null,
+      kofi_url: kofi as string | null,
+      patreon_url: patreon as string | null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", auth.access.userId);
+
+  if (error) return { error: error.message };
+
+  // Global note and support links appear on chapters that use the global message.
+  revalidatePath("/novels", "layout");
+  revalidatePath("/admin/settings");
+  return { message: "Settings saved." };
+}
+
 const NOVEL_STATUSES = ["ongoing", "completed", "hiatus"] as const;
 type NovelStatus = (typeof NOVEL_STATUSES)[number];
 
@@ -308,6 +364,11 @@ export async function createChapter(
   const novelId = String(formData.get("novelId") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
+  const noteMode = String(formData.get("noteMode") ?? "global");
+  const useGlobalNote = noteMode !== "unique";
+  const translatorNote = useGlobalNote
+    ? null
+    : String(formData.get("translatorNote") ?? "").trim() || null;
 
   if (!novelId) return { error: "Choose a novel." };
   if (!content) return { error: "Chapter content is required." };
@@ -359,6 +420,8 @@ export async function createChapter(
     number,
     title,
     content,
+    translator_note: translatorNote,
+    use_global_translator_note: useGlobalNote,
     is_free: isFree,
     coin_cost: coinCost,
     unlock_at: unlockAt,
@@ -377,6 +440,7 @@ export async function createChapter(
     .eq("id", novelId);
 
   revalidatePath("/admin");
+  revalidatePath("/novels", "layout");
   redirect(`/admin/novels/${novelId}/chapters`);
 }
 
@@ -491,6 +555,9 @@ export async function updateChapter(
 
   const title = String(formData.get("title") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
+  const noteMode = String(formData.get("noteMode") ?? "global");
+  const useGlobalNote = noteMode !== "unique";
+  const uniqueNote = String(formData.get("translatorNote") ?? "").trim() || null;
 
   if (!content) return { error: "Chapter content is required." };
 
@@ -533,6 +600,8 @@ export async function updateChapter(
     .update({
       title,
       content,
+      ...(useGlobalNote ? {} : { translator_note: uniqueNote }),
+      use_global_translator_note: useGlobalNote,
       is_free: isFree,
       coin_cost: coinCost,
       unlock_at: unlockAt,

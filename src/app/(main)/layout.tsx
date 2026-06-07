@@ -16,6 +16,7 @@ export default async function MainLayout({
   let username: string | null = null;
   let coins = 0;
   let isAdmin = false;
+  let isMasterAdmin = false;
   if (data?.claims) {
     const { data: profile } = await supabase
       .from("profiles")
@@ -26,7 +27,8 @@ export default async function MainLayout({
     coins = profile?.coins ?? 0;
 
     // Master admin check (env-based, always available).
-    isAdmin = isAdminEmail(data.claims.email as string | undefined);
+    isMasterAdmin = isAdminEmail(data.claims.email as string | undefined);
+    isAdmin = isMasterAdmin;
 
     // Translator role check — only possible after translators.sql has been run.
     // Fail silently so a missing column never breaks the header for everyone.
@@ -51,6 +53,7 @@ export default async function MainLayout({
         username={username}
         coins={coins}
         isAdmin={isAdmin}
+        isMasterAdmin={isMasterAdmin}
       />
       <div className="contents [&:has([data-hide-main-footer])_footer]:hidden">
         <main className="flex-1">{children}</main>

@@ -93,13 +93,15 @@ export default async function ChaptersListPage({
 
         <div className="flex flex-wrap items-center gap-2">
           <PublishAllButton novelId={id} draftCount={draftCount} />
-          <Link
-            href={`/admin/novels/${id}/import`}
-            className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            <Sparkles className="size-4" strokeWidth={1.75} aria-hidden />
-            Import &amp; translate
-          </Link>
+          {access.isMasterAdmin ? (
+            <Link
+              href={`/admin/novels/${id}/import`}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              <Sparkles className="size-4" strokeWidth={1.75} aria-hidden />
+              Import &amp; translate
+            </Link>
+          ) : null}
           <Link
             href={`/admin/novels/${id}/chapters/new`}
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"

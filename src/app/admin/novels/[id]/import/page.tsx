@@ -29,9 +29,7 @@ export default async function ImportChaptersPage({
     .maybeSingle();
 
   if (!novel) notFound();
-  if (!access || (!access.isMasterAdmin && novel.publisher_id !== access.userId)) {
-    notFound();
-  }
+  if (!access?.isMasterAdmin) notFound();
 
   return (
     <PageContainer as="div" width="prose">

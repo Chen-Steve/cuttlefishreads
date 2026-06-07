@@ -18,6 +18,8 @@ type ChapterRow = {
   number: number;
   title: string;
   content: string;
+  translator_note: string | null;
+  use_global_translator_note: boolean;
   is_free: boolean;
   coin_cost: number;
   unlock_at: string | null;
@@ -37,7 +39,9 @@ export default async function EditChapterPage({
     admin.from("novels").select("id, title, publisher_id").eq("id", id).maybeSingle(),
     admin
       .from("chapters")
-      .select("id, number, title, content, is_free, coin_cost, unlock_at")
+      .select(
+        "id, number, title, content, translator_note, use_global_translator_note, is_free, coin_cost, unlock_at",
+      )
       .eq("id", chapterId)
       .eq("novel_id", id)
       .maybeSingle(),
@@ -72,6 +76,8 @@ export default async function EditChapterPage({
             number: row.number,
             title: row.title,
             content: row.content,
+            translatorNote: row.translator_note,
+            useGlobalTranslatorNote: row.use_global_translator_note,
             isFree: row.is_free,
             coinCost: row.coin_cost,
             unlockAt: row.unlock_at,

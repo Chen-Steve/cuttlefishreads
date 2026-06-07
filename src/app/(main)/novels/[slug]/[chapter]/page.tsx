@@ -3,7 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CommentSection } from "@/components/comments";
 import { PageContainer } from "@/components/page-container";
-import { ChapterContent, ChapterUnlockGate, ReaderNav } from "@/components/reader";
+import {
+  ChapterContent,
+  ChapterUnlockGate,
+  ReaderNav,
+  TranslatorNote,
+} from "@/components/reader";
 import {
   getAdjacentChapters,
   getChapter,
@@ -135,7 +140,19 @@ export default async function ChapterReaderPage({
 
       {!current.locked ? (
         <>
-          <hr className="my-10 border-border" />
+          <TranslatorNote
+            name={novel.translator || novel.translatorUsername || "The translator"}
+            username={novel.translatorUsername}
+            note={
+              current.useGlobalTranslatorNote
+                ? (novel.translatorGlobalNote ?? null)
+                : current.translatorNote
+            }
+            kofiUrl={novel.translatorKofiUrl}
+            patreonUrl={novel.translatorPatreonUrl}
+          />
+
+          <hr className="my-6 border-border" />
 
           <section className="mb-10">
             <h2 className="mb-4 text-lg font-semibold tracking-tight text-foreground">

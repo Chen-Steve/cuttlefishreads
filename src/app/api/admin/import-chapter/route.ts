@@ -20,7 +20,7 @@ type ImportBody = {
 
 export async function POST(request: Request) {
   const adminAccess = await getAdminAccess();
-  if (!adminAccess?.hasWorkspace) {
+  if (!adminAccess?.isMasterAdmin) {
     return Response.json({ ok: false, error: "Not authorized." }, { status: 403 });
   }
 
@@ -55,10 +55,6 @@ export async function POST(request: Request) {
   if (!novel) {
     return Response.json({ ok: false, error: "That novel no longer exists." }, { status: 404 });
   }
-  if (!adminAccess.isMasterAdmin && novel.publisher_id !== adminAccess.userId) {
-    return Response.json({ ok: false, error: "Not authorized." }, { status: 403 });
-  }
-
   // Scrape first — cheap, and we always need the "next chapter" link even when
   // this chapter was already imported (so a re-run can resume past it).
   let scraped;

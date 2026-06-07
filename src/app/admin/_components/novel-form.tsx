@@ -97,12 +97,6 @@ export function NovelForm({
         </div>
       )}
 
-      {!canEditAttribution && (
-        <p className="rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs text-muted">
-          This novel will be credited to you as the translator.
-        </p>
-      )}
-
       <div className="flex flex-col gap-1.5">
         <label htmlFor="novel-description" className={labelClass}>
           Description

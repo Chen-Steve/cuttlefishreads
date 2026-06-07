@@ -98,12 +98,6 @@ export default async function NovelDetailPage({
   void recordNovelView(slug);
 
   const firstChapter = chapters[0];
-  const authorLine = [
-    novel.translator && `Translated by ${novel.translator}`,
-    novel.originalAuthor && `Original by ${novel.originalAuthor}`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
 
   return (
     <PageContainer as="article" width="prose">
@@ -118,8 +112,26 @@ export default async function NovelDetailPage({
           <h1 className="text-xl font-bold tracking-tight text-balance text-foreground sm:text-3xl">
             {novel.title}
           </h1>
-          {authorLine ? (
-            <p className="mt-1 text-sm text-muted">{authorLine}</p>
+          {novel.translator || novel.originalAuthor ? (
+            <p className="mt-1 text-sm text-muted">
+              {novel.translator ? (
+                <>
+                  Translated by{" "}
+                  {novel.translatorUsername ? (
+                    <Link
+                      href={`/u/${novel.translatorUsername}`}
+                      className="font-medium text-foreground underline-offset-2 hover:underline"
+                    >
+                      {novel.translator}
+                    </Link>
+                  ) : (
+                    novel.translator
+                  )}
+                </>
+              ) : null}
+              {novel.translator && novel.originalAuthor ? " · " : null}
+              {novel.originalAuthor ? `Original by ${novel.originalAuthor}` : null}
+            </p>
           ) : (
             <p className="mt-1 text-sm text-muted">by {novel.author}</p>
           )}

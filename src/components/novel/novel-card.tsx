@@ -23,7 +23,7 @@ export function NovelCard({
   return (
     <Link
       href={`/novels/${novel.slug}`}
-      className="group flex flex-col gap-3 rounded-xl p-2 outline-offset-2 transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-accent"
+      className={`group flex flex-col rounded-xl outline-offset-2 transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-accent ${compact ? "gap-2 p-1" : "gap-3 p-2"}`}
     >
       <NovelCover
         title={novel.title}
@@ -31,7 +31,9 @@ export function NovelCard({
         coverUrl={novel.coverUrl}
         className="transition-transform duration-300 group-hover:-translate-y-0.5"
       />
-      <div className="flex min-w-0 flex-col gap-1.5 px-1">
+      <div
+        className={`flex min-w-0 flex-col px-1 ${compact ? "gap-1" : "gap-1.5"}`}
+      >
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
           {novel.title}
         </h3>
@@ -39,7 +41,9 @@ export function NovelCard({
           <p className="text-xs text-muted">{novel.author}</p>
         ) : null}
         {novel.genres.length > 0 || !compact ? (
-          <div className="mt-1 -mx-1 min-w-0 overflow-x-auto px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <div
+            className={`${compact ? "mt-0.5" : "mt-1"} -mx-1 min-w-0 overflow-x-auto px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden`}
+          >
             <div className="flex w-max min-w-full flex-nowrap items-center gap-1.5">
               {!compact ? (
                 <Badge className="shrink-0 border-accent/30 text-accent">

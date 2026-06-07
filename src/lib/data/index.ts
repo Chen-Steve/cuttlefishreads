@@ -27,6 +27,8 @@ type DbChapter = {
   number: number;
   title: string;
   content: string;
+  translator_note: string | null;
+  use_global_translator_note: boolean;
   is_free: boolean;
   coin_cost: number;
   unlock_at: string | null;
@@ -96,6 +98,8 @@ function mapChapter(
     number: row.number,
     title: row.title,
     content: splitContent(row.content),
+    translatorNote: row.translator_note?.trim() ? row.translator_note : null,
+    useGlobalTranslatorNote: row.use_global_translator_note ?? true,
     publishedAt: formatDate(row.published_at),
     isFree: naturallyFree,
     coinCost: row.coin_cost,
@@ -153,7 +157,7 @@ async function fetchDbChapters(novelId: string): Promise<DbChapter[]> {
   const { data, error } = await admin
     .from("chapters")
     .select(
-      "id, number, title, content, is_free, coin_cost, unlock_at, published_at",
+      "id, number, title, content, translator_note, use_global_translator_note, is_free, coin_cost, unlock_at, published_at",
     )
     .eq("novel_id", novelId)
     .eq("is_published", true)
@@ -205,7 +209,30 @@ export async function getNovel(slug: string): Promise<Novel | undefined> {
     .maybeSingle();
 
   if (error || !data) return undefined;
-  return mapNovel(data as DbNovel);
+
+  const novel = mapNovel(data as DbNovel);
+
+  if (novel.publisherId) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username, translator_note, kofi_url, patreon_url")
+      .eq("id", novel.publisherId)
+      .maybeSingle();
+    if (profile?.username) {
+      novel.translatorUsername = profile.username;
+    }
+    if (profile?.translator_note?.trim()) {
+      novel.translatorGlobalNote = profile.translator_note;
+    }
+    if (profile?.kofi_url) {
+      novel.translatorKofiUrl = profile.kofi_url;
+    }
+    if (profile?.patreon_url) {
+      novel.translatorPatreonUrl = profile.patreon_url;
+    }
+  }
+
+  return novel;
 }
 
 export async function getFeaturedNovels(): Promise<Novel[]> {
@@ -278,6 +305,7 @@ export async function getLibraryNovels(): Promise<Novel[]> {
 export type PublicProfile = {
   id: string;
   username: string;
+  role: "user" | "translator";
 };
 
 export async function getPublicProfile(
@@ -286,12 +314,16 @@ export async function getPublicProfile(
   const supabase = createClient(await cookies());
   const { data } = await supabase
     .from("profiles")
-    .select("id, username")
+    .select("id, username, role")
     .eq("username", username)
     .maybeSingle();
 
   if (!data?.username) return null;
-  return { id: data.id, username: data.username };
+  return {
+    id: data.id,
+    username: data.username,
+    role: data.role === "translator" ? "translator" : "user",
+  };
 }
 
 export async function getUserBookmarkedNovels(
@@ -313,6 +345,24 @@ export async function getUserBookmarkedNovels(
 
   const novels = await getNovels();
   return novels.filter((novel) => slugs.has(novel.slug));
+}
+
+export async function getUserCreatedNovels(userId: string): Promise<Novel[]> {
+  const supabase = createClient(await cookies());
+  const { data, error } = await supabase
+    .from("novels")
+    .select(
+      "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, chapters(count)",
+    )
+    .eq("publisher_id", userId)
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    console.error("getUserCreatedNovels:", error);
+    return [];
+  }
+
+  return (data ?? []).map((row) => mapNovel(row as DbNovel));
 }
 
 export async function getChapters(slug: string): Promise<Chapter[]> {

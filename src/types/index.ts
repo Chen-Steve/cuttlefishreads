@@ -7,6 +7,10 @@ export interface Novel {
   author: string;
   originalAuthor?: string;
   translator?: string;
+  translatorUsername?: string;
+  translatorGlobalNote?: string;
+  translatorKofiUrl?: string;
+  translatorPatreonUrl?: string;
   synopsis: string;
   coverUrl?: string;
   genres: Genre[];
@@ -23,6 +27,10 @@ export interface Chapter {
   number: number;
   title: string;
   content: string[];
+  /** Per-chapter message when useGlobalTranslatorNote is false. */
+  translatorNote: string | null;
+  /** When true, readers see the translator's global note from their profile. */
+  useGlobalTranslatorNote: boolean;
   publishedAt: string;
   isFree: boolean;
   coinCost: number;

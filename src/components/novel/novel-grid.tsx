@@ -19,7 +19,13 @@ export function NovelGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-4 xl:grid-cols-5">
+    <div
+      className={
+        compact
+          ? "grid grid-cols-2 gap-x-2.5 gap-y-4 sm:grid-cols-3 sm:gap-x-3 sm:gap-y-5 lg:grid-cols-4 xl:grid-cols-5"
+          : "grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-4 xl:grid-cols-5"
+      }
+    >
       {novels.map((novel) => (
         <NovelCard
           key={novel.id}
