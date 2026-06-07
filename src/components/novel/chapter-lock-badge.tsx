@@ -18,7 +18,7 @@ export function ChapterLockBadge({ chapter }: { chapter: Chapter }) {
             <Coins className="size-3" strokeWidth={1.75} aria-hidden />
           </span>
         ) : null}
-        <UnlockCountdown unlockAt={chapter.unlockAt} />
+        <UnlockCountdown unlockAt={chapter.unlockAt} precision="day-hour" />
       </span>
     );
   }

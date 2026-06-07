@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Eye } from "lucide-react";
 import { CommentSection } from "@/components/comments";
 import {
   BookmarkButton,
@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   getChapters,
   getNovel,
+  getNovelViewCount,
   getUserCoins,
   isNovelBookmarked,
   isUserAuthenticated,
@@ -104,56 +105,82 @@ export default async function NovelDetailPage({
     notFound();
   }
 
+  const viewCount = await getNovelViewCount(novel.id);
+
   // Fire-and-forget unique view tracking; never block rendering on it.
   void recordNovelView(slug);
 
   const firstChapter = chapters[0];
   const bulkBuy = getBulkBuyState(chapters);
 
+  const authorLine =
+    novel.translator || novel.originalAuthor ? (
+      <p className="text-sm text-muted">
+        {novel.translator ? (
+          <>
+            by{" "}
+            {novel.translatorUsername ? (
+              <Link
+                href={`/u/${novel.translatorUsername}`}
+                className="font-medium text-foreground underline-offset-2 hover:underline"
+              >
+                {novel.translator}
+              </Link>
+            ) : (
+              novel.translator
+            )}
+          </>
+        ) : null}
+        {novel.translator && novel.originalAuthor ? " · " : null}
+        {novel.originalAuthor ? `Original by ${novel.originalAuthor}` : null}
+      </p>
+    ) : (
+      <p className="text-sm text-muted">by {novel.author}</p>
+    );
+
+  const statusAndGenres = (
+    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+      <Badge className="border-accent/30 text-accent">
+        {statusLabel[novel.status]}
+      </Badge>
+      {novel.genres.map((genre) => (
+        <Badge key={genre}>{genre}</Badge>
+      ))}
+    </div>
+  );
+
+  const viewCountDisplay = (
+    <p className="inline-flex items-center gap-1.5 text-xs text-muted sm:text-sm">
+      <Eye className="size-3.5 shrink-0 sm:size-4" strokeWidth={1.75} aria-hidden />
+      {viewCount.toLocaleString()} views
+    </p>
+  );
+
   return (
     <PageContainer as="article" width="prose">
-      <div className="flex flex-col gap-6 sm:flex-row sm:gap-8">
-        <NovelCover
-          title={novel.title}
-          slug={novel.slug}
-          coverUrl={novel.coverUrl}
-          className="w-32 shrink-0 self-center sm:w-40 sm:self-start"
-        />
+      <div className="flex flex-col gap-4 sm:flex-row sm:gap-8">
+        <div className="flex items-start gap-4 sm:contents">
+          <NovelCover
+            title={novel.title}
+            slug={novel.slug}
+            coverUrl={novel.coverUrl}
+            className="w-28 shrink-0 sm:w-40"
+          />
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:hidden">
+            {authorLine}
+            {statusAndGenres}
+            {viewCountDisplay}
+          </div>
+        </div>
         <div className="flex min-w-0 flex-1 flex-col">
           <h1 className="text-xl font-bold tracking-tight text-balance text-foreground sm:text-3xl">
             {novel.title}
           </h1>
-          {novel.translator || novel.originalAuthor ? (
-            <p className="mt-1 text-sm text-muted">
-              {novel.translator ? (
-                <>
-                  Translated by{" "}
-                  {novel.translatorUsername ? (
-                    <Link
-                      href={`/u/${novel.translatorUsername}`}
-                      className="font-medium text-foreground underline-offset-2 hover:underline"
-                    >
-                      {novel.translator}
-                    </Link>
-                  ) : (
-                    novel.translator
-                  )}
-                </>
-              ) : null}
-              {novel.translator && novel.originalAuthor ? " · " : null}
-              {novel.originalAuthor ? `Original by ${novel.originalAuthor}` : null}
-            </p>
-          ) : (
-            <p className="mt-1 text-sm text-muted">by {novel.author}</p>
-          )}
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Badge className="border-accent/30 text-accent">
-              {statusLabel[novel.status]}
-            </Badge>
-            {novel.genres.map((genre) => (
-              <Badge key={genre}>{genre}</Badge>
-            ))}
+          <div className="mt-1 hidden flex-col gap-4 sm:flex">
+            {authorLine}
+            {statusAndGenres}
+            {viewCountDisplay}
           </div>
 
           {novel.synopsis ? <NovelDescription synopsis={novel.synopsis} /> : null}

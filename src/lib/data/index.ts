@@ -265,6 +265,21 @@ export async function recordNovelView(slug: string): Promise<void> {
     );
 }
 
+export async function getNovelViewCount(novelId: string): Promise<number> {
+  const admin = createAdminClient();
+  const { count, error } = await admin
+    .from("novel_views")
+    .select("*", { count: "exact", head: true })
+    .eq("novel_id", novelId);
+
+  if (error) {
+    console.error("getNovelViewCount:", error);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
 export async function getBookmarkedSlugs(): Promise<Set<string>> {
   const supabase = createClient(await cookies());
   const { data: auth } = await supabase.auth.getClaims();

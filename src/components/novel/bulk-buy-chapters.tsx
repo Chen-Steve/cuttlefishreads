@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Coins, ShoppingBag } from "lucide-react";
+import { ArrowRight, Coins, ShoppingBag, X } from "lucide-react";
 
 import { bulkUnlockChapters } from "@/app/(main)/novels/actions";
 import {
@@ -26,16 +26,26 @@ export function BulkBuyChapters({
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [showInsufficientPopup, setShowInsufficientPopup] = useState(false);
   const [pending, startTransition] = useTransition();
   const bulkBuy = getBulkBuyState(chapters);
+  const canAfford = userCoins >= bulkBuy.discountedPrice;
 
   if (!bulkBuy.eligible) return null;
 
   function handleBulkBuy() {
     setError(null);
+    if (!canAfford) {
+      setShowInsufficientPopup(true);
+      return;
+    }
     startTransition(async () => {
       const result = await bulkUnlockChapters(novelSlug);
       if (result.error) {
+        if (result.error.toLowerCase().includes("insufficient coins")) {
+          setShowInsufficientPopup(true);
+          return;
+        }
         setError(result.error);
         return;
       }
@@ -61,7 +71,7 @@ export function BulkBuyChapters({
               <ShoppingBag className="size-4" strokeWidth={1.75} aria-hidden />
               Sign in to buy all chapters ({discountPercent}% off)
             </Link>
-          ) : userCoins >= bulkBuy.discountedPrice ? (
+          ) : (
             <button
               type="button"
               onClick={handleBulkBuy}
@@ -76,15 +86,6 @@ export function BulkBuyChapters({
                 <Coins className="size-3.5" strokeWidth={1.75} aria-hidden />
               </span>
             </button>
-          ) : (
-            <Link
-              href="/shop"
-              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-500/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:w-fit"
-            >
-              <ShoppingBag className="size-4" strokeWidth={1.75} aria-hidden />
-              Buy coins to unlock all ({bulkBuy.discountedPrice.toLocaleString()}{" "}
-              coins)
-            </Link>
           )}
 
           <p className="text-xs text-muted">
@@ -106,6 +107,58 @@ export function BulkBuyChapters({
         </div>
       )}
 
+      {showInsufficientPopup ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="presentation"
+          onClick={() => setShowInsufficientPopup(false)}
+        >
+          <div className="absolute inset-0 bg-foreground/20 backdrop-blur-[2px]" />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bulk-buy-insufficient-title"
+            className="relative w-full max-w-sm rounded-2xl border border-border bg-surface p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowInsufficientPopup(false)}
+              className="absolute right-4 top-4 rounded-lg p-1 text-muted transition-colors hover:bg-background hover:text-foreground"
+              aria-label="Close"
+            >
+              <X className="size-4" strokeWidth={1.75} aria-hidden />
+            </button>
+            <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-amber-500/10">
+              <Coins className="size-5 text-amber-600" strokeWidth={1.75} aria-hidden />
+            </div>
+            <h3
+              id="bulk-buy-insufficient-title"
+              className="mt-4 text-center text-lg font-semibold text-foreground"
+            >
+              Insufficient coins — top up!
+            </h3>
+            <p className="mt-2 text-center text-sm text-muted">
+              You need{" "}
+              <span className="font-semibold text-foreground">
+                {bulkBuy.discountedPrice.toLocaleString()} coins
+              </span>{" "}
+              but only have{" "}
+              <span className="font-semibold text-foreground">
+                {userCoins.toLocaleString()}
+              </span>
+              .
+            </p>
+            <Link
+              href="/shop"
+              className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              Go to shop
+              <ArrowRight className="size-4" strokeWidth={2} aria-hidden />
+            </Link>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

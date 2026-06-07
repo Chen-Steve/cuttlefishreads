@@ -4,21 +4,28 @@ import { useRouter } from "next/navigation";
 import { Clock } from "lucide-react";
 
 import { useUnlockCountdown } from "@/hooks/use-unlock-countdown";
+import type { UnlockCountdownPrecision } from "@/lib/unlock-countdown";
 import { cn } from "@/lib/utils";
 
 export function UnlockCountdown({
   unlockAt,
   variant = "badge",
+  precision = "full",
   className,
 }: {
   unlockAt: string;
   variant?: "badge" | "prominent";
+  precision?: UnlockCountdownPrecision;
   className?: string;
 }) {
   const router = useRouter();
-  const { scheduled, label } = useUnlockCountdown(unlockAt, () => {
-    router.refresh();
-  });
+  const { scheduled, label } = useUnlockCountdown(
+    unlockAt,
+    () => {
+      router.refresh();
+    },
+    precision,
+  );
 
   if (!scheduled) return null;
 
