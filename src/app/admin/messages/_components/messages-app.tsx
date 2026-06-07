@@ -233,7 +233,7 @@ export function MessagesApp({
   );
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-3.25rem)] min-h-[520px] w-full max-w-6xl gap-0 px-0 sm:px-6 sm:py-6 lg:px-8">
+    <div className="mx-auto flex h-[calc(100dvh-3rem)] w-full max-w-6xl gap-0 px-0 sm:h-[calc(100dvh-3.25rem)] sm:px-6 sm:py-6 lg:px-8">
       <div className="flex w-full overflow-hidden rounded-none border-border bg-surface sm:rounded-2xl sm:border">
         <Sidebar
           channels={channels}
@@ -308,6 +308,11 @@ function Sidebar({
         mobileHidden ? "hidden sm:flex" : "flex",
       )}
     >
+      {/* Mobile-only header bar */}
+      <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:hidden">
+        <span className="text-sm font-semibold text-foreground">Messages</span>
+      </div>
+
       <div className="flex items-center justify-between px-4 pb-2 pt-4">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
           Channels
@@ -317,9 +322,9 @@ function Sidebar({
             type="button"
             onClick={() => setShowNewChannel((v) => !v)}
             aria-label="Create channel"
-            className="rounded-lg p-1 text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="rounded-lg p-1.5 text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:p-1"
           >
-            <Plus className="size-4" strokeWidth={2} aria-hidden />
+            <Plus className="size-5 sm:size-4" strokeWidth={2} aria-hidden />
           </button>
         ) : null}
       </div>
@@ -358,9 +363,9 @@ function Sidebar({
           type="button"
           onClick={() => setShowMembers((v) => !v)}
           aria-label="New direct message"
-          className="rounded-lg p-1 text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className="rounded-lg p-1.5 text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:p-1"
         >
-          <MessageSquarePlus className="size-4" strokeWidth={2} aria-hidden />
+          <MessageSquarePlus className="size-5 sm:size-4" strokeWidth={2} aria-hidden />
         </button>
       </div>
 
@@ -410,7 +415,7 @@ function ConversationButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm font-medium transition-colors",
+        "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors sm:gap-2 sm:px-2 sm:py-1.5",
         active
           ? "bg-accent/10 text-accent"
           : "text-muted hover:bg-surface hover:text-foreground",
@@ -626,17 +631,17 @@ function Thread({
         mobileHidden ? "hidden sm:flex" : "flex",
       )}
     >
-      <header className="flex items-center gap-2 border-b border-border px-4 py-3">
+      <header className="flex items-center gap-2 border-b border-border px-3 py-3 sm:px-4">
         <button
           type="button"
           onClick={onBack}
           aria-label="Back to conversations"
-          className="rounded-lg p-1 text-muted hover:text-foreground sm:hidden"
+          className="-ml-1 rounded-lg p-2 text-muted hover:bg-surface hover:text-foreground sm:hidden"
         >
           <ArrowLeft className="size-5" aria-hidden />
         </button>
         {channel.kind === "channel" ? (
-          <Hash className="size-4 text-muted" strokeWidth={2} aria-hidden />
+          <Hash className="size-4 shrink-0 text-muted" strokeWidth={2} aria-hidden />
         ) : (
           <Avatar name={channel.title} />
         )}
@@ -647,7 +652,7 @@ function Thread({
 
       <div
         ref={scrollRef}
-        className="flex-1 space-y-1 overflow-y-auto px-4 py-4"
+        className="flex-1 space-y-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4"
       >
         {loading ? (
           <div className="flex h-full items-center justify-center">
@@ -845,7 +850,7 @@ function Composer({
   }
 
   return (
-    <div className="border-t border-border p-3">
+    <div className="border-t border-border p-2.5 sm:p-3">
       <div className="flex items-end gap-2 rounded-xl border border-border bg-background px-3 py-2 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
         <textarea
           ref={textareaRef}
@@ -854,7 +859,7 @@ function Composer({
           onKeyDown={handleKeyDown}
           rows={1}
           maxLength={MAX_MESSAGE_LENGTH}
-          placeholder="Write a message…  (Enter to send, Shift+Enter for a new line)"
+          placeholder="Write a message…"
           className="max-h-32 min-h-[1.5rem] w-full resize-none bg-transparent text-sm text-foreground placeholder:text-muted focus:outline-none"
         />
         <button

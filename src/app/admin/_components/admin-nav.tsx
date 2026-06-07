@@ -25,16 +25,16 @@ export function AdminNav({ isMasterAdmin }: { isMasterAdmin: boolean }) {
 
   return (
     <nav className="border-b border-border bg-surface">
-      <div className="mx-auto flex w-full max-w-6xl items-center gap-1 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-6xl items-center gap-1 overflow-x-auto px-4 [scrollbar-width:none] sm:px-6 sm:overflow-x-visible lg:px-8 [&::-webkit-scrollbar]:hidden">
         <Link
           href="/"
-          className="mr-2 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
+          className="mr-1 inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground sm:mr-2 sm:px-2.5"
         >
           <Home className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
-          Home
+          <span className="hidden sm:inline">Home</span>
         </Link>
 
-        <div className="mx-1 h-5 w-px bg-border" aria-hidden />
+        <div className="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden />
 
         {links.map((link) => {
           const active =
@@ -46,7 +46,7 @@ export function AdminNav({ isMasterAdmin }: { isMasterAdmin: boolean }) {
               key={link.href}
               href={link.href}
               className={cn(
-                "relative -mb-px border-b-2 px-3 py-3.5 text-sm font-medium transition-colors",
+                "relative -mb-px shrink-0 whitespace-nowrap border-b-2 px-2.5 py-3 text-xs font-medium transition-colors sm:px-3 sm:py-3.5 sm:text-sm",
                 active
                   ? "border-accent text-foreground"
                   : "border-transparent text-muted hover:text-foreground",
