@@ -11,6 +11,7 @@ type NavLink = { href: string; label: string };
 const baseLinks: NavLink[] = [
   { href: "/admin", label: "My Novels" },
   { href: "/admin/dashboard", label: "Dashboard" },
+  { href: "/admin/messages", label: "Messages" },
   { href: "/admin/settings", label: "Settings" },
 ];
 
