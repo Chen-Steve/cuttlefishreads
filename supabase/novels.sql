@@ -6,6 +6,10 @@
 -- so the coin price is read authoritatively from the chapter row instead of
 -- being trusted from the client.
 --
+-- Revenue split: when a reader spends coins to unlock a chapter, 70% of the
+-- coin cost is credited to the translator (publisher_id) and 30% is retained
+-- by the platform (simply not credited anywhere).
+--
 -- Writes to these tables are performed server-side with the service-role key
 -- (see src/app/admin/actions.ts), so there are no client insert/update
 -- policies. Public reads of chapter *content* are intentionally NOT exposed to
@@ -93,6 +97,8 @@ on conflict (id) do nothing;
 --   2. Returns false (no charge) for free / already-auto-unlocked / already
 --      purchased chapters.
 --   3. Checks the balance, deducts coins, and records a chapter_unlocks row.
+--   4. Credits 70% of the coin cost to the translator (publisher); the
+--      remaining 30% is the platform's share and is not credited anywhere.
 -- Returns true when coins were spent.
 -- -----------------------------------------------------------------------------
 drop function if exists public.unlock_chapter(text, integer, integer);
@@ -107,12 +113,13 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_user_id      uuid := auth.uid();
-  v_cost         integer;
-  v_is_free      boolean;
-  v_unlock_at    timestamptz;
-  v_publisher_id uuid;
-  v_balance      integer;
+  v_user_id           uuid := auth.uid();
+  v_cost              integer;
+  v_is_free           boolean;
+  v_unlock_at         timestamptz;
+  v_publisher_id      uuid;
+  v_balance           integer;
+  v_translator_share  integer;
 begin
   if v_user_id is null then
     raise exception 'Not authenticated';
@@ -130,7 +137,9 @@ begin
   end if;
 
   -- Free, or scheduled auto-unlock date has passed — no purchase needed.
-  if v_is_free or (v_unlock_at is not null and v_unlock_at <= now()) then
+  -- Also treat coin_cost = 0 as free to avoid a coins_spent > 0 constraint
+  -- violation (a chapter can have is_free = false but cost 0 during setup).
+  if v_is_free or v_cost = 0 or (v_unlock_at is not null and v_unlock_at <= now()) then
     return false;
   end if;
 
@@ -149,7 +158,7 @@ begin
     return false;
   end if;
 
-  -- Lock the profile row and read the balance.
+  -- Lock the reader's profile row and check the balance.
   select coins into v_balance
     from public.profiles
     where id = v_user_id
@@ -159,9 +168,18 @@ begin
     raise exception 'Insufficient coins (have %, need %)', v_balance, v_cost;
   end if;
 
+  -- Deduct full cost from reader.
   update public.profiles
     set coins = coins - v_cost
     where id = v_user_id;
+
+  -- Credit 70% to the translator; the platform keeps the remaining 30%.
+  if v_publisher_id is not null then
+    v_translator_share := floor(v_cost * 0.7)::integer;
+    update public.profiles
+      set coins = coins + v_translator_share
+      where id = v_publisher_id;
+  end if;
 
   insert into public.chapter_unlocks
     (user_id, novel_slug, chapter_number, coins_spent)

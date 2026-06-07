@@ -27,15 +27,12 @@ export type NovelFormValues = {
   genres: string[];
   tags: string[];
   status: string;
-  publisher_username: string | null;
 };
 
 export function NovelForm({
   novel,
-  canEditAttribution = true,
 }: {
   novel?: NovelFormValues;
-  canEditAttribution?: boolean;
 }) {
   const isEdit = Boolean(novel);
   const [state, action, pending] = useActionState<AdminState, FormData>(
@@ -67,35 +64,6 @@ export function NovelForm({
           className={inputClass}
         />
       </div>
-
-      {canEditAttribution && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="novel-author" className={labelClass}>
-              Original author
-            </label>
-            <input
-              id="novel-author"
-              name="originalAuthor"
-              defaultValue={novel?.original_author ?? ""}
-              placeholder="Original author name"
-              className={inputClass}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="novel-translator" className={labelClass}>
-              Translator
-            </label>
-            <input
-              id="novel-translator"
-              name="translator"
-              defaultValue={novel?.translator ?? ""}
-              placeholder="Translator name"
-              className={inputClass}
-            />
-          </div>
-        </div>
-      )}
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="novel-description" className={labelClass}>
@@ -164,24 +132,6 @@ export function NovelForm({
           </select>
         </div>
       </div>
-
-      {canEditAttribution && (
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="novel-publisher" className={labelClass}>
-            Publisher username
-          </label>
-          <input
-            id="novel-publisher"
-            name="publisherUsername"
-            defaultValue={novel?.publisher_username ?? ""}
-            placeholder="Username of the publisher (leave blank for none)"
-            className={inputClass}
-          />
-          <span className="text-xs text-muted">
-            The publisher can read all chapters of this novel for free.
-          </span>
-        </div>
-      )}
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="novel-cover" className={labelClass}>

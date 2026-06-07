@@ -50,7 +50,7 @@ create table if not exists public.chapter_unlocks (
   user_id        uuid        not null references auth.users (id) on delete cascade,
   novel_slug     text        not null,
   chapter_number integer     not null check (chapter_number > 0),
-  coins_spent    integer     not null check (coins_spent > 0),
+  coins_spent    integer     not null check (coins_spent >= 0),
   created_at     timestamptz not null default now(),
 
   unique (user_id, novel_slug, chapter_number)  -- prevents duplicate unlocks

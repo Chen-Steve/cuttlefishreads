@@ -99,34 +99,34 @@ export default async function ApplyPage() {
         plus a dashboard to track views, bookmarks, and purchases.
       </p>
 
-      <div className="mt-8 rounded-2xl border border-border bg-surface p-5 sm:p-6">
-        {application ? (
-          <div className={`rounded-xl border px-5 py-5 text-sm ${STATUS_COPY[application.status].tone}`}>
-            <p className="font-semibold">{STATUS_COPY[application.status].title}</p>
-            <p className="mt-1 opacity-90">{STATUS_COPY[application.status].body}</p>
-            {application.status === "approved" && (
-              <Link
-                href="/admin"
-                className="mt-3 inline-flex h-10 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
-              >
-                Go to workspace
-              </Link>
-            )}
-          </div>
-        ) : profile?.role === "translator" ? (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-5 text-sm text-emerald-700">
-            <p className="font-semibold">You&apos;re already a translator.</p>
+      {application ? (
+        <div className={`mt-8 rounded-xl border px-5 py-5 text-sm ${STATUS_COPY[application.status].tone}`}>
+          <p className="font-semibold">{STATUS_COPY[application.status].title}</p>
+          <p className="mt-1 opacity-90">{STATUS_COPY[application.status].body}</p>
+          {application.status === "approved" && (
             <Link
               href="/admin"
               className="mt-3 inline-flex h-10 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
             >
               Go to workspace
             </Link>
-          </div>
-        ) : (
+          )}
+        </div>
+      ) : profile?.role === "translator" ? (
+        <div className="mt-8 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-5 text-sm text-emerald-700">
+          <p className="font-semibold">You&apos;re already a translator.</p>
+          <Link
+            href="/admin"
+            className="mt-3 inline-flex h-10 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
+          >
+            Go to workspace
+          </Link>
+        </div>
+      ) : (
+        <div className="mt-8 rounded-2xl border border-border bg-surface p-5 sm:p-6">
           <ApplyForm username={profile?.username ?? ""} email={email} />
-        )}
-      </div>
+        </div>
+      )}
     </PageContainer>
   );
 }

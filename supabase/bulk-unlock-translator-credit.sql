@@ -1,18 +1,18 @@
 -- -----------------------------------------------------------------------------
--- bulk_unlock_chapters(p_novel_slug)
+-- Fix: bulk_unlock_chapters did not credit the translator.
 --
--- Unlocks every remaining purchasable advanced chapter for a novel at a 10%
--- discount. Only available when the novel has at least 10 advanced chapters
--- (is_free = false). The discounted total is computed server-side.
+-- The earlier bulk-unlock.sql already contained the 70/30 revenue split, but if
+-- only the coins_spent constraint migration was applied (and not the full
+-- function body), the live function still deducted coins from the reader without
+-- crediting the translator. This file redeploys the function so the translator
+-- (publisher_id) reliably receives 70% of the discounted total; the platform
+-- keeps the remaining 30%.
 --
--- Revenue split: 70% of the discounted total is credited to the translator
--- (publisher_id); the platform keeps the remaining 30%.
+-- Safe to run repeatedly. Run this whole file (not just parts of it).
 -- -----------------------------------------------------------------------------
 
--- Migration: relax the coins_spent check so the proportional (and discounted)
--- per-chapter share may legitimately round down to 0. Distributing a discounted
--- total across many low-cost chapters can leave individual rows at 0 coins, and
--- a 0-coin advanced chapter is a valid state during setup.
+-- Ensure the relaxed constraint is in place (proportional/discounted per-chapter
+-- shares may legitimately round down to 0).
 alter table public.chapter_unlocks
   drop constraint if exists chapter_unlocks_coins_spent_check;
 alter table public.chapter_unlocks
@@ -114,9 +114,11 @@ begin
   -- Credit 70% of the discounted total to the translator; platform keeps 30%.
   if v_publisher_id is not null then
     v_translator_share := floor(v_discounted * 0.7)::integer;
-    update public.profiles
-      set coins = coins + v_translator_share
-      where id = v_publisher_id;
+    if v_translator_share > 0 then
+      update public.profiles
+        set coins = coins + v_translator_share
+        where id = v_publisher_id;
+    end if;
   end if;
 
   for r in

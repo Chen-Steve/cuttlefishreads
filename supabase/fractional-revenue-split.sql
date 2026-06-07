@@ -1,23 +1,111 @@
 -- -----------------------------------------------------------------------------
--- bulk_unlock_chapters(p_novel_slug)
+-- Fractional 70/30 revenue split
 --
--- Unlocks every remaining purchasable advanced chapter for a novel at a 10%
--- discount. Only available when the novel has at least 10 advanced chapters
--- (is_free = false). The discounted total is computed server-side.
+-- The translator's 70% share must be exact, including the fraction (e.g. 70% of
+-- 5 coins = 3.5). That means profiles.coins has to hold decimals, and the unlock
+-- functions must stop rounding the share.
 --
--- Revenue split: 70% of the discounted total is credited to the translator
--- (publisher_id); the platform keeps the remaining 30%.
+-- Readers still pay whole coins (coin_cost is an integer), so chapter_unlocks
+-- .coins_spent stays an integer — only the credited translator share is
+-- fractional.
+--
+-- Safe to run repeatedly. Run this whole file.
 -- -----------------------------------------------------------------------------
 
--- Migration: relax the coins_spent check so the proportional (and discounted)
--- per-chapter share may legitimately round down to 0. Distributing a discounted
--- total across many low-cost chapters can leave individual rows at 0 coins, and
--- a 0-coin advanced chapter is a valid state during setup.
-alter table public.chapter_unlocks
-  drop constraint if exists chapter_unlocks_coins_spent_check;
-alter table public.chapter_unlocks
-  add constraint chapter_unlocks_coins_spent_check check (coins_spent >= 0);
+-- Allow fractional balances (two decimal places is plenty: 0.7 * an integer
+-- always yields a single decimal place).
+alter table public.profiles
+  alter column coins type numeric(14, 2) using coins::numeric;
 
+-- Single-chapter unlock -------------------------------------------------------
+create or replace function public.unlock_chapter(
+  p_novel_slug     text,
+  p_chapter_number integer
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id           uuid := auth.uid();
+  v_cost              integer;
+  v_is_free           boolean;
+  v_unlock_at         timestamptz;
+  v_publisher_id      uuid;
+  v_balance           numeric;
+  v_translator_share  numeric;
+begin
+  if v_user_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  select c.coin_cost, c.is_free, c.unlock_at, n.publisher_id
+    into v_cost, v_is_free, v_unlock_at, v_publisher_id
+    from public.chapters c
+    join public.novels   n on n.id = c.novel_id
+    where n.slug   = p_novel_slug
+      and c.number = p_chapter_number;
+
+  if not found then
+    raise exception 'Chapter not found';
+  end if;
+
+  if v_is_free or v_cost = 0 or (v_unlock_at is not null and v_unlock_at <= now()) then
+    return false;
+  end if;
+
+  if v_publisher_id is not null and v_publisher_id = v_user_id then
+    return false;
+  end if;
+
+  if exists (
+    select 1 from public.chapter_unlocks
+    where user_id        = v_user_id
+      and novel_slug     = p_novel_slug
+      and chapter_number = p_chapter_number
+  ) then
+    return false;
+  end if;
+
+  select coins into v_balance
+    from public.profiles
+    where id = v_user_id
+    for update;
+
+  if v_balance < v_cost then
+    raise exception 'Insufficient coins (have %, need %)', v_balance, v_cost;
+  end if;
+
+  update public.profiles
+    set coins = coins - v_cost
+    where id = v_user_id;
+
+  -- Credit the exact 70% (including the fraction) to the translator.
+  if v_publisher_id is not null then
+    v_translator_share := v_cost * 0.7;
+    if v_translator_share > 0 then
+      update public.profiles
+        set coins = coins + v_translator_share
+        where id = v_publisher_id;
+    end if;
+  end if;
+
+  insert into public.chapter_unlocks
+    (user_id, novel_slug, chapter_number, coins_spent)
+  values
+    (v_user_id, p_novel_slug, p_chapter_number, v_cost);
+
+  return true;
+end;
+$$;
+
+revoke all on function public.unlock_chapter(text, integer)
+  from public, anon, authenticated;
+grant execute on function public.unlock_chapter(text, integer)
+  to authenticated;
+
+-- Bulk unlock -----------------------------------------------------------------
 create or replace function public.bulk_unlock_chapters(
   p_novel_slug text
 )
@@ -30,14 +118,14 @@ declare
   v_user_id          uuid := auth.uid();
   v_publisher_id     uuid;
   v_advanced_count   integer;
-  v_balance          integer;
+  v_balance          numeric;
   v_total_cost       integer := 0;
   v_discounted       integer;
   v_unlocked_count   integer := 0;
   v_spent_so_far     integer := 0;
   v_chapter_spend    integer;
   v_last_number      integer;
-  v_translator_share integer;
+  v_translator_share numeric;
   r                  record;
 begin
   if v_user_id is null then
@@ -106,17 +194,18 @@ begin
     raise exception 'Insufficient coins (have %, need %)', v_balance, v_discounted;
   end if;
 
-  -- Deduct full discounted cost from reader.
   update public.profiles
     set coins = coins - v_discounted
     where id = v_user_id;
 
-  -- Credit 70% of the discounted total to the translator; platform keeps 30%.
+  -- Credit the exact 70% (including the fraction) of the discounted total.
   if v_publisher_id is not null then
-    v_translator_share := floor(v_discounted * 0.7)::integer;
-    update public.profiles
-      set coins = coins + v_translator_share
-      where id = v_publisher_id;
+    v_translator_share := v_discounted * 0.7;
+    if v_translator_share > 0 then
+      update public.profiles
+        set coins = coins + v_translator_share
+        where id = v_publisher_id;
+    end if;
   end if;
 
   for r in

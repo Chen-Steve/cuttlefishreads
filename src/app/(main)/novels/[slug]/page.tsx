@@ -156,22 +156,48 @@ export default async function NovelDetailPage({
     </p>
   );
 
+  const actionButtons = (
+    <>
+      {firstChapter ? (
+        <Link
+          href={`/novels/${novel.slug}/${firstChapter.number}`}
+          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          <BookOpen className="size-4" strokeWidth={1.75} aria-hidden />
+          Start reading
+        </Link>
+      ) : null}
+      <BookmarkButton
+        novelSlug={novel.slug}
+        initialBookmarked={bookmarked}
+        isLoggedIn={isLoggedIn}
+      />
+    </>
+  );
+
   return (
     <PageContainer as="article" width="prose">
-      <div className="flex flex-col gap-4 sm:flex-row sm:gap-8">
-        <div className="flex items-start gap-4 sm:contents">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
+        {/* Left column: cover + buttons (desktop) */}
+        <div className="flex items-start gap-4 sm:w-40 sm:shrink-0 sm:flex-col">
           <NovelCover
             title={novel.title}
             slug={novel.slug}
             coverUrl={novel.coverUrl}
-            className="w-28 shrink-0 sm:w-40"
+            className="w-28 shrink-0 sm:w-full"
           />
           <div className="flex min-w-0 flex-1 flex-col gap-2 sm:hidden">
             {authorLine}
             {statusAndGenres}
             {viewCountDisplay}
           </div>
+          {/* Desktop buttons below cover */}
+          <div className="mt-1 hidden w-full flex-col gap-3 sm:flex">
+            {actionButtons}
+          </div>
         </div>
+
+        {/* Right column: title, meta, synopsis, mobile buttons */}
         <div className="flex min-w-0 flex-1 flex-col">
           <h1 className="text-xl font-bold tracking-tight text-balance text-foreground sm:text-3xl">
             {novel.title}
@@ -185,21 +211,9 @@ export default async function NovelDetailPage({
 
           {novel.synopsis ? <NovelDescription synopsis={novel.synopsis} /> : null}
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-start">
-            {firstChapter ? (
-              <Link
-                href={`/novels/${novel.slug}/${firstChapter.number}`}
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:w-fit"
-              >
-                <BookOpen className="size-4" strokeWidth={1.75} aria-hidden />
-                Start reading
-              </Link>
-            ) : null}
-            <BookmarkButton
-              novelSlug={novel.slug}
-              initialBookmarked={bookmarked}
-              isLoggedIn={isLoggedIn}
-            />
+          {/* Mobile buttons */}
+          <div className="mt-6 flex flex-col gap-3 sm:hidden">
+            {actionButtons}
           </div>
         </div>
       </div>

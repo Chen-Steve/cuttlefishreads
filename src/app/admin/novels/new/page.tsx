@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
 import { PageContainer } from "@/components/page-container";
-import { getAdminAccess } from "@/lib/access";
 import { NovelForm } from "../../_components/novel-form";
 
 export const metadata: Metadata = {
@@ -12,8 +11,6 @@ export const metadata: Metadata = {
 };
 
 export default async function CreateNovelPage() {
-  const access = await getAdminAccess();
-
   return (
     <PageContainer as="div" width="prose">
       <Link
@@ -29,7 +26,7 @@ export default async function CreateNovelPage() {
       </h1>
 
       <div className="mt-8 rounded-2xl border border-border bg-surface p-5 sm:p-6">
-        <NovelForm canEditAttribution={access?.isMasterAdmin ?? false} />
+        <NovelForm />
       </div>
     </PageContainer>
   );

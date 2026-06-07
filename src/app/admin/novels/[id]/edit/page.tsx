@@ -35,18 +35,6 @@ export default async function EditNovelPage({
     notFound();
   }
 
-  let publisherUsername: string | null = null;
-  if (novel.publisher_id) {
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("username")
-      .eq("id", novel.publisher_id)
-      .maybeSingle();
-    publisherUsername = profile?.username ?? null;
-  }
-
-  const novelFormValues = { ...novel, publisher_username: publisherUsername };
-
   return (
     <PageContainer as="div" width="prose">
       <Link
@@ -57,7 +45,7 @@ export default async function EditNovelPage({
         Back to novels
       </Link>
       <div className="mt-4 rounded-2xl border border-border bg-surface p-5 sm:p-6">
-        <NovelForm novel={novelFormValues} canEditAttribution={access.isMasterAdmin} />
+        <NovelForm novel={novel} />
       </div>
     </PageContainer>
   );

@@ -28,6 +28,12 @@ function tally<T extends string>(rows: { key: T }[]): Map<T, number> {
   return map;
 }
 
+// Translator balances can be fractional (exact 70% split). Keep one decimal
+// place and drop a trailing ".0".
+function formatCoins(value: number): string {
+  return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+}
+
 export default async function DashboardPage() {
   const access = await getAdminAccess();
   const admin = createAdminClient();
@@ -59,8 +65,11 @@ export default async function DashboardPage() {
           admin.from("bookmarks").select("novel_id").in("novel_id", novelIds),
           admin
             .from("chapter_unlocks")
-            .select("novel_slug, coins_spent")
-            .in("novel_slug", slugs),
+            .select(
+              "novel_slug, chapter_number, translator_share, created_at, user_id",
+            )
+            .in("novel_slug", slugs)
+            .order("created_at", { ascending: false }),
         ]);
 
   const viewsByNovel = tally(
@@ -74,22 +83,66 @@ export default async function DashboardPage() {
     })),
   );
 
-  const purchasesBySlug = new Map<string, number>();
-  const coinsBySlug = new Map<string, number>();
-  for (const row of (unlocksRes.data ?? []) as {
+  const unlockRows = (unlocksRes.data ?? []) as {
     novel_slug: string;
-    coins_spent: number;
-  }[]) {
+    chapter_number: number;
+    translator_share: number;
+    created_at: string;
+    user_id: string;
+  }[];
+
+  const purchasesBySlug = new Map<string, number>();
+  const earnedBySlug = new Map<string, number>();
+  for (const row of unlockRows) {
     purchasesBySlug.set(
       row.novel_slug,
       (purchasesBySlug.get(row.novel_slug) ?? 0) + 1,
     );
-    coinsBySlug.set(
+    earnedBySlug.set(
       row.novel_slug,
-      (coinsBySlug.get(row.novel_slug) ?? 0) + row.coins_spent,
+      (earnedBySlug.get(row.novel_slug) ?? 0) + row.translator_share,
     );
   }
 
+  // Resolve buyer usernames for the individual-purchase list.
+  const buyerIds = [...new Set(unlockRows.map((r) => r.user_id))];
+  const usernameById = new Map<string, string>();
+  if (buyerIds.length > 0) {
+    const { data: profiles } = await admin
+      .from("profiles")
+      .select("id, username")
+      .in("id", buyerIds);
+    for (const p of (profiles ?? []) as { id: string; username: string | null }[]) {
+      usernameById.set(p.id, p.username ?? "Unknown");
+    }
+  }
+
+  // Group individual purchases by novel, newest first (unlockRows is already
+  // ordered by created_at desc). Each row carries the exact translator share
+  // that was credited at purchase time.
+  type Purchase = {
+    chapterNumber: number;
+    buyer: string;
+    earned: number;
+    createdAt: string;
+  };
+  const purchasesByNovel = new Map<string, Purchase[]>();
+  for (const row of unlockRows) {
+    const list = purchasesByNovel.get(row.novel_slug) ?? [];
+    list.push({
+      chapterNumber: row.chapter_number,
+      buyer: usernameById.get(row.user_id) ?? "Unknown",
+      earned: row.translator_share,
+      createdAt: row.created_at,
+    });
+    purchasesByNovel.set(row.novel_slug, list);
+  }
+  const novelsWithPurchases = rows.filter((n) =>
+    purchasesByNovel.has(n.slug),
+  );
+
+  // Earnings are the exact translator share credited per unlock (70% of list;
+  // the platform absorbs any bulk discount).
   const stats: NovelStat[] = rows.map((n) => ({
     id: n.id,
     slug: n.slug,
@@ -97,7 +150,7 @@ export default async function DashboardPage() {
     views: viewsByNovel.get(n.id) ?? 0,
     bookmarks: bookmarksByNovel.get(n.id) ?? 0,
     purchases: purchasesBySlug.get(n.slug) ?? 0,
-    coinsEarned: coinsBySlug.get(n.slug) ?? 0,
+    coinsEarned: earnedBySlug.get(n.slug) ?? 0,
   }));
 
   const totals = stats.reduce(
@@ -158,7 +211,7 @@ export default async function DashboardPage() {
                     {s.purchases.toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600">
-                    {s.coinsEarned.toLocaleString()}
+                    {formatCoins(s.coinsEarned)}
                   </td>
                 </tr>
               ))}
@@ -166,6 +219,80 @@ export default async function DashboardPage() {
           </table>
         )}
       </div>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold tracking-tight">
+          Chapter purchases
+        </h2>
+        <p className="mt-0.5 text-sm text-muted">
+          Individual chapter unlocks per novel, with your 70% earnings.
+        </p>
+
+        {novelsWithPurchases.length === 0 ? (
+          <p className="mt-4 rounded-2xl border border-border bg-surface px-4 py-12 text-center text-sm text-muted">
+            No chapter purchases yet.
+          </p>
+        ) : (
+          <div className="mt-4 flex flex-col gap-6">
+            {novelsWithPurchases.map((n) => {
+              const purchases = purchasesByNovel.get(n.slug) ?? [];
+              const earned = purchases.reduce((sum, p) => sum + p.earned, 0);
+              return (
+                <div
+                  key={n.id}
+                  className="overflow-x-auto rounded-2xl border border-border bg-surface"
+                >
+                  <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-3">
+                    <h3 className="font-medium text-foreground">{n.title}</h3>
+                    <span className="text-xs text-muted">
+                      {purchases.length.toLocaleString()} purchase
+                      {purchases.length === 1 ? "" : "s"} ·{" "}
+                      <span className="font-semibold text-amber-600">
+                        {formatCoins(earned)} coins
+                      </span>
+                    </span>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-left text-xs text-muted">
+                        <th className="px-4 py-3 font-medium">Reader</th>
+                        <th className="px-4 py-3 text-right font-medium">
+                          Chapter
+                        </th>
+                        <th className="px-4 py-3 text-right font-medium">Date</th>
+                        <th className="px-4 py-3 text-right font-medium">
+                          Earned
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {purchases.map((p, i) => (
+                        <tr
+                          key={`${n.slug}-${p.chapterNumber}-${i}`}
+                          className="border-b border-border last:border-0"
+                        >
+                          <td className="px-4 py-3 text-foreground">
+                            {p.buyer}
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums text-foreground">
+                            Ch. {p.chapterNumber}
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums text-muted">
+                            {new Date(p.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600">
+                            {formatCoins(p.earned)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </PageContainer>
   );
 }
@@ -186,7 +313,7 @@ function SummaryCard({
         <span className="text-xs font-medium">{label}</span>
       </div>
       <p className="mt-2 text-xl font-semibold tabular-nums text-foreground">
-        {value.toLocaleString()}
+        {formatCoins(value)}
       </p>
     </div>
   );
