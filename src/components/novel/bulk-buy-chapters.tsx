@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Coins, Info, ShoppingBag } from "lucide-react";
+import { Coins, ShoppingBag } from "lucide-react";
 
 import { bulkUnlockChapters } from "@/app/(main)/novels/actions";
 import {
@@ -29,11 +29,7 @@ export function BulkBuyChapters({
   const [pending, startTransition] = useTransition();
   const bulkBuy = getBulkBuyState(chapters);
 
-  function scrollToInfo() {
-    document
-      .getElementById("bulk-buy-info")
-      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }
+  if (!bulkBuy.eligible) return null;
 
   function handleBulkBuy() {
     setError(null);
@@ -51,22 +47,7 @@ export function BulkBuyChapters({
 
   return (
     <div className="flex flex-col gap-3">
-      {!bulkBuy.eligible ? (
-        <div className="flex items-center gap-2">
-          <span className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-5 text-sm font-semibold text-muted sm:flex-none">
-            <ShoppingBag className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
-            Not available for this novel yet
-          </span>
-          <button
-            type="button"
-            onClick={scrollToInfo}
-            aria-label="Why is bulk buy unavailable?"
-            className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-surface text-muted transition-colors hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            <Info className="size-4" strokeWidth={1.75} aria-hidden />
-          </button>
-        </div>
-      ) : bulkBuy.purchasableCount === 0 ? (
+      {bulkBuy.purchasableCount === 0 ? (
         <p className="text-sm text-muted">
           You have unlocked all advanced chapters for this novel.
         </p>
@@ -102,7 +83,7 @@ export function BulkBuyChapters({
             >
               <ShoppingBag className="size-4" strokeWidth={1.75} aria-hidden />
               Buy coins to unlock all ({bulkBuy.discountedPrice.toLocaleString()}{" "}
-              needed)
+              coins)
             </Link>
           )}
 
@@ -110,10 +91,6 @@ export function BulkBuyChapters({
             {discountPercent}% off the regular price of{" "}
             <span className="line-through">
               {bulkBuy.fullPrice.toLocaleString()} coins
-            </span>
-            . Your balance:{" "}
-            <span className="font-semibold text-foreground">
-              {userCoins.toLocaleString()} coins
             </span>
             .
           </p>
@@ -139,10 +116,7 @@ export function BulkBuyInfo({
   advancedCount: number;
 }) {
   return (
-    <div
-      id="bulk-buy-info"
-      className="scroll-mt-24 rounded-xl border border-border/60 bg-background px-4 py-3"
-    >
+    <div className="rounded-xl border border-border/60 bg-background px-4 py-3">
       <p className="text-xs leading-relaxed text-muted">
         Bulk buy becomes available once a novel has at least{" "}
         {BULK_BUY_MIN_ADVANCED_CHAPTERS} advanced chapters. This novel currently

@@ -178,19 +178,27 @@ export default async function NovelDetailPage({
       </div>
 
       <section className="mt-10">
-        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div
+          className={
+            bulkBuy.eligible
+              ? "mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+              : "mb-4"
+          }
+        >
           <h2 className="text-lg font-semibold tracking-tight text-foreground">
             Chapters
             <span className="ml-2 text-sm font-normal text-muted">
               {chapters.length}
             </span>
           </h2>
-          <BulkBuyChapters
-            novelSlug={novel.slug}
-            chapters={chapters}
-            userCoins={userCoins}
-            isLoggedIn={isLoggedIn}
-          />
+          {bulkBuy.eligible ? (
+            <BulkBuyChapters
+              novelSlug={novel.slug}
+              chapters={chapters}
+              userCoins={userCoins}
+              isLoggedIn={isLoggedIn}
+            />
+          ) : null}
         </div>
         <ChapterList slug={novel.slug} chapters={chapters} />
         {!bulkBuy.eligible ? (
