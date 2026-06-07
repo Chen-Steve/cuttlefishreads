@@ -207,7 +207,8 @@ export async function listConversations(
       admin
         .from("chat_channels")
         .select("id, kind, name, created_at")
-        .in("id", dmChannelIds),
+        .in("id", dmChannelIds)
+        .eq("kind", "dm"),
       admin
         .from("chat_channel_members")
         .select("channel_id, user_id")
