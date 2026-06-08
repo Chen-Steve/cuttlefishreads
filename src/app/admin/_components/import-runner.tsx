@@ -283,7 +283,7 @@ export function ImportRunner({
                 value={coinCost}
                 onChange={(e) => setCoinCost(Math.max(1, Number(e.target.value)))}
                 disabled={running}
-                aria-label="Coin cost"
+                aria-label="Cookie cost"
                 className="h-11 w-28 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-accent focus:ring-2 focus:ring-accent/25"
               />
             )}

@@ -157,7 +157,7 @@ export default async function ChaptersListPage({
                     {chapter.is_free ? (
                       <span className="text-emerald-600">Free</span>
                     ) : (
-                      <span>{chapter.coin_cost} coins</span>
+                      <span>{chapter.coin_cost} cookies</span>
                     )}
                   </p>
                 </div>

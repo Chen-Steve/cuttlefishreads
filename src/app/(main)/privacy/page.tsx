@@ -56,7 +56,7 @@ export default function PrivacyPage() {
               is used solely for site security and performance.
             </li>
             <li>
-              <strong>Payment data:</strong> If you purchase coins, payment is
+              <strong>Payment data:</strong> If you purchase cookies, payment is
               processed by our third-party payment provider. We do not store your
               full card details.
             </li>
@@ -68,7 +68,7 @@ export default function PrivacyPage() {
           <ul>
             <li>Create and manage your account.</li>
             <li>Save and synchronise your reading progress and library.</li>
-            <li>Process coin purchases and maintain your balance.</li>
+            <li>Process cookie purchases and maintain your balance.</li>
             <li>Respond to your inquiries and support requests.</li>
             <li>
               Send transactional emails (e.g., password reset, email

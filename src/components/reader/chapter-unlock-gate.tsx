@@ -3,11 +3,12 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Coins, Lock } from "lucide-react";
+import { Cookie, Lock } from "lucide-react";
 
 import { unlockChapter } from "@/app/(main)/novels/actions";
 import { UnlockCountdown } from "@/components/reader/unlock-countdown";
 import { isScheduledUnlock } from "@/lib/unlock-countdown";
+import { cookiesLabel } from "@/lib/utils";
 
 export function ChapterUnlockGate({
   novelSlug,
@@ -63,9 +64,9 @@ export function ChapterUnlockGate({
               Or unlock early with{" "}
               <span className="inline-flex items-center gap-1 font-semibold text-amber-600">
                 {coinCost}
-                <Coins className="size-3.5" strokeWidth={1.75} aria-hidden />
+                <Cookie className="size-3.5" strokeWidth={1.75} aria-hidden />
               </span>{" "}
-              coins.
+              cookies.
             </p>
           ) : (
             <p className="mt-4 text-sm text-muted">
@@ -78,9 +79,9 @@ export function ChapterUnlockGate({
           Unlock with{" "}
           <span className="inline-flex items-center gap-1 font-semibold text-amber-600">
             {coinCost}
-            <Coins className="size-3.5" strokeWidth={1.75} aria-hidden />
+            <Cookie className="size-3.5" strokeWidth={1.75} aria-hidden />
           </span>{" "}
-          coins to continue reading.
+          cookies to continue reading.
         </p>
       )}
 
@@ -89,7 +90,7 @@ export function ChapterUnlockGate({
           role="alert"
           className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600"
         >
-          {error}
+          {cookiesLabel(error)}
         </p>
       )}
 
@@ -107,7 +108,7 @@ export function ChapterUnlockGate({
               <p className="text-xs text-muted">
                 Your balance:{" "}
                 <span className="font-semibold text-foreground">
-                  {userCoins.toLocaleString()} coins
+                  {userCoins.toLocaleString()} cookies
                 </span>
               </p>
               {canAfford ? (
@@ -120,15 +121,15 @@ export function ChapterUnlockGate({
                   {pending
                     ? "Unlocking…"
                     : canUnlockEarly
-                      ? `Unlock early for ${coinCost} coins`
-                      : `Unlock for ${coinCost} coins`}
+                      ? `Unlock early for ${coinCost} cookies`
+                      : `Unlock for ${coinCost} cookies`}
                 </button>
               ) : (
                 <Link
                   href="/shop"
                   className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
                 >
-                  Buy coins
+                  Buy cookies
                 </Link>
               )}
             </>

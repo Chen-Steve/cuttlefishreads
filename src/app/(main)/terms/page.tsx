@@ -112,23 +112,23 @@ export default function TermsPage() {
           </p>
         </Section>
 
-        <Section title="6. Virtual Currency (Coins)">
+        <Section title="6. Virtual Currency (Cookies)">
           <ul>
             <li>
-              {SITE.name} may offer a virtual currency (&quot;Coins&quot;) that
+              {SITE.name} may offer a virtual currency (&quot;Cookies&quot;) that
               can be used to unlock premium chapters.
             </li>
             <li>
-              Coins have no monetary value and cannot be refunded, transferred,
+              Cookies have no monetary value and cannot be refunded, transferred,
               or exchanged for real currency except where required by applicable
               law.
             </li>
             <li>
-              We reserve the right to modify Coin pricing, availability, and
+              We reserve the right to modify Cookie pricing, availability, and
               redemption at any time.
             </li>
             <li>
-              Coins in your account may be forfeited if your account is
+              Cookies in your account may be forfeited if your account is
               terminated for a violation of these Terms.
             </li>
           </ul>

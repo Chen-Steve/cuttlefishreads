@@ -95,9 +95,9 @@ export default async function AccountPage() {
           <dd className="text-sm font-medium text-foreground">{email}</dd>
         </div>
         <div className="flex items-center justify-between gap-4 py-3.5">
-          <dt className="text-sm text-muted">Coin balance</dt>
+          <dt className="text-sm text-muted">Cookie balance</dt>
           <dd className="text-sm font-semibold text-foreground">
-            {(profile?.coins ?? 0).toLocaleString()} coins
+            {(profile?.coins ?? 0).toLocaleString()} cookies
           </dd>
         </div>
       </dl>
@@ -109,7 +109,7 @@ export default async function AccountPage() {
           href="/shop"
           className="text-sm font-medium text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
-          Buy coins
+          Buy cookies
         </Link>
       </div>
 
@@ -120,7 +120,7 @@ export default async function AccountPage() {
               <tr className="border-b border-border text-left text-xs text-muted">
                 <th className="px-5 py-3 font-medium">Date</th>
                 <th className="px-5 py-3 font-medium">Package</th>
-                <th className="px-5 py-3 text-right font-medium">Coins</th>
+                <th className="px-5 py-3 text-right font-medium">Cookies</th>
                 <th className="px-5 py-3 text-right font-medium">Amount</th>
               </tr>
             </thead>
@@ -153,7 +153,7 @@ export default async function AccountPage() {
           >
             Visit the shop
           </Link>{" "}
-          to buy coins.
+          to buy cookies.
         </p>
       )}
 
@@ -189,7 +189,7 @@ export default async function AccountPage() {
                     Ch. {u.chapter_number}
                   </td>
                   <td className="whitespace-nowrap px-5 py-3 text-right font-semibold text-amber-600">
-                    −{u.coins_spent.toLocaleString()} coins
+                    −{u.coins_spent.toLocaleString()} cookies
                   </td>
                 </tr>
               ))}

@@ -95,14 +95,14 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error("credit_coins error:", error);
       return NextResponse.json(
-        { error: "Payment captured but crediting coins failed. Contact support." },
+        { error: "Payment captured but crediting cookies failed. Contact support." },
         { status: 500 }
       );
     }
   } catch (error) {
     console.error("Admin client / credit error:", error);
     return NextResponse.json(
-      { error: "Payment captured but crediting coins failed. Contact support." },
+      { error: "Payment captured but crediting cookies failed. Contact support." },
       { status: 500 }
     );
   }

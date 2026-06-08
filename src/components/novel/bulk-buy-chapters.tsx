@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Coins, ShoppingBag, X } from "lucide-react";
+import { ArrowRight, Cookie, ShoppingBag, X } from "lucide-react";
 
 import { bulkUnlockChapters } from "@/app/(main)/novels/actions";
 import {
@@ -11,6 +11,7 @@ import {
   BULK_BUY_MIN_ADVANCED_CHAPTERS,
   getBulkBuyState,
 } from "@/lib/bulk-buy";
+import { cookiesLabel } from "@/lib/utils";
 import type { Chapter } from "@/types";
 
 export function BulkBuyChapters({
@@ -81,9 +82,9 @@ export function BulkBuyChapters({
               <ShoppingBag className="size-4" strokeWidth={1.75} aria-hidden />
               {pending
                 ? "Unlocking…"
-                : `Buy all ${bulkBuy.purchasableCount} chapters for ${bulkBuy.discountedPrice.toLocaleString()} coins`}
+                : `Buy all ${bulkBuy.purchasableCount} chapters for ${bulkBuy.discountedPrice.toLocaleString()} cookies`}
               <span className="inline-flex items-center gap-1 font-normal text-amber-600/80">
-                <Coins className="size-3.5" strokeWidth={1.75} aria-hidden />
+                <Cookie className="size-3.5" strokeWidth={1.75} aria-hidden />
               </span>
             </button>
           )}
@@ -91,7 +92,7 @@ export function BulkBuyChapters({
           <p className="text-xs text-muted">
             {discountPercent}% off the regular price of{" "}
             <span className="line-through">
-              {bulkBuy.fullPrice.toLocaleString()} coins
+              {bulkBuy.fullPrice.toLocaleString()} cookies
             </span>
             .
           </p>
@@ -101,7 +102,7 @@ export function BulkBuyChapters({
               role="alert"
               className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600"
             >
-              {error}
+              {cookiesLabel(error)}
             </p>
           ) : null}
         </div>
@@ -130,18 +131,18 @@ export function BulkBuyChapters({
               <X className="size-4" strokeWidth={1.75} aria-hidden />
             </button>
             <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-amber-500/10">
-              <Coins className="size-5 text-amber-600" strokeWidth={1.75} aria-hidden />
+              <Cookie className="size-5 text-amber-600" strokeWidth={1.75} aria-hidden />
             </div>
             <h3
               id="bulk-buy-insufficient-title"
               className="mt-4 text-center text-lg font-semibold text-foreground"
             >
-              Insufficient coins — top up!
+              Insufficient cookies — top up!
             </h3>
             <p className="mt-2 text-center text-sm text-muted">
               You need{" "}
               <span className="font-semibold text-foreground">
-                {bulkBuy.discountedPrice.toLocaleString()} coins
+                {bulkBuy.discountedPrice.toLocaleString()} cookies
               </span>{" "}
               but only have{" "}
               <span className="font-semibold text-foreground">

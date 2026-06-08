@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   const order = computeOrder(input);
   if (!order) {
     return NextResponse.json(
-      { error: "Invalid package or coin amount." },
+      { error: "Invalid package or cookie amount." },
       { status: 400 }
     );
   }
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const ppOrder = await createPayPalOrder({
       amountCents: order.amountCents,
       customId,
-      description: `${order.coins} coins`,
+      description: `${order.coins} cookies`,
     });
     return NextResponse.json({ id: ppOrder.id });
   } catch (error) {

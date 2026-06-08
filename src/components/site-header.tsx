@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, ChevronDown, Coins, LogIn, LogOut, Library, PenLine, Search, Settings, ShoppingBag, User, X } from "lucide-react";
+import { BookOpen, ChevronDown, Cookie, LogIn, LogOut, Library, PenLine, Search, Settings, ShoppingBag, User, X } from "lucide-react";
 
 import { signOut } from "@/app/(main)/(auth)/actions";
 import { cn } from "@/lib/utils";
@@ -185,11 +185,11 @@ function AccountDropdown({
           className="absolute right-0 top-full z-30 mt-1.5 min-w-40 overflow-hidden rounded-xl border border-border bg-surface shadow-md"
         >
           <div className="flex items-center gap-2 border-b border-border px-3.5 py-2.5">
-            <Coins className="size-4 shrink-0 text-amber-500" strokeWidth={1.75} aria-hidden />
+            <Cookie className="size-4 shrink-0 text-amber-500" strokeWidth={1.75} aria-hidden />
             <span className="text-sm font-semibold text-foreground">
               {coins.toLocaleString()}
             </span>
-            <span className="text-sm text-muted">coins</span>
+            <span className="text-sm text-muted">cookies</span>
           </div>
 
           <Link

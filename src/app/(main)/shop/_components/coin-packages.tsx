@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Cookie } from "lucide-react";
 
 import {
   type CoinPackage,
@@ -10,7 +11,6 @@ import {
   CENTS_PER_COIN,
   centsToAmountString,
 } from "@/lib/coin-packages";
-import { CoinIcon } from "./coin-icon";
 import { usePayPal } from "./use-paypal";
 
 export function CoinPackages({
@@ -67,7 +67,7 @@ export function CoinPackages({
           if (!res.ok) {
             throw new Error(result.error ?? "Payment could not be completed.");
           }
-          setSuccess(`Success! ${result.coins} coins added to your balance.`);
+          setSuccess(`Success! ${result.coins} cookies added to your balance.`);
           router.refresh();
         },
         onCancel: () => setPendingId(null),
@@ -135,16 +135,16 @@ export function CoinPackages({
               <p className="mt-0.5 text-xs text-muted">{pkg.description}</p>
 
               <div className="mt-4 flex h-8 items-end gap-1.5">
-                <CoinIcon className="size-7 shrink-0 text-amber-500" />
+                <Cookie className="size-7 shrink-0 text-amber-500" strokeWidth={1.75} aria-hidden />
                 <span className="translate-y-[3px] text-3xl font-bold leading-none tracking-tight tabular-nums text-foreground">
                   {totalCoins}
                 </span>
-                <span className="text-sm leading-none text-muted">coins</span>
+                <span className="text-sm leading-none text-muted">cookies</span>
               </div>
 
               {pkg.bonusCoins > 0 && (
                 <p className="mt-1 text-xs font-medium text-accent">
-                  +{pkg.bonusCoins} bonus coins included
+                  +{pkg.bonusCoins} bonus cookies included
                 </p>
               )}
 
@@ -173,18 +173,18 @@ export function CoinPackages({
       <div className="mt-6 rounded-2xl border border-border bg-surface p-5 sm:p-6">
         <p className="text-sm font-semibold text-foreground">Custom amount</p>
         <p className="mt-0.5 text-xs text-muted">
-          Buy exactly the coins you need — minimum {MIN_COINS}.
+          Buy exactly the cookies you need — minimum {MIN_COINS}.
         </p>
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="custom-coins" className="text-xs font-medium text-muted">
-              Number of coins
+            <label htmlFor="custom-cookies" className="text-xs font-medium text-muted">
+              Number of cookies
             </label>
             <div className="relative">
-              <CoinIcon className="absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-amber-500" />
+              <Cookie className="absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-amber-500" strokeWidth={1.75} aria-hidden />
               <input
-                id="custom-coins"
+                id="custom-cookies"
                 type="number"
                 min={MIN_COINS}
                 step={1}
@@ -201,7 +201,7 @@ export function CoinPackages({
               customCoins > 0 &&
               customCoins < MIN_COINS && (
                 <p className="text-xs text-red-500">
-                  Minimum is {MIN_COINS} coins.
+                  Minimum is {MIN_COINS} cookies.
                 </p>
               )}
           </div>

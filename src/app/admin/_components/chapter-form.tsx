@@ -237,7 +237,7 @@ export function ChapterForm({
               onChange={() => setAccess("paid")}
               className="size-3.5 accent-accent"
             />
-            Paid (unlock with coins)
+            Paid (unlock with cookies)
           </label>
         </div>
       </fieldset>
@@ -245,7 +245,7 @@ export function ChapterForm({
       {access === "paid" && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="chapter-cost" className={labelClass}>
-            Coin cost
+            Cookie cost
           </label>
           <input
             id="chapter-cost"

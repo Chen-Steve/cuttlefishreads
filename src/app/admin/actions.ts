@@ -381,7 +381,7 @@ export async function createChapter(
   const coinCost = isFree ? 0 : Math.floor(Number(formData.get("coinCost") ?? 0));
 
   if (!isFree && (!Number.isFinite(coinCost) || coinCost < 1)) {
-    return { error: "Paid chapters need a coin cost of at least 1." };
+    return { error: "Paid chapters need a cookie cost of at least 1." };
   }
 
   const unlockAtRaw = String(formData.get("unlockAt") ?? "").trim();
@@ -569,7 +569,7 @@ export async function updateChapter(
   const coinCost = isFree ? 0 : Math.floor(Number(formData.get("coinCost") ?? 0));
 
   if (!isFree && (!Number.isFinite(coinCost) || coinCost < 1)) {
-    return { error: "Paid chapters need a coin cost of at least 1." };
+    return { error: "Paid chapters need a cookie cost of at least 1." };
   }
 
   const numberRaw = Math.floor(Number(formData.get("number") ?? 0));

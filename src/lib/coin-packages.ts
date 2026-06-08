@@ -33,7 +33,7 @@ export const COIN_PACKAGES: readonly CoinPackage[] = [
   {
     id: "pack_reader",
     label: "Reader",
-    description: "11 % more coins",
+    description: "11 % more cookies",
     price: 10_00,
     coins: 40,
     bonusCoins: 5,
@@ -42,7 +42,7 @@ export const COIN_PACKAGES: readonly CoinPackage[] = [
   {
     id: "pack_regular",
     label: "Regular",
-    description: "17 % more coins",
+    description: "17 % more cookies",
     price: 15_00,
     coins: 60,
     bonusCoins: 10,
@@ -51,7 +51,7 @@ export const COIN_PACKAGES: readonly CoinPackage[] = [
   {
     id: "pack_enthusiast",
     label: "Enthusiast",
-    description: "17 % more coins",
+    description: "17 % more cookies",
     price: 25_00,
     coins: 100,
     bonusCoins: 20,
@@ -60,7 +60,7 @@ export const COIN_PACKAGES: readonly CoinPackage[] = [
   {
     id: "pack_collector",
     label: "Collector",
-    description: "Best value — 23 % more coins",
+    description: "Best value — 23 % more cookies",
     price: 50_00,
     coins: 200,
     bonusCoins: 60,

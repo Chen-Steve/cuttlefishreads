@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bookmark, Coins, Eye, ShoppingCart } from "lucide-react";
+import { Bookmark, Cookie, Eye, ShoppingCart } from "lucide-react";
 
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -176,7 +176,7 @@ export default async function DashboardPage() {
         <SummaryCard icon={<Eye className="size-4" />} label="Total views" value={totals.views} />
         <SummaryCard icon={<Bookmark className="size-4" />} label="Bookmarks" value={totals.bookmarks} />
         <SummaryCard icon={<ShoppingCart className="size-4" />} label="Purchases" value={totals.purchases} />
-        <SummaryCard icon={<Coins className="size-4" />} label="Coins earned" value={totals.coinsEarned} />
+        <SummaryCard icon={<Cookie className="size-4" />} label="Cookies earned" value={totals.coinsEarned} />
       </div>
 
       <div className="mt-8 overflow-x-auto rounded-2xl border border-border bg-surface">
@@ -192,7 +192,7 @@ export default async function DashboardPage() {
                 <th className="px-4 py-3 text-right font-medium">Views</th>
                 <th className="px-4 py-3 text-right font-medium">Bookmarks</th>
                 <th className="px-4 py-3 text-right font-medium">Purchases</th>
-                <th className="px-4 py-3 text-right font-medium">Coins</th>
+                <th className="px-4 py-3 text-right font-medium">Cookies</th>
               </tr>
             </thead>
             <tbody>
@@ -248,7 +248,7 @@ export default async function DashboardPage() {
                       {purchases.length.toLocaleString()} purchase
                       {purchases.length === 1 ? "" : "s"} ·{" "}
                       <span className="font-semibold text-amber-600">
-                        {formatCoins(earned)} coins
+                        {formatCoins(earned)} cookies
                       </span>
                     </span>
                   </div>

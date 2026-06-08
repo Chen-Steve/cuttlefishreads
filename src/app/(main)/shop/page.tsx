@@ -22,7 +22,7 @@ export default async function ShopPage() {
   return (
     <PageContainer as="section">
       <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-        Coin Shop
+        Cookie Shop
       </h1>
 
       <CoinPackages packages={COIN_PACKAGES} clientId={paypalClientId} />
