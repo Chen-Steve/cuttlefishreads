@@ -21,9 +21,7 @@ export function UnlockCountdown({
   const router = useRouter();
   const { scheduled, label } = useUnlockCountdown(
     unlockAt,
-    () => {
-      router.refresh();
-    },
+    () => router.refresh(),
     precision,
   );
 
@@ -33,14 +31,14 @@ export function UnlockCountdown({
     return (
       <div
         className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-4 py-3",
+          "inline-flex items-center gap-3 rounded-xl border border-accent/30 bg-accent/10 px-4 py-3",
           className,
         )}
       >
         <Clock className="size-4 shrink-0 text-accent" strokeWidth={1.75} aria-hidden />
-        <div className="text-left">
-          <p className="text-xs font-medium text-muted">Free unlock in</p>
-          <p className="font-mono text-lg font-semibold tabular-nums text-accent" suppressHydrationWarning>
+        <div>
+          <p className="text-xs font-medium text-accent/70">Unlocks in</p>
+          <p className="font-mono text-lg font-semibold leading-tight tabular-nums text-accent" suppressHydrationWarning>
             {label}
           </p>
         </div>

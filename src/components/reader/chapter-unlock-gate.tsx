@@ -10,6 +10,18 @@ import { UnlockCountdown } from "@/components/reader/unlock-countdown";
 import { isScheduledUnlock } from "@/lib/unlock-countdown";
 import { cookiesLabel } from "@/lib/utils";
 
+const btnClass =
+  "inline-flex h-11 items-center justify-center rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-colors hover:bg-accent-hover";
+
+function CoinCost({ amount }: { amount: number }) {
+  return (
+    <span className="inline-flex items-center gap-1 font-semibold text-amber-600">
+      {amount}
+      <Cookie className="size-3.5" strokeWidth={1.75} aria-hidden />
+    </span>
+  );
+}
+
 export function ChapterUnlockGate({
   novelSlug,
   chapterNumber,
@@ -59,29 +71,19 @@ export function ChapterUnlockGate({
           <div className="mt-4 flex justify-center">
             <UnlockCountdown unlockAt={unlockAt} variant="prominent" />
           </div>
-          {canUnlockEarly ? (
-            <p className="mt-4 text-sm text-muted">
-              Or unlock early with{" "}
-              <span className="inline-flex items-center gap-1 font-semibold text-amber-600">
-                {coinCost}
-                <Cookie className="size-3.5" strokeWidth={1.75} aria-hidden />
-              </span>{" "}
-              cookies.
-            </p>
-          ) : (
-            <p className="mt-4 text-sm text-muted">
-              This chapter will unlock automatically when the timer reaches zero.
-            </p>
-          )}
+          <p className="mt-4 text-sm text-muted">
+            {canUnlockEarly ? (
+              <>
+                Or unlock early with <CoinCost amount={coinCost} /> cookies.
+              </>
+            ) : (
+              "Unlocks automatically when the timer reaches zero."
+            )}
+          </p>
         </>
       ) : (
         <p className="mt-2 text-sm text-muted">
-          Unlock with{" "}
-          <span className="inline-flex items-center gap-1 font-semibold text-amber-600">
-            {coinCost}
-            <Cookie className="size-3.5" strokeWidth={1.75} aria-hidden />
-          </span>{" "}
-          cookies to continue reading.
+          Unlock with <CoinCost amount={coinCost} /> cookies to continue reading.
         </p>
       )}
 
@@ -97,16 +99,13 @@ export function ChapterUnlockGate({
       {(!scheduled || canUnlockEarly) && (
         <div className="mt-6 flex flex-col items-center gap-3">
           {!isLoggedIn ? (
-            <Link
-              href="/login"
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
-            >
+            <Link href="/login" className={btnClass}>
               Sign in to unlock
             </Link>
           ) : (
             <>
               <p className="text-xs text-muted">
-                Your balance:{" "}
+                Balance:{" "}
                 <span className="font-semibold text-foreground">
                   {userCoins.toLocaleString()} cookies
                 </span>
@@ -116,19 +115,14 @@ export function ChapterUnlockGate({
                   type="button"
                   onClick={handleUnlock}
                   disabled={pending}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  className={`${btnClass} gap-2 disabled:cursor-not-allowed disabled:opacity-50`}
                 >
                   {pending
                     ? "Unlocking…"
-                    : canUnlockEarly
-                      ? `Unlock early for ${coinCost} cookies`
-                      : `Unlock for ${coinCost} cookies`}
+                    : `Unlock${canUnlockEarly ? " early" : ""} for ${coinCost} cookies`}
                 </button>
               ) : (
-                <Link
-                  href="/shop"
-                  className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
-                >
+                <Link href="/shop" className={btnClass}>
                   Buy cookies
                 </Link>
               )}
