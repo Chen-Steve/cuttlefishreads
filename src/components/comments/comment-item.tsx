@@ -231,6 +231,37 @@ export function CommentItem({
               {error}
             </p>
           ) : null}
+
+          {comment.replies.length > 0 ? (
+            <ul className="mt-3 space-y-2 border-l-2 border-border pl-3">
+              {comment.replies.map((reply) => (
+                <li key={reply.id} className="rounded-lg bg-background p-3">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <Link
+                      href={`/u/${reply.username}`}
+                      className="text-sm font-semibold text-foreground transition-colors hover:text-accent"
+                    >
+                      {reply.username}
+                    </Link>
+                    {reply.isTranslatorReply ? (
+                      <Badge className="border-accent/40 bg-accent/10 text-accent">
+                        Translator
+                      </Badge>
+                    ) : null}
+                    <time
+                      dateTime={reply.createdAt}
+                      className="text-xs text-muted"
+                    >
+                      {formatTimestamp(reply.createdAt)}
+                    </time>
+                  </div>
+                  <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+                    {reply.body}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       </div>
     </article>

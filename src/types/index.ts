@@ -60,12 +60,16 @@ export interface NovelComment {
   id: string;
   novelSlug: string;
   chapterNumber: number | null;
+  parentId: string | null;
   body: string;
   userId: string;
   username: string;
   likeCount: number;
   likedByCurrentUser: boolean;
   isOwn: boolean;
+  /** True when this is a reply authored by the novel's translator/publisher. */
+  isTranslatorReply: boolean;
+  replies: NovelComment[];
   createdAt: string;
   updatedAt: string;
 }
