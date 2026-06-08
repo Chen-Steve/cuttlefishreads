@@ -166,7 +166,7 @@ export async function createNovel(
 
   if (access.isMasterAdmin) {
     originalAuthor = String(formData.get("originalAuthor") ?? "").trim();
-    translator = String(formData.get("translator") ?? "").trim();
+    translator = String(formData.get("translator") ?? "").trim() || (access.username ?? "");
     const publisherUsername = String(formData.get("publisherUsername") ?? "").trim();
     if (publisherUsername) {
       const { data: profile } = await admin
@@ -269,7 +269,10 @@ export async function updateNovel(
 
   if (access.isMasterAdmin) {
     originalAuthor = String(formData.get("originalAuthor") ?? "").trim();
-    translator = String(formData.get("translator") ?? "").trim();
+    translator =
+      String(formData.get("translator") ?? "").trim() ||
+      existing.translator ||
+      (access.username ?? "");
     const publisherUsername = String(formData.get("publisherUsername") ?? "").trim();
     publisherId = null;
     if (publisherUsername) {
