@@ -8,7 +8,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: siteUrl,
   title: {
-    default: `${SITE.name} | Read Popular and Niche Novels Online`,
+    default: `${SITE.name} | Home`,
     template: `%s | ${SITE.name}`,
   },
   description: SITE.seoDescription,
@@ -26,25 +26,6 @@ export const metadata: Metadata = {
     types: {
       "application/rss+xml": [{ url: "/feed.xml", title: "Cuttlefish Reads" }],
     },
-  },
-  openGraph: {
-    title: `${SITE.name} | Read Popular and Niche Novels Online`,
-    description: SITE.seoDescription,
-    url: "/",
-    siteName: SITE.name,
-    type: "website",
-    images: [
-      {
-        url: "/cuttle.png",
-        alt: SITE.name,
-      },
-    ],
-  },
-  twitter: {
-    card: "summary",
-    title: `${SITE.name} | Read Popular and Niche Novels Online`,
-    description: SITE.seoDescription,
-    images: ["/cuttle.png"],
   },
   robots: {
     index: true,

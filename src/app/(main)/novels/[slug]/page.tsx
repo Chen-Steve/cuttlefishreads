@@ -60,32 +60,6 @@ export async function generateMetadata({
         ],
       },
     },
-    openGraph: {
-      title: `${novel.title} | Cuttlefish Reads`,
-      description,
-      url: path,
-      siteName: "Cuttlefish Reads",
-      type: "book",
-      images: novel.coverUrl
-        ? [
-            {
-              url: novel.coverUrl,
-              alt: `${novel.title} cover`,
-            },
-          ]
-        : [
-            {
-              url: "/cuttle.png",
-              alt: "Cuttlefish Reads",
-            },
-          ],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: `${novel.title} | Cuttlefish Reads`,
-      description,
-      images: [novel.coverUrl ?? "/cuttle.png"],
-    },
   };
 }
 

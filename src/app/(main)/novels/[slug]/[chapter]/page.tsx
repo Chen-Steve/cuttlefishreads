@@ -52,25 +52,6 @@ export async function generateMetadata({
     alternates: {
       canonical: path,
     },
-    openGraph: {
-      title,
-      description,
-      url: path,
-      siteName: "Cuttlefish Reads",
-      type: "article",
-      images: [
-        {
-          url: novel.coverUrl ?? "/cuttle.png",
-          alt: novel.coverUrl ? `${novel.title} cover` : "Cuttlefish Reads",
-        },
-      ],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: [novel.coverUrl ?? "/cuttle.png"],
-    },
     robots: {
       index: !current.locked,
       follow: true,

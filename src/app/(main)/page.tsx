@@ -8,7 +8,7 @@ import { SITE } from "@/lib/constants";
 import { publicPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = publicPageMetadata({
-  title: "Read Popular and Niche Novels Online",
+  title: "Home",
   description: SITE.seoDescription,
   path: "/",
 });

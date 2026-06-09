@@ -50,24 +50,5 @@ export function publicPageMetadata({
     alternates: {
       canonical,
     },
-    openGraph: {
-      title,
-      description,
-      url: canonical,
-      siteName: SITE.name,
-      type: "website",
-      images: [
-        {
-          url: "/cuttle.png",
-          alt: SITE.name,
-        },
-      ],
-    },
-    twitter: {
-      card: "summary",
-      title,
-      description,
-      images: ["/cuttle.png"],
-    },
   };
 }
