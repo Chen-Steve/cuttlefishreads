@@ -139,6 +139,30 @@ export async function createNovel(
   _prev: AdminState,
   formData: FormData,
 ): Promise<AdminState> {
+  try {
+    return await _createNovel(formData);
+  } catch (err) {
+    // redirect() throws internally — re-throw so Next.js can handle navigation.
+    if (
+      err != null &&
+      typeof err === "object" &&
+      "digest" in err &&
+      typeof (err as { digest: unknown }).digest === "string" &&
+      (err as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+    ) {
+      throw err;
+    }
+    console.error("[createNovel] unexpected error:", err);
+    return {
+      error:
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred. Please try again.",
+    };
+  }
+}
+
+async function _createNovel(formData: FormData): Promise<AdminState> {
   const auth = await requireWorkspace();
   if (!auth.access) return { error: auth.error };
   const { access } = auth;
