@@ -43,7 +43,7 @@ export function NovelForm({
   );
 
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form action={action} className="flex flex-col gap-5">
       {state.error && (
         <p
           role="alert"
@@ -53,41 +53,76 @@ export function NovelForm({
         </p>
       )}
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="novel-title" className={labelClass}>
-          Title
-        </label>
-        <input
-          id="novel-title"
-          name="title"
-          required
-          defaultValue={novel?.title}
-          placeholder="The Lantern of Quiet Tides"
-          className={inputClass}
-        />
-      </div>
+      <div className="grid gap-5 sm:grid-cols-[7.5rem_1fr]">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="novel-cover" className={labelClass}>
+            Cover
+          </label>
+          <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg border border-border bg-background ring-1 ring-black/5">
+            {novel?.cover_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={novel.cover_url}
+                alt=""
+                className="size-full object-cover"
+              />
+            ) : (
+              <div className="flex size-full items-center justify-center px-2 text-center text-[0.65rem] leading-tight text-muted/70">
+                No cover yet
+              </div>
+            )}
+          </div>
+          <input
+            id="novel-cover"
+            name="cover"
+            type="file"
+            accept="image/*"
+            className="block w-full text-xs text-muted file:mr-2 file:rounded-lg file:border-0 file:bg-accent file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-accent-hover"
+          />
+          {isEdit && (
+            <span className="text-[0.7rem] leading-tight text-muted">
+              Leave empty to keep current cover.
+            </span>
+          )}
+        </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="novel-description" className={labelClass}>
-          Description
-        </label>
-        <textarea
-          id="novel-description"
-          name="description"
-          rows={4}
-          defaultValue={novel?.description ?? ""}
-          placeholder="A short synopsis…"
-          className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
-        />
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="novel-title" className={labelClass}>
+              Title
+            </label>
+            <input
+              id="novel-title"
+              name="title"
+              required
+              defaultValue={novel?.title}
+              placeholder="The Lantern of Quiet Tides"
+              className={inputClass}
+            />
+          </div>
+
+          <div className="flex flex-1 flex-col gap-1.5">
+            <label htmlFor="novel-description" className={labelClass}>
+              Description
+            </label>
+            <textarea
+              id="novel-description"
+              name="description"
+              defaultValue={novel?.description ?? ""}
+              placeholder="A short synopsis…"
+              className="min-h-[6.5rem] w-full flex-1 resize-y rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
+            />
+          </div>
+        </div>
       </div>
 
       <fieldset className="flex flex-col gap-2">
         <legend className={labelClass}>Genres</legend>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {GENRES.map((genre) => (
             <label
               key={genre}
-              className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:checked]:text-accent"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:checked]:text-accent"
             >
               <input
                 type="checkbox"
@@ -103,19 +138,6 @@ export function NovelForm({
       </fieldset>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="novel-tags" className={labelClass}>
-            Tags
-          </label>
-          <input
-            id="novel-tags"
-            name="tags"
-            defaultValue={novel?.tags.join(", ") ?? ""}
-            placeholder="cultivation, slow burn, strong lead"
-            className={inputClass}
-          />
-          <span className="text-xs text-muted">Comma-separated.</span>
-        </div>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="novel-status" className={labelClass}>
             Status
@@ -150,51 +172,38 @@ export function NovelForm({
             ))}
           </select>
         </div>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="novel-cover" className={labelClass}>
-          Cover image
-        </label>
-        {novel?.cover_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={novel.cover_url}
-            alt=""
-            className="h-32 w-24 rounded-lg object-cover ring-1 ring-black/5"
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="novel-tags" className={labelClass}>
+            Tags <span className="font-normal opacity-60">(comma-separated)</span>
+          </label>
+          <input
+            id="novel-tags"
+            name="tags"
+            defaultValue={novel?.tags.join(", ") ?? ""}
+            placeholder="cultivation, slow burn, strong lead"
+            className={inputClass}
           />
-        )}
-        <input
-          id="novel-cover"
-          name="cover"
-          type="file"
-          accept="image/*"
-          className="block w-full text-sm text-muted file:mr-4 file:rounded-lg file:border-0 file:bg-accent file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-accent-hover"
-        />
-        {isEdit && (
-          <span className="text-xs text-muted">Leave empty to keep the current cover.</span>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="novel-novelupdates-url" className={labelClass}>
-          NovelUpdates link <span className="font-normal opacity-60">(optional)</span>
-        </label>
-        <input
-          id="novel-novelupdates-url"
-          name="novelupdatesUrl"
-          type="url"
-          defaultValue={novel?.novelupdates_url ?? ""}
-          placeholder="https://www.novelupdates.com/series/..."
-          className={inputClass}
-        />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="novel-novelupdates-url" className={labelClass}>
+            NovelUpdates link <span className="font-normal opacity-60">(optional)</span>
+          </label>
+          <input
+            id="novel-novelupdates-url"
+            name="novelupdatesUrl"
+            type="url"
+            defaultValue={novel?.novelupdates_url ?? ""}
+            placeholder="https://www.novelupdates.com/series/..."
+            className={inputClass}
+          />
+        </div>
       </div>
 
       <div
         className={
           isEdit
-            ? "flex items-center justify-between gap-4"
-            : undefined
+            ? "flex items-center justify-between gap-4 border-t border-border pt-4"
+            : "border-t border-border pt-4"
         }
       >
         <button
