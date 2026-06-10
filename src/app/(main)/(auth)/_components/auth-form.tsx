@@ -42,7 +42,7 @@ function PasswordInput({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-11 w-full rounded-xl border border-border bg-background px-3.5 pr-11 text-sm text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
+        className="h-11 w-full rounded-xl border border-border bg-background px-3.5 pr-11 text-base text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
       />
       <button
         type="button"
@@ -176,7 +176,7 @@ export function AuthForm({
                   placeholder={field.placeholder}
                   value={values[field.name] ?? ""}
                   onChange={(e) => setField(field.name, e.target.value)}
-                  className="h-11 rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
+                  className="h-11 rounded-xl border border-border bg-background px-3.5 text-base text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
                 />
               )}
             </div>
