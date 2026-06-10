@@ -5,16 +5,41 @@ import { PlusCircle } from "lucide-react";
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
-import { NovelsGrid, type NovelRow } from "./_components/novels-grid";
+import { NovelsGrid, type NovelRow, type TranslatorOption } from "./_components/novels-grid";
 
 export const metadata: Metadata = {
   title: "Admin — Novels",
   robots: { index: false, follow: false },
 };
 
-type RawNovel = Omit<NovelRow, "chapter_count"> & {
+type RawNovel = Omit<
+  NovelRow,
+  "chapter_count" | "translator_username"
+> & {
   chapters: { count: number }[];
 };
+
+function buildTranslatorOptions(novels: NovelRow[]): TranslatorOption[] {
+  const byPublisher = new Map<string, { label: string; count: number }>();
+
+  for (const novel of novels) {
+    const id = novel.publisher_id ?? "__unassigned__";
+    const label =
+      novel.translator_username ??
+      novel.translator?.trim() ??
+      "Unassigned";
+    const existing = byPublisher.get(id);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      byPublisher.set(id, { label, count: 1 });
+    }
+  }
+
+  return Array.from(byPublisher.entries())
+    .map(([id, { label, count }]) => ({ id, label, count }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
 
 export default async function AdminPage() {
   const access = await getAdminAccess();
@@ -22,7 +47,9 @@ export default async function AdminPage() {
 
   let query = admin
     .from("novels")
-    .select("id, title, slug, status, cover_url, genres, updated_at, chapters(count)")
+    .select(
+      "id, title, slug, status, cover_url, genres, updated_at, publisher_id, translator, chapters(count)",
+    )
     .order("updated_at", { ascending: false });
 
   // Translators only see novels they own; master admins see everything.
@@ -32,6 +59,26 @@ export default async function AdminPage() {
 
   const { data } = await query.returns<RawNovel[]>();
 
+  const publisherIds = [
+    ...new Set(
+      (data ?? [])
+        .map((n) => n.publisher_id)
+        .filter((id): id is string => id != null),
+    ),
+  ];
+
+  const { data: profiles } =
+    publisherIds.length === 0
+      ? { data: [] as { id: string; username: string | null }[] }
+      : await admin
+          .from("profiles")
+          .select("id, username")
+          .in("id", publisherIds);
+
+  const usernameById = new Map(
+    (profiles ?? []).map((p) => [p.id, p.username]),
+  );
+
   const novels: NovelRow[] = (data ?? []).map((n) => ({
     id: n.id,
     title: n.title,
@@ -40,8 +87,16 @@ export default async function AdminPage() {
     cover_url: n.cover_url,
     genres: n.genres,
     updated_at: n.updated_at,
+    publisher_id: n.publisher_id,
+    translator: n.translator,
+    translator_username: n.publisher_id
+      ? (usernameById.get(n.publisher_id) ?? null)
+      : null,
     chapter_count: n.chapters?.[0]?.count ?? 0,
   }));
+
+  const translatorOptions =
+    access?.isMasterAdmin ? buildTranslatorOptions(novels) : [];
 
   return (
     <PageContainer as="div">
@@ -67,7 +122,7 @@ export default async function AdminPage() {
       </div>
 
       <div className="mt-8">
-        <NovelsGrid novels={novels} />
+        <NovelsGrid novels={novels} translatorOptions={translatorOptions} />
       </div>
     </PageContainer>
   );

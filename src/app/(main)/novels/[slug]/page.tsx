@@ -96,7 +96,7 @@ export default async function NovelDetailPage({
             {novel.translatorUsername ? (
               <Link
                 href={`/u/${novel.translatorUsername}`}
-                className="font-medium text-foreground underline-offset-2 hover:underline"
+                className="font-medium underline underline-offset-2 hover:text-accent"
               >
                 {novel.translator}
               </Link>
@@ -107,6 +107,19 @@ export default async function NovelDetailPage({
         ) : null}
         {novel.translator && novel.originalAuthor ? " · " : null}
         {novel.originalAuthor ? `Original by ${novel.originalAuthor}` : null}
+        {novel.novelupdatesUrl ? (
+          <>
+            {", "}
+            <a
+              href={novel.novelupdatesUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium  underline underline-offset-2 hover:text-accent"
+            >
+              novelupdates
+            </a>
+          </>
+        ) : null}
       </p>
     ) : (
       <p className="text-sm text-muted">by {novel.author}</p>
@@ -117,6 +130,7 @@ export default async function NovelDetailPage({
       <Badge className="border-accent/30 text-accent">
         {statusLabel[novel.status]}
       </Badge>
+      <Badge>{novel.language}</Badge>
       {novel.genres.map((genre) => (
         <Badge key={genre}>{genre}</Badge>
       ))}

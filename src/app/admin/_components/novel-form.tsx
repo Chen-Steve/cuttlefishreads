@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 
-import { GENRES } from "@/lib/constants";
+import { GENRES, LANGUAGES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { createNovel, updateNovel, type AdminState } from "../actions";
 import { DeleteNovelButton } from "./delete-novel-button";
@@ -27,6 +27,8 @@ export type NovelFormValues = {
   genres: string[];
   tags: string[];
   status: string;
+  language: string;
+  novelupdates_url: string | null;
 };
 
 export function NovelForm({
@@ -131,6 +133,23 @@ export function NovelForm({
             ))}
           </select>
         </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="novel-language" className={labelClass}>
+            Original language
+          </label>
+          <select
+            id="novel-language"
+            name="language"
+            defaultValue={novel?.language ?? "Chinese"}
+            className={inputClass}
+          >
+            {LANGUAGES.map((lang) => (
+              <option key={lang} value={lang}>
+                {lang}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -155,6 +174,20 @@ export function NovelForm({
         {isEdit && (
           <span className="text-xs text-muted">Leave empty to keep the current cover.</span>
         )}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="novel-novelupdates-url" className={labelClass}>
+          NovelUpdates link <span className="font-normal opacity-60">(optional)</span>
+        </label>
+        <input
+          id="novel-novelupdates-url"
+          name="novelupdatesUrl"
+          type="url"
+          defaultValue={novel?.novelupdates_url ?? ""}
+          placeholder="https://www.novelupdates.com/series/..."
+          className={inputClass}
+        />
       </div>
 
       <div

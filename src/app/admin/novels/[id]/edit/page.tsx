@@ -25,7 +25,7 @@ export default async function EditNovelPage({
   const { data: novel } = await admin
     .from("novels")
     .select(
-      "id, title, original_author, translator, description, cover_url, genres, tags, status, publisher_id",
+      "id, title, original_author, translator, description, cover_url, genres, tags, status, language, publisher_id, novelupdates_url",
     )
     .eq("id", id)
     .maybeSingle();

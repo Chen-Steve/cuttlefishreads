@@ -6,15 +6,20 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess, type AdminAccess } from "@/lib/access";
 import { slugify } from "@/lib/utils";
-import { GENRES, type Genre } from "@/lib/constants";
+import { GENRES, type Genre, LANGUAGES, type Language } from "@/lib/constants";
 
 export type AdminState = { error?: string };
 
 export type SupportLinksState = { error?: string; message?: string };
 
 // Validates an optional support link. Empty is allowed (clears the link);
-// otherwise it must be an http(s) URL.
-function parseSupportLink(raw: string, label: string): string | null | { error: string } {
+// otherwise it must be an http(s) URL. Pass `allowedHostname` to restrict
+// the link to a specific domain (e.g. "www.novelupdates.com").
+function parseSupportLink(
+  raw: string,
+  label: string,
+  allowedHostname?: string,
+): string | null | { error: string } {
   const value = raw.trim();
   if (!value) return null;
   let url: URL;
@@ -25,6 +30,14 @@ function parseSupportLink(raw: string, label: string): string | null | { error: 
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     return { error: `Your ${label} link must start with http:// or https://.` };
+  }
+  if (allowedHostname) {
+    // Accept both the bare domain and the www. subdomain.
+    const bare = allowedHostname.replace(/^www\./, "");
+    const hostname = url.hostname.toLowerCase();
+    if (hostname !== bare && hostname !== `www.${bare}`) {
+      return { error: `Your ${label} link must point to ${allowedHostname}.` };
+    }
   }
   return url.toString();
 }
@@ -175,9 +188,19 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
   const status: NovelStatus = NOVEL_STATUSES.includes(statusRaw as NovelStatus)
     ? (statusRaw as NovelStatus)
     : "ongoing";
+  const languageRaw = String(formData.get("language") ?? "Chinese");
+  const language: Language = (LANGUAGES as readonly string[]).includes(languageRaw)
+    ? (languageRaw as Language)
+    : "Chinese";
   const genres = parseGenres(formData);
   const tags = parseTags(String(formData.get("tags") ?? ""));
   const cover = formData.get("cover");
+  const novelupdatesUrl = parseSupportLink(
+    String(formData.get("novelupdatesUrl") ?? ""),
+    "NovelUpdates",
+    "novelupdates.com",
+  );
+  if (novelupdatesUrl && typeof novelupdatesUrl === "object") return { error: novelupdatesUrl.error };
 
   const admin = createAdminClient();
 
@@ -240,7 +263,9 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
     genres,
     tags,
     status,
+    language,
     publisher_id: publisherId,
+    novelupdates_url: (novelupdatesUrl as string | null) ?? null,
   });
 
   if (error) {
@@ -268,9 +293,19 @@ export async function updateNovel(
   const status: NovelStatus = NOVEL_STATUSES.includes(statusRaw as NovelStatus)
     ? (statusRaw as NovelStatus)
     : "ongoing";
+  const languageRaw = String(formData.get("language") ?? "Chinese");
+  const language: Language = (LANGUAGES as readonly string[]).includes(languageRaw)
+    ? (languageRaw as Language)
+    : "Chinese";
   const genres = parseGenres(formData);
   const tags = parseTags(String(formData.get("tags") ?? ""));
   const cover = formData.get("cover");
+  const novelupdatesUrl = parseSupportLink(
+    String(formData.get("novelupdatesUrl") ?? ""),
+    "NovelUpdates",
+    "novelupdates.com",
+  );
+  if (novelupdatesUrl && typeof novelupdatesUrl === "object") return { error: novelupdatesUrl.error };
 
   const admin = createAdminClient();
 
@@ -335,7 +370,9 @@ export async function updateNovel(
       genres,
       tags,
       status,
+      language,
       publisher_id: publisherId,
+      novelupdates_url: (novelupdatesUrl as string | null) ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", novelId);

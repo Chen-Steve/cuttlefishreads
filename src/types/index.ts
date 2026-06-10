@@ -1,4 +1,4 @@
-import type { Genre } from "@/lib/constants";
+import type { Genre, Language } from "@/lib/constants";
 
 export interface Novel {
   id: string;
@@ -7,10 +7,12 @@ export interface Novel {
   author: string;
   originalAuthor?: string;
   translator?: string;
+  language: Language;
   translatorUsername?: string;
   translatorGlobalNote?: string;
   translatorKofiUrl?: string;
   translatorPatreonUrl?: string;
+  novelupdatesUrl?: string;
   synopsis: string;
   coverUrl?: string;
   genres: Genre[];
@@ -74,4 +76,4 @@ export interface NovelComment {
   updatedAt: string;
 }
 
-export type { Genre };
+export type { Genre, Language };

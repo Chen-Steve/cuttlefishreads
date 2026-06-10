@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-import type { Genre } from "@/lib/constants";
+import type { Genre, Language } from "@/lib/constants";
 import type { Chapter, ChapterSummary, Novel, NovelComment } from "@/types";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -19,6 +19,8 @@ type DbNovel = {
   status: string;
   updated_at: string;
   publisher_id: string | null;
+  novelupdates_url: string | null;
+  language: string;
   chapters: { count: number }[];
 };
 
@@ -78,6 +80,8 @@ function mapNovel(row: DbNovel): Novel {
     chapterCount: row.chapters?.[0]?.count ?? 0,
     updatedAt: row.updated_at,
     publisherId: row.publisher_id ?? undefined,
+    novelupdatesUrl: row.novelupdates_url ?? undefined,
+    language: (row.language as Language) ?? "Chinese",
   };
 }
 
@@ -130,7 +134,7 @@ async function fetchNovelRows(): Promise<DbNovel[]> {
   const { data, error } = await supabase
     .from("novels")
     .select(
-      "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, chapters(count)",
+      "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, novelupdates_url, language, chapters(count)",
     )
     .order("updated_at", { ascending: false });
 
@@ -204,7 +208,7 @@ export async function getNovel(slug: string): Promise<Novel | undefined> {
   const { data, error } = await supabase
     .from("novels")
     .select(
-      "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, chapters(count)",
+      "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, novelupdates_url, language, chapters(count)",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -230,6 +234,17 @@ export async function getNovel(slug: string): Promise<Novel | undefined> {
     }
     if (profile?.patreon_url) {
       novel.translatorPatreonUrl = profile.patreon_url;
+    }
+  } else if (novel.translator) {
+    // No publisher assigned — try to find a profile whose username matches
+    // the translator name set by an admin so the name can still be linked.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("username", novel.translator)
+      .maybeSingle();
+    if (profile?.username) {
+      novel.translatorUsername = profile.username;
     }
   }
 
@@ -368,7 +383,7 @@ export async function getUserCreatedNovels(userId: string): Promise<Novel[]> {
   const { data, error } = await supabase
     .from("novels")
     .select(
-      "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, chapters(count)",
+      "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, novelupdates_url, language, chapters(count)",
     )
     .eq("publisher_id", userId)
     .order("updated_at", { ascending: false });
