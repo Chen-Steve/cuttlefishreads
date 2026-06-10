@@ -23,18 +23,24 @@ export async function approveApplication(
 
   const { data: application } = await admin
     .from("translator_applications")
-    .select("id, user_id, status")
+    .select("id, user_id, status, username")
     .eq("id", applicationId)
     .maybeSingle();
 
   if (!application) return { error: "Application not found." };
 
   // Grant the translator role first so an approved status is never out of sync
-  // with the actual permission.
-  const { error: roleError } = await admin
-    .from("profiles")
-    .update({ role: "translator", updated_at: new Date().toISOString() })
-    .eq("id", application.user_id);
+  // with the actual permission. Upsert so approval still works when the user
+  // has no profiles row yet (update alone would silently no-op).
+  const { error: roleError } = await admin.from("profiles").upsert(
+    {
+      id: application.user_id,
+      role: "translator",
+      username: application.username || null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "id" },
+  );
 
   if (roleError) return { error: roleError.message };
 

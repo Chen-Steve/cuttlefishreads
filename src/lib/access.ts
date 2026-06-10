@@ -19,6 +19,41 @@ export type AdminAccess = {
   hasWorkspace: boolean;
 };
 
+// Workspace access is driven by profiles.role, but an approved application can
+// drift out of sync (e.g. approval ran before a profile row existed). When that
+// happens, sync the profile and treat the user as a translator.
+async function resolveWorkspaceRole(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  profileRole: string | undefined,
+): Promise<WorkspaceRole> {
+  if (profileRole === "translator") return "translator";
+
+  const { data: application } = await admin
+    .from("translator_applications")
+    .select("status, username")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (application?.status !== "approved") return "user";
+
+  const { error } = await admin.from("profiles").upsert(
+    {
+      id: userId,
+      role: "translator",
+      username: application.username || null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "id" },
+  );
+
+  if (error) {
+    console.error("[getAdminAccess] failed to sync translator role:", error);
+  }
+
+  return "translator";
+}
+
 // Resolves the current request's workspace access from the validated JWT plus
 // the profiles role. Returns null when no authenticated user is present.
 export async function getAdminAccess(): Promise<AdminAccess | null> {
@@ -38,7 +73,12 @@ export async function getAdminAccess(): Promise<AdminAccess | null> {
     .eq("id", userId)
     .maybeSingle();
 
-  const role: WorkspaceRole = profile?.role === "translator" ? "translator" : "user";
+  const role: WorkspaceRole =
+    profile?.role === "translator"
+      ? "translator"
+      : isMasterAdmin
+        ? "user"
+        : await resolveWorkspaceRole(admin, userId, profile?.role);
   const isTranslator = role === "translator";
 
   return {

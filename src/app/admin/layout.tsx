@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 
 import { getAdminAccess } from "@/lib/access";
 import { AdminNav } from "./_components/admin-nav";
@@ -19,7 +19,9 @@ export default async function AdminLayout({
   const access = await getAdminAccess();
 
   if (!access) redirect("/login");
-  if (!access.hasWorkspace) notFound();
+  // Logged-in readers without translator access get sent to /apply instead of
+  // a 404 — the application page explains their status.
+  if (!access.hasWorkspace) redirect("/apply");
 
   return (
     <main className="flex-1">
