@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, Library } from "lucide-react";
-import { NovelGrid } from "@/components/novel";
+import { NovelCarousel, PaginatedNovelGrid } from "@/components/novel";
 import { PageContainer } from "@/components/page-container";
-import { getFeaturedNovels, getNovels } from "@/lib/data";
+import { getFeaturedNovels, getNewlyAddedNovels, getNovels } from "@/lib/data";
 import { SITE } from "@/lib/constants";
 import { publicPageMetadata } from "@/lib/seo";
 
@@ -14,11 +14,11 @@ export const metadata: Metadata = publicPageMetadata({
 });
 
 export default async function Home() {
-  const [featured, all] = await Promise.all([
+  const [featured, newlyAdded, all] = await Promise.all([
     getFeaturedNovels(),
+    getNewlyAddedNovels(),
     getNovels(),
   ]);
-  const latest = all.slice(0, 5);
 
   return (
     <PageContainer className="pt-3 pb-6 sm:py-8 lg:py-10">
@@ -60,11 +60,17 @@ export default async function Home() {
         linkLabel="View all"
         className="mt-0 sm:mt-8"
       >
-        <NovelGrid novels={featured} compact />
+        <NovelCarousel novels={featured} compact />
       </Section>
 
+      {newlyAdded.length > 0 ? (
+        <Section title="Newly added" href="/novels" linkLabel="View all">
+          <NovelCarousel novels={newlyAdded} compact />
+        </Section>
+      ) : null}
+
       <Section title="Recently updated" href="/novels" linkLabel="View all">
-        <NovelGrid novels={latest} compact />
+        <PaginatedNovelGrid novels={all} pageSize={6} compact />
       </Section>
     </PageContainer>
   );
@@ -85,13 +91,13 @@ function Section({
 }) {
   return (
     <section className={className}>
-      <div className="mb-3 flex items-end justify-between gap-4">
-        <h2 className="text-lg font-semibold tracking-tight text-foreground">
+      <div className="mb-3 flex items-baseline justify-between gap-4">
+        <h2 className="text-lg font-semibold leading-none tracking-tight text-foreground">
           {title}
         </h2>
         <Link
           href={href}
-          className="inline-flex items-center gap-1 text-sm font-medium text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className="inline-flex shrink-0 items-center gap-1 text-sm font-medium leading-none text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           {linkLabel}
           <ArrowRight className="size-3.5" strokeWidth={2} aria-hidden />

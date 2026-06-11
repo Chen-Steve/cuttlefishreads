@@ -24,6 +24,11 @@ type DbNovel = {
   chapters: { count: number }[];
 };
 
+const NOVEL_LIST_COLUMNS =
+  "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, novelupdates_url, language, chapters(count)";
+
+const NEWLY_ADDED_DAYS = 7;
+
 type DbChapter = {
   id: string;
   number: number;
@@ -133,9 +138,7 @@ async function fetchNovelRows(): Promise<DbNovel[]> {
   const supabase = createClient(await cookies());
   const { data, error } = await supabase
     .from("novels")
-    .select(
-      "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, novelupdates_url, language, chapters(count)",
-    )
+    .select(NOVEL_LIST_COLUMNS)
     .order("updated_at", { ascending: false });
 
   if (error) {
@@ -207,9 +210,7 @@ export async function getNovel(slug: string): Promise<Novel | undefined> {
   const supabase = createClient(await cookies());
   const { data, error } = await supabase
     .from("novels")
-    .select(
-      "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, novelupdates_url, language, chapters(count)",
-    )
+    .select(NOVEL_LIST_COLUMNS)
     .eq("slug", slug)
     .maybeSingle();
 
@@ -252,8 +253,70 @@ export async function getNovel(slug: string): Promise<Novel | undefined> {
 }
 
 export async function getFeaturedNovels(): Promise<Novel[]> {
-  const novels = await getNovels();
-  return novels.slice(0, 3);
+  const admin = createAdminClient();
+  const { data: viewRows, error: viewsError } = await admin
+    .from("novel_views")
+    .select("novel_id");
+
+  if (viewsError) {
+    console.error("getFeaturedNovels views:", viewsError);
+    const novels = await getNovels();
+    return novels.slice(0, 5);
+  }
+
+  const viewCounts = new Map<string, number>();
+  for (const row of (viewRows ?? []) as { novel_id: string }[]) {
+    viewCounts.set(row.novel_id, (viewCounts.get(row.novel_id) ?? 0) + 1);
+  }
+
+  const topIds = [...viewCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([id]) => id);
+
+  if (topIds.length === 0) {
+    const novels = await getNovels();
+    return novels.slice(0, 5);
+  }
+
+  const { data: rows, error } = await admin
+    .from("novels")
+    .select(NOVEL_LIST_COLUMNS)
+    .in("id", topIds);
+
+  if (error) {
+    console.error("getFeaturedNovels novels:", error);
+    const novels = await getNovels();
+    return novels.slice(0, 5);
+  }
+
+  const byId = new Map(
+    ((rows ?? []) as DbNovel[]).map((row) => [row.id, row]),
+  );
+
+  return topIds
+    .map((id) => byId.get(id))
+    .filter((row): row is DbNovel => row != null)
+    .map(mapNovel);
+}
+
+export async function getNewlyAddedNovels(): Promise<Novel[]> {
+  const since = new Date();
+  since.setUTCDate(since.getUTCDate() - NEWLY_ADDED_DAYS);
+
+  const supabase = createClient(await cookies());
+  const { data, error } = await supabase
+    .from("novels")
+    .select(NOVEL_LIST_COLUMNS)
+    .gte("created_at", since.toISOString())
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("getNewlyAddedNovels:", error);
+    return [];
+  }
+
+  return ((data ?? []) as DbNovel[]).map(mapNovel);
 }
 
 // Records a unique view for a novel. The visitor key is the logged-in user id
@@ -382,9 +445,7 @@ export async function getUserCreatedNovels(userId: string): Promise<Novel[]> {
   const supabase = createClient(await cookies());
   const { data, error } = await supabase
     .from("novels")
-    .select(
-      "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, novelupdates_url, language, chapters(count)",
-    )
+    .select(NOVEL_LIST_COLUMNS)
     .eq("publisher_id", userId)
     .order("updated_at", { ascending: false });
 
