@@ -343,6 +343,111 @@ export async function recordNovelView(slug: string): Promise<void> {
     );
 }
 
+export type MonthlyViewPoint = {
+  month: string;
+  byNovel: Record<string, number>;
+};
+
+/**
+ * Returns new-reader counts grouped by month (since launch) broken down
+ * per novel. Each point's `byNovel` maps novelId → count for that month.
+ * `month` is formatted as "YYYY-MM".
+ */
+export async function getMonthlyViews(
+  novelIds: string[],
+): Promise<MonthlyViewPoint[]> {
+  if (novelIds.length === 0) return [];
+
+  const LAUNCH_YEAR = 2026;
+  const LAUNCH_MONTH = 6; // June
+
+  const since = new Date(LAUNCH_YEAR, LAUNCH_MONTH - 1, 1);
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("novel_views")
+    .select("novel_id, created_at")
+    .in("novel_id", novelIds)
+    .gte("created_at", since.toISOString());
+
+  if (error) {
+    console.error("getMonthlyViews:", error);
+    return [];
+  }
+
+  // counts[month][novelId] = count
+  const counts = new Map<string, Record<string, number>>();
+  for (const row of (data ?? []) as { novel_id: string; created_at: string }[]) {
+    const d = new Date(row.created_at);
+    const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const byNovel = counts.get(month) ?? {};
+    byNovel[row.novel_id] = (byNovel[row.novel_id] ?? 0) + 1;
+    counts.set(month, byNovel);
+  }
+
+  // Fill every month from launch to now so gaps show as zero.
+  const points: MonthlyViewPoint[] = [];
+  const now = new Date();
+  const cursor = new Date(LAUNCH_YEAR, LAUNCH_MONTH - 1, 1);
+  while (
+    cursor.getFullYear() < now.getFullYear() ||
+    (cursor.getFullYear() === now.getFullYear() &&
+      cursor.getMonth() <= now.getMonth())
+  ) {
+    const month = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
+    points.push({ month, byNovel: counts.get(month) ?? {} });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return points;
+}
+
+export type DailyViewPoint = { day: string; byNovel: Record<string, number> };
+
+/**
+ * Returns new-reader counts for each day of the current calendar month,
+ * broken down per novel. `day` is formatted as "YYYY-MM-DD".
+ */
+export async function getDailyViews(
+  novelIds: string[],
+): Promise<DailyViewPoint[]> {
+  if (novelIds.length === 0) return [];
+
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("novel_views")
+    .select("novel_id, created_at")
+    .in("novel_id", novelIds)
+    .gte("created_at", monthStart.toISOString())
+    .lt("created_at", monthEnd.toISOString());
+
+  if (error) {
+    console.error("getDailyViews:", error);
+    return [];
+  }
+
+  const counts = new Map<string, Record<string, number>>();
+  for (const row of (data ?? []) as { novel_id: string; created_at: string }[]) {
+    const d = new Date(row.created_at);
+    const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const byNovel = counts.get(day) ?? {};
+    byNovel[row.novel_id] = (byNovel[row.novel_id] ?? 0) + 1;
+    counts.set(day, byNovel);
+  }
+
+  // Fill every day of the current month up to today.
+  const points: DailyViewPoint[] = [];
+  const today = now.getDate();
+  for (let d = 1; d <= today; d++) {
+    const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    points.push({ day, byNovel: counts.get(day) ?? {} });
+  }
+  return points;
+}
+
 export async function getNovelViewCount(novelId: string): Promise<number> {
   const admin = createAdminClient();
   const { count, error } = await admin
