@@ -12,6 +12,13 @@ export function cookiesLabel(text: string): string {
     .replace(/\bcoin\b/g, "cookie");
 }
 
+/** Count words in plain text (whitespace-separated tokens). */
+export function countWords(text: string): number {
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+  return trimmed.split(/\s+/).length;
+}
+
 /** Convert a title into a URL-friendly slug. */
 export function slugify(value: string) {
   return value
