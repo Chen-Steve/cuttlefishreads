@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 
 import { GENRES, LANGUAGES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -37,10 +37,30 @@ export function NovelForm({
   novel?: NovelFormValues;
 }) {
   const isEdit = Boolean(novel);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const localCoverPreview = useMemo(
+    () => (coverFile ? URL.createObjectURL(coverFile) : null),
+    [coverFile],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (localCoverPreview) URL.revokeObjectURL(localCoverPreview);
+    };
+  }, [localCoverPreview]);
+
+  // Pass the selected file as a bound argument — FormData file fields are
+  // unreliable with useActionState on Next.js 16.2.x (they can arrive empty).
+  const boundAction = isEdit
+    ? updateNovel.bind(null, novel!.id, coverFile)
+    : createNovel.bind(null, coverFile);
+
   const [state, action, pending] = useActionState<AdminState, FormData>(
-    isEdit ? updateNovel.bind(null, novel!.id) : createNovel,
+    boundAction,
     {},
   );
+
+  const displayCover = localCoverPreview ?? novel?.cover_url ?? null;
 
   return (
     <form action={action} className="flex flex-col gap-5">
@@ -59,10 +79,10 @@ export function NovelForm({
             Cover
           </label>
           <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg border border-border bg-background ring-1 ring-black/5">
-            {novel?.cover_url ? (
+            {displayCover ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={novel.cover_url}
+                src={displayCover}
                 alt=""
                 className="size-full object-cover"
               />
@@ -76,14 +96,19 @@ export function NovelForm({
             id="novel-cover"
             name="cover"
             type="file"
-            accept="image/*"
-            className="block w-full text-xs text-muted file:mr-2 file:rounded-lg file:border-0 file:bg-accent file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-accent-hover"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/*"
+            onChange={(event) => setCoverFile(event.target.files?.[0] ?? null)}
+            className="block w-full text-transparent text-xs file:mr-0 file:rounded-lg file:border-0 file:bg-accent file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-accent-hover"
           />
-          {isEdit && (
+          {coverFile ? (
+            <span className="text-[0.7rem] leading-tight text-muted">
+              Selected: {coverFile.name}
+            </span>
+          ) : isEdit ? (
             <span className="text-[0.7rem] leading-tight text-muted">
               Leave empty to keep current cover.
             </span>
-          )}
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-3">

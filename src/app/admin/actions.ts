@@ -124,6 +124,28 @@ function parseTags(raw: string): string[] {
   );
 }
 
+const MAX_COVER_BYTES = 5 * 1024 * 1024;
+
+function resolveCoverFile(
+  coverFile: File | null | undefined,
+  formData: FormData,
+): File | null {
+  if (coverFile instanceof File && coverFile.size > 0) return coverFile;
+  const fromForm = formData.get("cover");
+  if (fromForm instanceof File && fromForm.size > 0) return fromForm;
+  return null;
+}
+
+function validateCoverFile(file: File): string | null {
+  if (file.size > MAX_COVER_BYTES) {
+    return `Cover image is too large (max ${MAX_COVER_BYTES / 1024 / 1024} MB). Try a smaller image.`;
+  }
+  if (file.type && !file.type.startsWith("image/")) {
+    return "Cover must be an image file (JPEG, PNG, WebP, or GIF).";
+  }
+  return null;
+}
+
 async function uploadCover(
   admin: ReturnType<typeof createAdminClient>,
   slug: string,
@@ -149,11 +171,12 @@ async function uploadCover(
 }
 
 export async function createNovel(
+  coverFile: File | null,
   _prev: AdminState,
   formData: FormData,
 ): Promise<AdminState> {
   try {
-    return await _createNovel(formData);
+    return await _createNovel(coverFile, formData);
   } catch (err) {
     // redirect() throws internally — re-throw so Next.js can handle navigation.
     if (
@@ -175,7 +198,10 @@ export async function createNovel(
   }
 }
 
-async function _createNovel(formData: FormData): Promise<AdminState> {
+async function _createNovel(
+  coverFile: File | null,
+  formData: FormData,
+): Promise<AdminState> {
   const auth = await requireWorkspace();
   if (!auth.access) return { error: auth.error };
   const { access } = auth;
@@ -194,7 +220,11 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
     : "Chinese";
   const genres = parseGenres(formData);
   const tags = parseTags(String(formData.get("tags") ?? ""));
-  const cover = formData.get("cover");
+  const cover = resolveCoverFile(coverFile, formData);
+  if (cover) {
+    const coverError = validateCoverFile(cover);
+    if (coverError) return { error: coverError };
+  }
   const novelupdatesUrl = parseSupportLink(
     String(formData.get("novelupdatesUrl") ?? ""),
     "NovelUpdates",
@@ -247,7 +277,7 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
     coverUrl = await uploadCover(
       admin,
       slug,
-      cover instanceof File ? cover : null,
+      cover,
     );
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Cover upload failed." };
@@ -278,6 +308,7 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
 
 export async function updateNovel(
   novelId: string,
+  coverFile: File | null,
   _prev: AdminState,
   formData: FormData,
 ): Promise<AdminState> {
@@ -299,7 +330,11 @@ export async function updateNovel(
     : "Chinese";
   const genres = parseGenres(formData);
   const tags = parseTags(String(formData.get("tags") ?? ""));
-  const cover = formData.get("cover");
+  const cover = resolveCoverFile(coverFile, formData);
+  if (cover) {
+    const coverError = validateCoverFile(cover);
+    if (coverError) return { error: coverError };
+  }
   const novelupdatesUrl = parseSupportLink(
     String(formData.get("novelupdatesUrl") ?? ""),
     "NovelUpdates",
@@ -350,7 +385,7 @@ export async function updateNovel(
   }
 
   let coverUrl = existing.cover_url;
-  if (cover instanceof File && cover.size > 0) {
+  if (cover) {
     try {
       const uploaded = await uploadCover(admin, existing.slug, cover);
       if (uploaded) coverUrl = uploaded;
