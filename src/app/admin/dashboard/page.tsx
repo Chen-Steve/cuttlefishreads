@@ -461,7 +461,7 @@ function SvgBarChart({
 
         return (
           <g key={key} opacity={isHighlighted || !highlightLast ? 1 : 0.6}>
-            <title>{xLabel}: {total.toLocaleString()} new readers</title>
+            <title>{xLabel}: {total} new readers</title>
             {segments.map((seg) => {
               const segH = Math.max((seg.count / maxY) * PLOT_H, 0);
               const rectY = currentY - segH;

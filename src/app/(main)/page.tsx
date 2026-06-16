@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, Library } from "lucide-react";
+import { DiscordIcon } from "@/components/discord-icon";
 import { NovelCarousel, PaginatedNovelGrid } from "@/components/novel";
 import { PageContainer } from "@/components/page-container";
 import { getFeaturedNovels, getNewlyAddedNovels, getNovels } from "@/lib/data";
@@ -50,6 +51,15 @@ export default async function Home() {
               <Library className="size-3.5" strokeWidth={1.75} aria-hidden />
               My library
             </Link>
+            <a
+              href={SITE.discordUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-semibold text-foreground transition-colors hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              <DiscordIcon className="size-3.5" />
+              Discord
+            </a>
           </div>
         </div>
       </section>
