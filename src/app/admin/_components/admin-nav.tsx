@@ -13,7 +13,6 @@ const baseLinks: NavLink[] = [
   { href: "/admin", label: "My Novels" },
   { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/comments", label: "Comments" },
-  { href: "/admin/messages", label: "Messages" },
   { href: "/admin/settings", label: "Settings" },
 ];
 
