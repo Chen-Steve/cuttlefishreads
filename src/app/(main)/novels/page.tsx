@@ -15,12 +15,7 @@ export default async function NovelsPage() {
   const novels = await getNovels();
 
   return (
-    <PageContainer as="section">
-      <header className="mb-6 sm:mb-7">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-          All novels
-        </h1>
-      </header>
+    <PageContainer as="section" className="pt-4 pb-8 sm:pt-5 sm:pb-10 lg:pt-6 lg:pb-12">
       <NovelsBrowser novels={novels} />
     </PageContainer>
   );

@@ -1,10 +1,17 @@
 import { cookies } from "next/headers";
 
 import type { Genre, Language } from "@/lib/constants";
-import type { Chapter, ChapterSummary, Novel, NovelComment } from "@/types";
+import type {
+  Chapter,
+  ChapterSummary,
+  Novel,
+  NovelComment,
+  RecentlyUpdatedNovel,
+} from "@/types";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
+import { formatRelativeDate } from "@/lib/utils";
 
 type DbNovel = {
   id: string;
@@ -317,6 +324,69 @@ export async function getNewlyAddedNovels(): Promise<Novel[]> {
   }
 
   return ((data ?? []) as DbNovel[]).map(mapNovel);
+}
+
+type DbRecentChapterRow = {
+  number: number;
+  title: string;
+  published_at: string;
+  is_free: boolean;
+  novels: { slug: string; title: string };
+};
+
+type DbRecentChapterQueryRow = Omit<DbRecentChapterRow, "novels"> & {
+  novels: { slug: string; title: string } | { slug: string; title: string }[] | null;
+};
+
+function resolveNovelRef(
+  novels: DbRecentChapterQueryRow["novels"],
+): { slug: string; title: string } | null {
+  if (!novels) return null;
+  return Array.isArray(novels) ? (novels[0] ?? null) : novels;
+}
+
+export async function getRecentlyUpdatedNovels(): Promise<RecentlyUpdatedNovel[]> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("chapters")
+    .select("number, title, published_at, is_free, novels!inner(slug, title)")
+    .eq("is_published", true);
+
+  if (error) {
+    console.error("getRecentlyUpdatedNovels:", error);
+    return [];
+  }
+
+  const latestBySlug = new Map<string, RecentlyUpdatedNovel>();
+
+  for (const row of (data ?? []) as DbRecentChapterQueryRow[]) {
+    const novel = resolveNovelRef(row.novels);
+    if (!novel) continue;
+
+    const existing = latestBySlug.get(novel.slug);
+    if (
+      existing &&
+      new Date(existing.updatedAt).getTime() >= new Date(row.published_at).getTime()
+    ) {
+      continue;
+    }
+
+    latestBySlug.set(novel.slug, {
+      slug: novel.slug,
+      title: novel.title,
+      latestChapter: {
+        number: row.number,
+        title: row.title,
+        isAdvanced: !row.is_free,
+      },
+      updatedAt: row.published_at,
+      updatedAtLabel: formatRelativeDate(row.published_at),
+    });
+  }
+
+  return [...latestBySlug.values()].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  );
 }
 
 // Records a unique view for a novel. The visitor key is the logged-in user id

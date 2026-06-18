@@ -2,9 +2,13 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, Library } from "lucide-react";
 import { DiscordIcon } from "@/components/discord-icon";
-import { NovelCarousel, PaginatedNovelGrid } from "@/components/novel";
+import { NovelCarousel, PaginatedRecentlyUpdatedList } from "@/components/novel";
 import { PageContainer } from "@/components/page-container";
-import { getFeaturedNovels, getNewlyAddedNovels, getNovels } from "@/lib/data";
+import {
+  getFeaturedNovels,
+  getNewlyAddedNovels,
+  getRecentlyUpdatedNovels,
+} from "@/lib/data";
 import { SITE } from "@/lib/constants";
 import { publicPageMetadata } from "@/lib/seo";
 
@@ -15,10 +19,10 @@ export const metadata: Metadata = publicPageMetadata({
 });
 
 export default async function Home() {
-  const [featured, newlyAdded, all] = await Promise.all([
+  const [featured, newlyAdded, recentlyUpdated] = await Promise.all([
     getFeaturedNovels(),
     getNewlyAddedNovels(),
-    getNovels(),
+    getRecentlyUpdatedNovels(),
   ]);
 
   return (
@@ -79,8 +83,8 @@ export default async function Home() {
         </Section>
       ) : null}
 
-      <Section title="Recently updated" href="/novels" linkLabel="View all">
-        <PaginatedNovelGrid novels={all} pageSize={6} compact />
+      <Section title="Recently updated">
+        <PaginatedRecentlyUpdatedList novels={recentlyUpdated} pageSize={8} />
       </Section>
     </PageContainer>
   );
@@ -94,8 +98,8 @@ function Section({
   className = "mt-6 sm:mt-8",
 }: {
   title: string;
-  href: string;
-  linkLabel: string;
+  href?: string;
+  linkLabel?: string;
   children: React.ReactNode;
   className?: string;
 }) {
@@ -105,13 +109,15 @@ function Section({
         <h2 className="text-lg font-semibold leading-none tracking-tight text-foreground">
           {title}
         </h2>
-        <Link
-          href={href}
-          className="inline-flex shrink-0 items-center gap-1 text-sm font-medium leading-none text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        >
-          {linkLabel}
-          <ArrowRight className="size-3.5" strokeWidth={2} aria-hidden />
-        </Link>
+        {href && linkLabel ? (
+          <Link
+            href={href}
+            className="inline-flex shrink-0 items-center gap-1 text-sm font-medium leading-none text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            {linkLabel}
+            <ArrowRight className="size-3.5" strokeWidth={2} aria-hidden />
+          </Link>
+        ) : null}
       </div>
       {children}
     </section>

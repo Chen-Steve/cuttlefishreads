@@ -2,6 +2,8 @@ export { NovelCard } from "./novel-card";
 export { NovelCarousel } from "./novel-carousel";
 export { NovelGrid } from "./novel-grid";
 export { PaginatedNovelGrid } from "./paginated-novel-grid";
+export { PaginatedRecentlyUpdatedList } from "./paginated-recently-updated-list";
+export { RecentlyUpdatedList } from "./recently-updated-list";
 export { NovelsBrowser } from "./novels-browser";
 export { NovelCover } from "./novel-cover";
 export { NovelDescription } from "./novel-description";

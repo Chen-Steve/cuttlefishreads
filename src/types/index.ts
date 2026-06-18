@@ -23,6 +23,18 @@ export interface Novel {
   publisherId?: string;
 }
 
+export interface RecentlyUpdatedNovel {
+  slug: string;
+  title: string;
+  latestChapter: {
+    number: number;
+    title: string;
+    isAdvanced: boolean;
+  };
+  updatedAt: string;
+  updatedAtLabel: string;
+}
+
 export interface Chapter {
   id: string;
   novelSlug: string;
