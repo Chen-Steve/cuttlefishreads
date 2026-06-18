@@ -113,7 +113,7 @@ export function CoinPackages({
       )}
 
       {/* Preset packages */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
         {packages.map((pkg) => {
           const totalCoins = pkg.coins + pkg.bonusCoins;
           const dollars = pkg.price / 100;
@@ -173,7 +173,7 @@ export function CoinPackages({
       <div className="mt-6 rounded-2xl border border-border bg-surface p-5 sm:p-6">
         <p className="text-sm font-semibold text-foreground">Custom amount</p>
         <p className="mt-0.5 text-xs text-muted">
-          Buy exactly the cookies you need — minimum {MIN_COINS}.
+          minimum {MIN_COINS}.
         </p>
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
