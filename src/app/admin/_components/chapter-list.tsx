@@ -67,6 +67,29 @@ function formatUnlockDate(value: string) {
   });
 }
 
+export function ChapterOrderToggle() {
+  const newestFirst = useSyncExternalStore(
+    subscribeChapterOrder,
+    readChapterOrderPreference,
+    getChapterOrderServerSnapshot,
+  );
+
+  return (
+    <button
+      type="button"
+      onClick={() => writeChapterOrderPreference(!newestFirst)}
+      aria-pressed={newestFirst}
+      className={cn(
+        "inline-flex h-10 items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+        newestFirst && "border-accent/40 bg-accent/5 text-accent",
+      )}
+    >
+      <ArrowDownUp className="size-4" strokeWidth={1.75} aria-hidden />
+      {newestFirst ? "Newest first" : "Oldest first"}
+    </button>
+  );
+}
+
 function unlockLabel(chapter: Pick<AdminChapterRow, "is_free" | "unlock_at">) {
   if (chapter.unlock_at) {
     const date = formatUnlockDate(chapter.unlock_at);
@@ -104,23 +127,7 @@ export function ChapterList({
   }
 
   return (
-    <div>
-      <div className="mb-3 flex justify-end">
-        <button
-          type="button"
-          onClick={() => writeChapterOrderPreference(!newestFirst)}
-          aria-pressed={newestFirst}
-          className={cn(
-            "inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-            newestFirst && "border-accent/40 bg-accent/5 text-accent",
-          )}
-        >
-          <ArrowDownUp className="size-3.5" strokeWidth={1.75} aria-hidden />
-          {newestFirst ? "Newest first" : "Oldest first"}
-        </button>
-      </div>
-
-      <div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
+    <div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
         {rows.map((chapter) => (
           <div
             key={chapter.id}
@@ -134,6 +141,10 @@ export function ChapterList({
               <p className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
                 <span className="truncate">
                   {chapter.title || `Chapter ${chapter.number}`}
+                </span>
+                <span className="shrink-0 text-xs font-normal tabular-nums text-muted">
+                  {chapter.word_count.toLocaleString()} word
+                  {chapter.word_count === 1 ? "" : "s"}
                 </span>
                 {chapter.is_published ? (
                   <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
@@ -153,11 +164,6 @@ export function ChapterList({
                 ) : (
                   <span>{chapter.coin_cost} cookies</span>
                 )}
-                <span aria-hidden>·</span>
-                <span>
-                  {chapter.word_count.toLocaleString()} word
-                  {chapter.word_count === 1 ? "" : "s"}
-                </span>
               </p>
             </div>
 
@@ -176,7 +182,6 @@ export function ChapterList({
             </div>
           </div>
         ))}
-      </div>
     </div>
   );
 }

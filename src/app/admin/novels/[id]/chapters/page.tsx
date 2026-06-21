@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft, PlusCircle, Sparkles } from "lucide-react";
+import { ChevronLeft, PlusCircle } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/page-container";
 import { countWords } from "@/lib/utils";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
-import { ChapterList } from "../../../_components/chapter-list";
+import {
+  ChapterList,
+  ChapterOrderToggle,
+} from "../../../_components/chapter-list";
 import { PublishAllButton } from "../../../_components/chapter-admin-actions";
 
 export const metadata: Metadata = {
@@ -92,15 +95,7 @@ export default async function ChaptersListPage({
 
         <div className="flex flex-wrap items-center gap-2">
           <PublishAllButton novelId={id} draftCount={draftCount} />
-          {access.isMasterAdmin ? (
-            <Link
-              href={`/admin/novels/${id}/import`}
-              className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            >
-              <Sparkles className="size-4" strokeWidth={1.75} aria-hidden />
-              Import &amp; translate
-            </Link>
-          ) : null}
+          <ChapterOrderToggle />
           <Link
             href={`/admin/novels/${id}/chapters/new`}
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"

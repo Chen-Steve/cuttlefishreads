@@ -12,6 +12,7 @@ import {
   centsToAmountString,
 } from "@/lib/coin-packages";
 import { usePayPal } from "./use-paypal";
+import { PayPalPayButton } from "./paypal-pay-button";
 
 export function CoinPackages({
   packages,
@@ -83,14 +84,7 @@ export function CoinPackages({
     }
   }
 
-  const buyLabel = (id: string) =>
-    !clientId
-      ? "Unavailable"
-      : !ready
-        ? "Loading…"
-        : pendingId === id
-          ? "Processing…"
-          : "Buy with PayPal";
+  const buyDisabled = !paymentsEnabled || pendingId !== null;
 
   return (
     <>
@@ -152,18 +146,13 @@ export function CoinPackages({
                 ${dollars.toFixed(2)}
               </p>
 
-              <button
-                type="button"
-                onClick={() => buy({ packageId: pkg.id }, pkg.id)}
-                disabled={!paymentsEnabled || pendingId !== null}
-                className={`mt-5 inline-flex h-10 w-full items-center justify-center rounded-xl text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 ${
-                  pkg.highlight
-                    ? "bg-accent text-white hover:bg-accent-hover"
-                    : "border border-border bg-background text-foreground hover:bg-surface"
-                }`}
-              >
-                {buyLabel(pkg.id)}
-              </button>
+              <PayPalPayButton
+                unavailable={!clientId}
+                loading={Boolean(clientId) && !ready}
+                disabled={buyDisabled}
+                onPay={() => buy({ packageId: pkg.id }, pkg.id)}
+                className="mt-5"
+              />
             </div>
           );
         })}
@@ -215,19 +204,18 @@ export function CoinPackages({
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
+          <PayPalPayButton
+            unavailable={!clientId}
+            loading={Boolean(clientId) && !ready}
+            disabled={
+              buyDisabled || validCustomCoins === null
+            }
+            onPay={() =>
               validCustomCoins &&
               buy({ customCoins: validCustomCoins }, "pack_custom")
             }
-            disabled={
-              !paymentsEnabled || pendingId !== null || validCustomCoins === null
-            }
-            className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 sm:ml-auto"
-          >
-            {buyLabel("pack_custom")}
-          </button>
+            className="mt-0 sm:ml-auto sm:max-w-[200px]"
+          />
         </div>
       </div>
 

@@ -22,6 +22,15 @@ export type CoinPackage = {
 // toward higher-value purchases.
 export const COIN_PACKAGES: readonly CoinPackage[] = [
   {
+    id: "pack_mini",
+    label: "Mini",
+    description: "A quick taste",
+    price: 1_00,
+    coins: 4,
+    bonusCoins: 0,
+    highlight: false,
+  },
+  {
     id: "pack_starter",
     label: "Starter",
     description: "Try it out",
