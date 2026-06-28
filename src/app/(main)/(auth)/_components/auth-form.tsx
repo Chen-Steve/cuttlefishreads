@@ -128,13 +128,12 @@ export function AuthForm({
 
   return (
     <section className="mx-auto flex w-full max-w-md flex-col px-4 py-12 sm:px-6 sm:py-16">
-      <div className="rounded-2xl border border-border bg-surface px-5 py-7 shadow-sm sm:px-8 sm:py-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-          {title}
-        </h1>
-        <p className="mt-1 text-sm text-muted">{subtitle}</p>
+      <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+        {title}
+      </h1>
+      <p className="mt-1 text-sm text-muted">{subtitle}</p>
 
-        <form action={formAction} className="mt-6 flex flex-col gap-4">
+      <form action={formAction} className="mt-6 flex flex-col gap-4">
           {hiddenFields &&
             Object.entries(hiddenFields).map(([name, value]) => (
               <input key={name} type="hidden" name={name} value={value} />
@@ -228,7 +227,6 @@ export function AuthForm({
             </form>
           </>
         ) : null}
-      </div>
 
       <p className="mt-6 text-center text-sm text-muted">
         {footerPrompt}{" "}
