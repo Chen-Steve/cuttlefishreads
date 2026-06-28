@@ -25,7 +25,7 @@ export function BookmarkButton({
     return (
       <Link
         href="/login"
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface px-5 text-sm font-semibold text-muted transition-colors hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:w-fit"
+        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface px-5 text-sm font-semibold text-muted transition-colors hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         <LogIn className="size-4" strokeWidth={1.75} aria-hidden />
         Sign in to add to library
@@ -51,7 +51,7 @@ export function BookmarkButton({
   }
 
   return (
-    <div className="flex flex-col gap-1.5 sm:items-start">
+    <div className="flex w-full flex-col gap-1.5">
       <button
         type="button"
         onClick={handleClick}
@@ -59,8 +59,8 @@ export function BookmarkButton({
         aria-pressed={bookmarked}
         className={
           bookmarked
-            ? "inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-accent bg-accent/10 px-5 text-sm font-semibold text-accent transition-colors hover:bg-accent/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit"
-            : "inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface px-5 text-sm font-semibold text-foreground transition-colors hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit"
+            ? "inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-accent bg-accent/10 px-5 text-sm font-semibold text-accent transition-colors hover:bg-accent/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
+            : "inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface px-5 text-sm font-semibold text-foreground transition-colors hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
         }
       >
         {bookmarked ? (

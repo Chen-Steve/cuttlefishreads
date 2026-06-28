@@ -1,13 +1,25 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 import { Bold, Italic, Pilcrow } from "lucide-react";
 
+import {
+  formatSuggestedUnlockPreview,
+  getSuggestedUnlockAt,
+} from "@/lib/suggested-unlock-at";
 import { createChapter, updateChapter, type AdminState } from "../actions";
 
 const inputClass =
   "h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25";
 const labelClass = "text-xs font-medium text-muted";
+
+function toDatetimeLocal(value: string | Date | null): string {
+  if (!value) return "";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 export type ChapterFormInitial = {
   chapterId: string;
@@ -24,9 +36,11 @@ export type ChapterFormInitial = {
 export function ChapterForm({
   novelId,
   initial,
+  latestChapterUnlockAt = null,
 }: {
   novelId: string;
   initial?: ChapterFormInitial;
+  latestChapterUnlockAt?: string | null;
 }) {
   const isEdit = Boolean(initial);
 
@@ -45,7 +59,23 @@ export function ChapterForm({
   const [noteMode, setNoteMode] = useState<"global" | "unique">(
     initial?.useGlobalTranslatorNote === false ? "unique" : "global",
   );
+  const [unlockAt, setUnlockAt] = useState(() =>
+    toDatetimeLocal(initial?.unlockAt ?? null),
+  );
   const contentRef = useRef<HTMLTextAreaElement>(null);
+
+  const suggestedUnlockAt = useMemo(
+    () => getSuggestedUnlockAt(latestChapterUnlockAt),
+    [latestChapterUnlockAt],
+  );
+  const suggestedUnlockLabel = useMemo(
+    () => formatSuggestedUnlockPreview(suggestedUnlockAt),
+    [suggestedUnlockAt],
+  );
+
+  function applySuggestedUnlockDate() {
+    setUnlockAt(toDatetimeLocal(suggestedUnlockAt));
+  }
 
   function wrapSelection(before: string, after: string) {
     const el = contentRef.current;
@@ -57,16 +87,6 @@ export function ChapterForm({
     const cursor = start + before.length + selected.length;
     el.focus();
     el.setSelectionRange(cursor, cursor);
-  }
-
-  // Format a UTC ISO string to the value expected by datetime-local inputs
-  // (YYYY-MM-DDTHH:MM in local time).
-  function toDatetimeLocal(iso: string | null): string {
-    if (!iso) return "";
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "";
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
   return (
@@ -243,37 +263,52 @@ export function ChapterForm({
       </fieldset>
 
       {access === "paid" && (
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="chapter-cost" className={labelClass}>
-            Cookie cost
-          </label>
-          <input
-            id="chapter-cost"
-            name="coinCost"
-            type="number"
-            min={1}
-            defaultValue={initial?.coinCost ?? 5}
-            className={`${inputClass} sm:w-44`}
-          />
-        </div>
-      )}
+        <>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="chapter-cost" className={labelClass}>
+              Cookie cost
+            </label>
+            <input
+              id="chapter-cost"
+              name="coinCost"
+              type="number"
+              min={1}
+              defaultValue={initial?.coinCost ?? 5}
+              className={`${inputClass} sm:w-44`}
+            />
+          </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="chapter-unlock" className={labelClass}>
-          Auto-unlock date
-          <span className="ml-1 font-normal opacity-60">(optional)</span>
-        </label>
-        <input
-          id="chapter-unlock"
-          name="unlockAt"
-          type="datetime-local"
-          defaultValue={toDatetimeLocal(initial?.unlockAt ?? null)}
-          className={`${inputClass} sm:w-72`}
-        />
-        <span className="text-xs text-muted">
-          A paid chapter becomes free for everyone once this date passes.
-        </span>
-      </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="chapter-unlock" className={labelClass}>
+              Auto-unlock date
+              <span className="ml-1 font-normal opacity-60">(optional)</span>
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                id="chapter-unlock"
+                name="unlockAt"
+                type="datetime-local"
+                value={unlockAt}
+                onChange={(event) => setUnlockAt(event.target.value)}
+                className={`${inputClass} sm:w-72`}
+              />
+              <button
+                type="button"
+                onClick={applySuggestedUnlockDate}
+                className="inline-flex h-11 shrink-0 items-center rounded-xl border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              >
+                Use next day
+              </button>
+            </div>
+            <span className="text-xs text-muted">
+              {latestChapterUnlockAt
+                ? `Next day sets ${suggestedUnlockLabel} — one day after the latest scheduled chapter.`
+                : `Next day sets ${suggestedUnlockLabel}.`}
+              {" "}A paid chapter becomes free for everyone once this date passes.
+            </span>
+          </div>
+        </>
+      )}
 
       <button
         type="submit"

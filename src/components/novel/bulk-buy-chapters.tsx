@@ -32,7 +32,7 @@ export function BulkBuyChapters({
   const bulkBuy = getBulkBuyState(chapters);
   const canAfford = userCoins >= bulkBuy.discountedPrice;
 
-  if (!bulkBuy.eligible) return null;
+  if (!bulkBuy.eligible || bulkBuy.purchasableCount === 0) return null;
 
   function handleBulkBuy() {
     setError(null);
@@ -58,13 +58,8 @@ export function BulkBuyChapters({
 
   return (
     <div className="flex flex-col gap-3">
-      {bulkBuy.purchasableCount === 0 ? (
-        <p className="text-sm text-muted">
-          You have unlocked all advanced chapters for this novel.
-        </p>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {!isLoggedIn ? (
+      <div className="flex flex-col gap-2">
+        {!isLoggedIn ? (
             <Link
               href="/login"
               className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-500/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:w-fit"
@@ -105,8 +100,7 @@ export function BulkBuyChapters({
               {cookiesLabel(error)}
             </p>
           ) : null}
-        </div>
-      )}
+      </div>
 
       {showInsufficientPopup ? (
         <div

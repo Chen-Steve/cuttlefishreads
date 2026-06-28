@@ -3,9 +3,9 @@
 // price when creating/verifying a PayPal order). The client never dictates a
 // price; it only sends a package id or a custom coin amount.
 
-export const MIN_COINS = 20;
-// Base rate: 20 coins = $5.00 → 25 cents per coin.
-export const CENTS_PER_COIN = 25;
+export const MIN_COINS = 50;
+// Base rate: 10 coins = $1.00 → 10 cents per coin.
+export const CENTS_PER_COIN = 10;
 export const CURRENCY = "USD";
 
 export type CoinPackage = {
@@ -26,7 +26,7 @@ export const COIN_PACKAGES: readonly CoinPackage[] = [
     label: "Starter",
     description: "Try it out",
     price: 5_00,
-    coins: 20,
+    coins: 50,
     bonusCoins: 0,
     highlight: false,
   },
@@ -35,8 +35,8 @@ export const COIN_PACKAGES: readonly CoinPackage[] = [
     label: "Reader",
     description: "11 % more cookies",
     price: 10_00,
-    coins: 40,
-    bonusCoins: 5,
+    coins: 100,
+    bonusCoins: 13,
     highlight: false,
   },
   {
@@ -44,8 +44,8 @@ export const COIN_PACKAGES: readonly CoinPackage[] = [
     label: "Regular",
     description: "17 % more cookies",
     price: 15_00,
-    coins: 60,
-    bonusCoins: 10,
+    coins: 150,
+    bonusCoins: 25,
     highlight: false,
   },
   {
@@ -53,8 +53,8 @@ export const COIN_PACKAGES: readonly CoinPackage[] = [
     label: "Enthusiast",
     description: "17 % more cookies",
     price: 25_00,
-    coins: 100,
-    bonusCoins: 20,
+    coins: 250,
+    bonusCoins: 50,
     highlight: true,
   },
   {
@@ -62,8 +62,8 @@ export const COIN_PACKAGES: readonly CoinPackage[] = [
     label: "Collector",
     description: "Best value — 23 % more cookies",
     price: 50_00,
-    coins: 200,
-    bonusCoins: 60,
+    coins: 500,
+    bonusCoins: 150,
     highlight: false,
   },
 ] as const;

@@ -32,6 +32,15 @@ export default async function AddChapterPage({
     notFound();
   }
 
+  const { data: latestUnlockRow } = await admin
+    .from("chapters")
+    .select("unlock_at")
+    .eq("novel_id", id)
+    .not("unlock_at", "is", null)
+    .order("unlock_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   return (
     <PageContainer as="div" width="prose">
       <Link
@@ -43,7 +52,10 @@ export default async function AddChapterPage({
       </Link>
 
       <div className="mt-4 rounded-2xl border border-border bg-surface p-5 sm:p-6">
-        <ChapterForm novelId={novel.id} />
+        <ChapterForm
+          novelId={novel.id}
+          latestChapterUnlockAt={latestUnlockRow?.unlock_at ?? null}
+        />
       </div>
     </PageContainer>
   );

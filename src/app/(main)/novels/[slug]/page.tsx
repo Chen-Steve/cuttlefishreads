@@ -8,6 +8,7 @@ import {
   BulkBuyChapters,
   BulkBuyInfo,
   ChapterList,
+  ChapterOrderToggle,
   NovelCover,
   NovelDescription,
 } from "@/components/novel";
@@ -207,27 +208,24 @@ export default async function NovelDetailPage({
       </div>
 
       <section className="mt-10">
-        <div
-          className={
-            bulkBuy.eligible
-              ? "mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
-              : "mb-4"
-          }
-        >
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold tracking-tight text-foreground">
-            Chapters
+            Chapters:
             <span className="ml-2 text-sm font-normal text-muted">
               {chapters.length}
             </span>
           </h2>
-          {bulkBuy.eligible ? (
-            <BulkBuyChapters
-              novelSlug={novel.slug}
-              chapters={chapters}
-              userCoins={userCoins}
-              isLoggedIn={isLoggedIn}
-            />
-          ) : null}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {bulkBuy.eligible ? (
+              <BulkBuyChapters
+                novelSlug={novel.slug}
+                chapters={chapters}
+                userCoins={userCoins}
+                isLoggedIn={isLoggedIn}
+              />
+            ) : null}
+            {chapters.length > 0 ? <ChapterOrderToggle /> : null}
+          </div>
         </div>
         <ChapterList slug={novel.slug} chapters={chapters} />
         {!bulkBuy.eligible ? (
