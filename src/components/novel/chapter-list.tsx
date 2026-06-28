@@ -67,11 +67,11 @@ export function ChapterOrderToggle() {
       onClick={() => writeChapterOrderPreference(!newestFirst)}
       aria-pressed={newestFirst}
       className={cn(
-        "inline-flex h-10 items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+        "inline-flex h-8 items-center gap-1 rounded-lg border border-border bg-background px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
         newestFirst && "border-accent/40 bg-accent/5 text-accent",
       )}
     >
-      <ArrowDownUp className="size-4" strokeWidth={1.75} aria-hidden />
+      <ArrowDownUp className="size-3.5" strokeWidth={1.75} aria-hidden />
       {newestFirst ? "First" : "Latest"}
     </button>
   );

@@ -207,25 +207,39 @@ export default async function NovelDetailPage({
         </div>
       </div>
 
-      <section className="mt-10">
-        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-semibold tracking-tight text-foreground">
-            Chapters:
-            <span className="ml-2 text-sm font-normal text-muted">
-              {chapters.length}
-            </span>
-          </h2>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {bulkBuy.eligible ? (
+      <section className="mt-4">
+        <div className="flex flex-col gap-2 sm:mb-2">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">
+              Chapters:
+              <span className="ml-2 text-sm font-normal text-muted">
+                {chapters.length}
+              </span>
+            </h2>
+            <div className="flex shrink-0 items-center gap-2">
+              {bulkBuy.eligible ? (
+                <div className="hidden sm:contents">
+                  <BulkBuyChapters
+                    novelSlug={novel.slug}
+                    chapters={chapters}
+                    userCoins={userCoins}
+                    isLoggedIn={isLoggedIn}
+                  />
+                </div>
+              ) : null}
+              {chapters.length > 0 ? <ChapterOrderToggle /> : null}
+            </div>
+          </div>
+          {bulkBuy.eligible ? (
+            <div className="flex justify-end sm:hidden">
               <BulkBuyChapters
                 novelSlug={novel.slug}
                 chapters={chapters}
                 userCoins={userCoins}
                 isLoggedIn={isLoggedIn}
               />
-            ) : null}
-            {chapters.length > 0 ? <ChapterOrderToggle /> : null}
-          </div>
+            </div>
+          ) : null}
         </div>
         <ChapterList slug={novel.slug} chapters={chapters} />
         {!bulkBuy.eligible ? (
