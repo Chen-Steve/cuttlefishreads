@@ -77,11 +77,9 @@ export default async function Home() {
         <NovelCarousel novels={featured} compact />
       </Section>
 
-      {newlyAdded.length > 0 ? (
-        <Section title="Newly added" href="/novels" linkLabel="View all">
-          <NovelCarousel novels={newlyAdded} compact />
-        </Section>
-      ) : null}
+      <Section title="Newly added" href="/novels" linkLabel="View all">
+        <NovelCarousel novels={newlyAdded} compact />
+      </Section>
 
       <Section title="Recently updated">
         <PaginatedRecentlyUpdatedList novels={recentlyUpdated} pageSize={8} />

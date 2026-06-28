@@ -34,7 +34,7 @@ type DbNovel = {
 const NOVEL_LIST_COLUMNS =
   "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, novelupdates_url, language, chapters(count)";
 
-const NEWLY_ADDED_DAYS = 7;
+const NEWLY_ADDED_LIMIT = 12;
 
 type DbChapter = {
   id: string;
@@ -308,15 +308,12 @@ export async function getFeaturedNovels(): Promise<Novel[]> {
 }
 
 export async function getNewlyAddedNovels(): Promise<Novel[]> {
-  const since = new Date();
-  since.setUTCDate(since.getUTCDate() - NEWLY_ADDED_DAYS);
-
   const supabase = createClient(await cookies());
   const { data, error } = await supabase
     .from("novels")
     .select(NOVEL_LIST_COLUMNS)
-    .gte("created_at", since.toISOString())
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(NEWLY_ADDED_LIMIT);
 
   if (error) {
     console.error("getNewlyAddedNovels:", error);
