@@ -15,7 +15,20 @@ type SearchMatch = {
 };
 
 const novelsNavItem = { href: "/novels", label: "Novels", icon: BookOpen } as const;
+const libraryNavItem = { href: "/library", label: "Library", icon: Library } as const;
+const shopNavItem = { href: "/shop", label: "Shop", icon: ShoppingBag } as const;
 const loginNavItem = { href: "/login", label: "Login / Sign Up", icon: LogIn } as const;
+const authenticatedMobileNavItems = [libraryNavItem, shopNavItem] as const;
+
+function getNavItemClassName(href: string, isAuthenticated: boolean) {
+  if (href === "/novels") {
+    return cn(navIconLinkBaseClass, "hidden sm:inline-flex");
+  }
+  if (isAuthenticated && (href === "/library" || href === "/shop")) {
+    return cn(navIconLinkBaseClass, "hidden sm:inline-flex");
+  }
+  return navIconLinkClass;
+}
 
 const navIconLinkBaseClass =
   "h-10 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium leading-none text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:h-9 sm:px-3";
@@ -213,16 +226,6 @@ function AccountDropdown({
           </div>
 
           <Link
-            href="/library"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
-          >
-            <Library className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
-            Library
-          </Link>
-
-          <Link
             href="/account"
             role="menuitem"
             onClick={() => setOpen(false)}
@@ -243,16 +246,6 @@ function AccountDropdown({
               Public profile
             </Link>
           ) : null}
-
-          <Link
-            href="/shop"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
-          >
-            <ShoppingBag className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
-            Shop
-          </Link>
 
           {isAdmin && (
             <Link
@@ -304,7 +297,7 @@ export function SiteHeader({
   const isDesktop = useIsDesktopNav();
 
   const navItems = isAuthenticated
-    ? [novelsNavItem]
+    ? [novelsNavItem, libraryNavItem, shopNavItem]
     : [novelsNavItem, loginNavItem];
 
   const desktopSearchClassNames = {
@@ -363,15 +356,27 @@ export function SiteHeader({
             </span>
           </Link>
 
+          {isAuthenticated
+            ? authenticatedMobileNavItems.map(({ href, label, icon: Icon }) => (
+                <Link
+                  key={`mobile-${href}`}
+                  href={href}
+                  aria-label={label}
+                  className={cn(navIconLinkClass, "sm:hidden")}
+                >
+                  <span className={navIconWrapperClass}>
+                    <Icon className="size-5" strokeWidth={1.75} aria-hidden />
+                  </span>
+                </Link>
+              ))
+            : null}
+
           {navItems.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
-              className={
-                href === "/novels"
-                  ? cn(navIconLinkBaseClass, "hidden sm:inline-flex")
-                  : navIconLinkClass
-              }
+              aria-label={label}
+              className={getNavItemClassName(href, isAuthenticated)}
             >
               <span className={navIconWrapperClass}>
                 <Icon className="size-5 sm:size-4" strokeWidth={1.75} aria-hidden />
