@@ -49,6 +49,7 @@ export function NovelCover({
         <img
           src={coverUrl}
           alt={title}
+          draggable={false}
           className="h-full w-full object-cover"
         />
       </div>
