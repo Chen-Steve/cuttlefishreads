@@ -345,7 +345,7 @@ function resolveNovelRef(
   return Array.isArray(novels) ? (novels[0] ?? null) : novels;
 }
 
-const RECENT_CHAPTERS_PER_NOVEL = 2;
+const RECENT_CHAPTERS_PER_NOVEL = 3;
 
 export async function getRecentlyUpdatedNovels(): Promise<RecentlyUpdatedNovel[]> {
   const admin = createAdminClient();

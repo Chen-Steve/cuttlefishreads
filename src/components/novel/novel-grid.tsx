@@ -6,6 +6,7 @@ export function NovelGrid({
   compact = false,
   hideAuthor = false,
   tightMobile = false,
+  tightGap = false,
   showChapterCount = false,
 }: {
   novels: Novel[];
@@ -13,6 +14,8 @@ export function NovelGrid({
   hideAuthor?: boolean;
   /** Tighter row gap on small screens (compact grids only). */
   tightMobile?: boolean;
+  /** Tighter grid gaps without compact card styling. */
+  tightGap?: boolean;
   showChapterCount?: boolean;
 }) {
   if (novels.length === 0) {
@@ -30,7 +33,9 @@ export function NovelGrid({
           ? tightMobile
             ? "grid grid-cols-2 gap-x-2.5 gap-y-2.5 sm:grid-cols-3 sm:gap-x-3 sm:gap-y-5 lg:grid-cols-4 xl:grid-cols-5"
             : "grid grid-cols-2 gap-x-2.5 gap-y-4 sm:grid-cols-3 sm:gap-x-3 sm:gap-y-5 lg:grid-cols-4 xl:grid-cols-5"
-          : "grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-4 xl:grid-cols-5"
+          : tightGap
+            ? "grid grid-cols-2 gap-x-2 gap-y-2.5 sm:grid-cols-3 sm:gap-x-2.5 sm:gap-y-3.5 lg:grid-cols-4 lg:gap-x-3 lg:gap-y-4 xl:grid-cols-5"
+            : "grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-4 xl:grid-cols-5"
       }
     >
       {novels.map((novel) => (

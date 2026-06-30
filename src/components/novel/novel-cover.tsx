@@ -26,11 +26,33 @@ function initials(title: string) {
     .join("");
 }
 
+const COVER_GENRE_BADGES = ["BL", "GL"] as const;
+type CoverGenreBadge = (typeof COVER_GENRE_BADGES)[number];
+
+export function getCoverGenreBadges(
+  genres: readonly string[],
+): CoverGenreBadge[] {
+  return COVER_GENRE_BADGES.filter((genre) => genres.includes(genre));
+}
+
+export function genresExcludingCoverBadges(genres: readonly string[]): string[] {
+  return genres.filter(
+    (genre): genre is string =>
+      genre !== "BL" && genre !== "GL",
+  );
+}
+
+const GENRE_BADGE_STYLES: Record<CoverGenreBadge, string> = {
+  BL: "bg-indigo-600/90 text-white",
+  GL: "bg-rose-500/90 text-white",
+};
+
 export function NovelCover({
   title,
   slug,
   coverUrl,
   chapterCount,
+  genres = [],
   className,
 }: {
   title: string;
@@ -38,13 +60,34 @@ export function NovelCover({
   coverUrl?: string;
   /** Shown as a badge on the top-right of the cover. */
   chapterCount?: number;
+  /** BL / GL badges on the top-left when present in genres. */
+  genres?: readonly string[];
   className?: string;
 }) {
-  const badge =
+  const coverGenreBadges = getCoverGenreBadges(genres);
+
+  const chapterBadge =
     chapterCount != null ? (
       <span className="absolute top-1.5 right-1.5 z-10 rounded-md bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white backdrop-blur-sm">
         {chapterCount} ch
       </span>
+    ) : null;
+
+  const genreBadges =
+    coverGenreBadges.length > 0 ? (
+      <div className="absolute top-1.5 left-1.5 z-10 flex gap-1">
+        {coverGenreBadges.map((label) => (
+          <span
+            key={label}
+            className={cn(
+              "rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-none backdrop-blur-sm",
+              GENRE_BADGE_STYLES[label],
+            )}
+          >
+            {label}
+          </span>
+        ))}
+      </div>
     ) : null;
 
   if (coverUrl) {
@@ -62,7 +105,8 @@ export function NovelCover({
           draggable={false}
           className="h-full w-full object-cover"
         />
-        {badge}
+        {chapterBadge}
+        {genreBadges}
       </div>
     );
   }
@@ -80,7 +124,8 @@ export function NovelCover({
       <span className="font-semibold text-3xl text-white/90 drop-shadow-sm">
         {initials(title)}
       </span>
-      {badge}
+      {chapterBadge}
+      {genreBadges}
     </div>
   );
 }

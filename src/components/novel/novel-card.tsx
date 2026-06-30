@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Novel } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import { NovelCover } from "./novel-cover";
+import { genresExcludingCoverBadges, NovelCover } from "./novel-cover";
 
 const statusLabel: Record<Novel["status"], string> = {
   ongoing: "Ongoing",
@@ -22,6 +22,8 @@ export function NovelCard({
   hideAuthor?: boolean;
   showChapterCount?: boolean;
 }) {
+  const cardGenres = genresExcludingCoverBadges(novel.genres);
+
   return (
     <Link
       href={`/novels/${novel.slug}`}
@@ -32,6 +34,7 @@ export function NovelCard({
         slug={novel.slug}
         coverUrl={novel.coverUrl}
         chapterCount={showChapterCount ? novel.chapterCount : undefined}
+        genres={novel.genres}
         className="transition-transform duration-300 group-hover:-translate-y-0.5"
       />
       <div
@@ -43,7 +46,7 @@ export function NovelCard({
         {!compact && !hideAuthor ? (
           <p className="text-xs text-muted">{novel.author}</p>
         ) : null}
-        {novel.genres.length > 0 || !compact ? (
+        {cardGenres.length > 0 || !compact ? (
           <div
             className={`${compact ? "mt-0.5" : "mt-1"} -mx-1 min-w-0 overflow-x-auto px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden`}
           >
@@ -53,7 +56,7 @@ export function NovelCard({
                   {statusLabel[novel.status]}
                 </Badge>
               ) : null}
-              {novel.genres.slice(0, 2).map((genre) => (
+              {cardGenres.slice(0, 2).map((genre) => (
                 <Badge key={genre} className="shrink-0">
                   {genre}
                 </Badge>

@@ -7,7 +7,7 @@ import { Check, Trash2 } from "lucide-react";
 import { removeBookmarks } from "@/app/(main)/novels/actions";
 import { NovelGrid } from "@/components/novel";
 import { Badge } from "@/components/ui/badge";
-import { NovelCover } from "@/components/novel/novel-cover";
+import { genresExcludingCoverBadges, NovelCover } from "@/components/novel/novel-cover";
 import type { Novel } from "@/types";
 
 const statusLabel: Record<Novel["status"], string> = {
@@ -25,6 +25,8 @@ function SelectableNovelCard({
   selected: boolean;
   onToggle: () => void;
 }) {
+  const cardGenres = genresExcludingCoverBadges(novel.genres);
+
   return (
     <button
       type="button"
@@ -48,19 +50,20 @@ function SelectableNovelCard({
         title={novel.title}
         slug={novel.slug}
         coverUrl={novel.coverUrl}
+        genres={novel.genres}
         className="transition-transform duration-300 group-hover:-translate-y-0.5"
       />
       <div className="flex min-w-0 flex-col gap-1.5 px-1">
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
           {novel.title}
         </h3>
-        {novel.genres.length > 0 ? (
+        {cardGenres.length > 0 ? (
           <div className="mt-1 -mx-1 min-w-0 overflow-x-auto px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex w-max min-w-full flex-nowrap items-center gap-1.5">
               <Badge className="shrink-0 border-accent/30 text-accent">
                 {statusLabel[novel.status]}
               </Badge>
-              {novel.genres.slice(0, 2).map((genre) => (
+              {cardGenres.slice(0, 2).map((genre) => (
                 <Badge key={genre} className="shrink-0">
                   {genre}
                 </Badge>
@@ -120,54 +123,59 @@ export function LibraryGrid({ novels }: { novels: Novel[] }) {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        {managing ? (
-          <>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => (allSelected ? setSelected(new Set()) : setSelected(new Set(allSlugs)))}
-                className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-foreground transition-colors hover:border-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {allSelected ? "Deselect all" : "Select all"}
-              </button>
-              <span className="text-sm text-muted">
-                {selectedCount} selected
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setError(null);
-                  setConfirming(true);
-                }}
-                disabled={selectedCount === 0 || pending}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-background px-3 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Trash2 className="size-3.5" strokeWidth={1.75} aria-hidden />
-                Remove selected
-              </button>
-              <button
-                type="button"
-                onClick={exitManaging}
-                disabled={pending}
-                className="inline-flex h-9 items-center rounded-lg border border-border px-3 text-sm font-medium text-foreground transition-colors hover:border-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </div>
-          </>
-        ) : (
+      <header className="mb-6 flex items-center justify-between gap-4 sm:mb-7">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+          My library
+        </h1>
+        {!managing ? (
           <button
             type="button"
             onClick={() => setManaging(true)}
-            className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-foreground transition-colors hover:border-accent/40"
+            className="inline-flex h-9 shrink-0 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-foreground transition-colors hover:border-accent/40"
           >
             Manage library
           </button>
-        )}
-      </div>
+        ) : null}
+      </header>
+
+      {managing ? (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => (allSelected ? setSelected(new Set()) : setSelected(new Set(allSlugs)))}
+              className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-foreground transition-colors hover:border-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {allSelected ? "Deselect all" : "Select all"}
+            </button>
+            <span className="text-sm text-muted">
+              {selectedCount} selected
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setConfirming(true);
+              }}
+              disabled={selectedCount === 0 || pending}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-background px-3 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Trash2 className="size-3.5" strokeWidth={1.75} aria-hidden />
+              Remove selected
+            </button>
+            <button
+              type="button"
+              onClick={exitManaging}
+              disabled={pending}
+              className="inline-flex h-9 items-center rounded-lg border border-border px-3 text-sm font-medium text-foreground transition-colors hover:border-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {confirming ? (
         <div

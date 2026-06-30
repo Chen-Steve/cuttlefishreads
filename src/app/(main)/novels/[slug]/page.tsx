@@ -173,6 +173,7 @@ export default async function NovelDetailPage({
             title={novel.title}
             slug={novel.slug}
             coverUrl={novel.coverUrl}
+            genres={novel.genres}
             className="w-28 shrink-0 sm:w-full"
           />
           <div className="flex min-w-0 flex-1 flex-col gap-2 sm:hidden">

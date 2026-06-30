@@ -170,7 +170,7 @@ export function NovelsBrowser({ novels }: { novels: Novel[] }) {
         </div>
       </div>
 
-      <NovelGrid novels={filtered} showChapterCount />
+      <NovelGrid novels={filtered} showChapterCount hideAuthor tightGap />
     </div>
   );
 }
