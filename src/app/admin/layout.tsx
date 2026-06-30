@@ -5,6 +5,9 @@ import { getAdminAccess } from "@/lib/access";
 import { AdminNav } from "./_components/admin-nav";
 
 export const metadata: Metadata = {
+  title: {
+    absolute: "Workspace",
+  },
   robots: {
     index: false,
     follow: false,

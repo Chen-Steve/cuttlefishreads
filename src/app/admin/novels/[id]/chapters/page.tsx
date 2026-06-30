@@ -14,7 +14,6 @@ import {
 import { PublishAllButton } from "../../../_components/chapter-admin-actions";
 
 export const metadata: Metadata = {
-  title: "Admin — Chapters",
   robots: { index: false, follow: false },
 };
 

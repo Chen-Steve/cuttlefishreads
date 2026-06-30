@@ -8,7 +8,6 @@ import { getAdminAccess } from "@/lib/access";
 import { ChapterForm } from "../../../../_components/chapter-form";
 
 export const metadata: Metadata = {
-  title: "Admin",
   robots: { index: false, follow: false },
 };
 

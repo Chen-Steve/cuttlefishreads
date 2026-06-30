@@ -244,7 +244,7 @@ export default async function NovelDetailPage({
         <ChapterList slug={novel.slug} chapters={chapters} />
         {!bulkBuy.eligible ? (
           <div className="mt-4">
-            <BulkBuyInfo advancedCount={bulkBuy.advancedCount} />
+            <BulkBuyInfo />
           </div>
         ) : null}
       </section>

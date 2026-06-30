@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { Toaster } from "@/components/ui/sonner";
 import { nationalPark } from "@/lib/fonts";
 import { SITE } from "@/lib/constants";
 import { siteUrl } from "@/lib/seo";
@@ -72,6 +73,7 @@ export default function RootLayout({
       </Script>
       <body className="flex min-h-full flex-col bg-background text-foreground">
         {children}
+        <Toaster />
       </body>
     </html>
   );

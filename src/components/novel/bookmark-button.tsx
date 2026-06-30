@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bookmark, BookmarkCheck, LogIn } from "lucide-react";
+import { Bookmark, BookmarkCheck } from "lucide-react";
+import { toast } from "sonner";
 
 import { toggleBookmark } from "@/app/(main)/novels/actions";
 
@@ -21,19 +21,17 @@ export function BookmarkButton({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  if (!isLoggedIn) {
-    return (
-      <Link
-        href="/login"
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface px-5 text-sm font-semibold text-muted transition-colors hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-      >
-        <LogIn className="size-4" strokeWidth={1.75} aria-hidden />
-        Sign in to add to library
-      </Link>
-    );
-  }
-
   function handleClick() {
+    if (!isLoggedIn) {
+      toast("Sign in to add to library", {
+        action: {
+          label: "Sign in",
+          onClick: () => router.push("/login"),
+        },
+      });
+      return;
+    }
+
     setError(null);
     const next = !bookmarked;
     setBookmarked(next);
@@ -56,19 +54,19 @@ export function BookmarkButton({
         type="button"
         onClick={handleClick}
         disabled={pending}
-        aria-pressed={bookmarked}
+        aria-pressed={isLoggedIn ? bookmarked : false}
         className={
-          bookmarked
+          bookmarked && isLoggedIn
             ? "inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-accent bg-accent/10 px-5 text-sm font-semibold text-accent transition-colors hover:bg-accent/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
             : "inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface px-5 text-sm font-semibold text-foreground transition-colors hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
         }
       >
-        {bookmarked ? (
+        {bookmarked && isLoggedIn ? (
           <BookmarkCheck className="size-4" strokeWidth={1.75} aria-hidden />
         ) : (
           <Bookmark className="size-4" strokeWidth={1.75} aria-hidden />
         )}
-        {bookmarked ? "In your library" : "Add to library"}
+        {bookmarked && isLoggedIn ? "In your library" : "Add to library"}
       </button>
       {error ? (
         <p role="alert" className="text-xs text-red-600">

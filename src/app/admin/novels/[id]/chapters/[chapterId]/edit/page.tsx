@@ -9,7 +9,6 @@ import { getAdminAccess } from "@/lib/access";
 import { ChapterForm } from "../../../../../_components/chapter-form";
 
 export const metadata: Metadata = {
-  title: "Admin — Edit Chapter",
   robots: { index: false, follow: false },
 };
 

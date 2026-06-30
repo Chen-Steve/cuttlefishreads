@@ -7,7 +7,6 @@ import { getAdminAccess } from "@/lib/access";
 import { SupportLinksForm } from "../_components/support-links-form";
 
 export const metadata: Metadata = {
-  title: "Admin — Settings",
   robots: { index: false, follow: false },
 };
 

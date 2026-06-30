@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, X } from "lucide-react";
+import { ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
 
 import { GENRES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ export function NovelsBrowser({ novels }: { novels: Novel[] }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<Status>("all");
   const [genre, setGenre] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -46,6 +47,8 @@ export function NovelsBrowser({ novels }: { novels: Novel[] }) {
   }, [novels, query, status, genre]);
 
   const hasFilters = query.trim() !== "" || status !== "all" || genre !== null;
+  const activePillFilters =
+    (status !== "all" ? 1 : 0) + (genre !== null ? 1 : 0);
 
   function clearAll() {
     setQuery("");
@@ -110,37 +113,64 @@ export function NovelsBrowser({ novels }: { novels: Novel[] }) {
           )}
         </label>
 
-        <div className="flex flex-wrap gap-1">
-          {STATUS_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setStatus(opt.value)}
-              className={pillClass(status === opt.value)}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((open) => !open)}
+          aria-expanded={filtersOpen}
+          className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full border border-border bg-surface text-xs font-semibold text-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:hidden"
+        >
+          <SlidersHorizontal className="size-3.5" strokeWidth={1.75} aria-hidden />
+          {filtersOpen ? "Hide filters" : "Show filters"}
+          {activePillFilters > 0 ? (
+            <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+              {activePillFilters}
+            </span>
+          ) : null}
+          <ChevronDown
+            className={cn(
+              "size-3.5 transition-transform",
+              filtersOpen && "rotate-180",
+            )}
+            strokeWidth={2}
+            aria-hidden
+          />
+        </button>
+
+        <div
+          className={cn(
+            "flex flex-col gap-2",
+            filtersOpen ? "flex" : "hidden sm:flex",
+          )}
+        >
+          <div className="flex flex-wrap gap-1">
+            {STATUS_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setStatus(opt.value)}
+                className={pillClass(status === opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap gap-1">
+            {GENRES.map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGenre(genre === g ? null : g)}
+                className={pillClass(genre === g)}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Genre pills */}
-      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex w-max gap-1">
-          {GENRES.map((g) => (
-            <button
-              key={g}
-              type="button"
-              onClick={() => setGenre(genre === g ? null : g)}
-              className={pillClass(genre === g)}
-            >
-              {g}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <NovelGrid novels={filtered} />
+      <NovelGrid novels={filtered} showChapterCount />
     </div>
   );
 }

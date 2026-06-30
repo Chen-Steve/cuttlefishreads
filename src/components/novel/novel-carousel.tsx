@@ -8,10 +8,12 @@ export function NovelCarousel({
   novels,
   compact = false,
   hideAuthor = false,
+  showChapterCount = false,
 }: {
   novels: Novel[];
   compact?: boolean;
   hideAuthor?: boolean;
+  showChapterCount?: boolean;
 }) {
   if (novels.length === 0) {
     return (
@@ -29,13 +31,13 @@ export function NovelCarousel({
       >
         {novels.map((novel) => (
           <div key={novel.id} className="w-[10.5rem] shrink-0 snap-start">
-            <NovelCard novel={novel} compact={compact} hideAuthor={hideAuthor} />
+            <NovelCard novel={novel} compact={compact} hideAuthor={hideAuthor} showChapterCount={showChapterCount} />
           </div>
         ))}
       </div>
 
       <div className="hidden sm:block">
-        <NovelGrid novels={novels} compact={compact} hideAuthor={hideAuthor} />
+        <NovelGrid novels={novels} compact={compact} hideAuthor={hideAuthor} showChapterCount={showChapterCount} />
       </div>
     </>
   );

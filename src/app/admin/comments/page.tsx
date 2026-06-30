@@ -9,7 +9,6 @@ import type { NovelComment } from "@/types";
 import { CommentsManager, type NovelCommentGroup } from "./_components/comments-manager";
 
 export const metadata: Metadata = {
-  title: "Admin — Comments",
   robots: { index: false, follow: false },
 };
 

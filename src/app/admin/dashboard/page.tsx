@@ -12,7 +12,6 @@ import {
 } from "@/lib/data";
 
 export const metadata: Metadata = {
-  title: "Admin — Dashboard",
   robots: { index: false, follow: false },
 };
 

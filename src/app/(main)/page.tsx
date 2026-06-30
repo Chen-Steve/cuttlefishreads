@@ -74,11 +74,11 @@ export default async function Home() {
         linkLabel="View all"
         className="mt-0 sm:mt-8"
       >
-        <NovelCarousel novels={featured} compact />
+        <NovelCarousel novels={featured} compact showChapterCount />
       </Section>
 
       <Section title="Newly added" href="/novels" linkLabel="View all">
-        <NovelCarousel novels={newlyAdded} compact />
+        <NovelCarousel novels={newlyAdded} compact showChapterCount />
       </Section>
 
       <Section title="Recently updated">

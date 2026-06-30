@@ -6,12 +6,14 @@ export function NovelGrid({
   compact = false,
   hideAuthor = false,
   tightMobile = false,
+  showChapterCount = false,
 }: {
   novels: Novel[];
   compact?: boolean;
   hideAuthor?: boolean;
   /** Tighter row gap on small screens (compact grids only). */
   tightMobile?: boolean;
+  showChapterCount?: boolean;
 }) {
   if (novels.length === 0) {
     return (
@@ -37,6 +39,7 @@ export function NovelGrid({
           novel={novel}
           compact={compact}
           hideAuthor={hideAuthor}
+          showChapterCount={showChapterCount}
         />
       ))}
     </div>

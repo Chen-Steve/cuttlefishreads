@@ -8,7 +8,6 @@ import { getAdminAccess } from "@/lib/access";
 import { NovelsGrid, type NovelRow, type TranslatorOption } from "./_components/novels-grid";
 
 export const metadata: Metadata = {
-  title: "Admin — Novels",
   robots: { index: false, follow: false },
 };
 

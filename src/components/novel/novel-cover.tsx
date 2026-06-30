@@ -30,13 +30,23 @@ export function NovelCover({
   title,
   slug,
   coverUrl,
+  chapterCount,
   className,
 }: {
   title: string;
   slug: string;
   coverUrl?: string;
+  /** Shown as a badge on the top-right of the cover. */
+  chapterCount?: number;
   className?: string;
 }) {
+  const badge =
+    chapterCount != null ? (
+      <span className="absolute top-1.5 right-1.5 z-10 rounded-md bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white backdrop-blur-sm">
+        {chapterCount} ch
+      </span>
+    ) : null;
+
   if (coverUrl) {
     return (
       <div
@@ -52,6 +62,7 @@ export function NovelCover({
           draggable={false}
           className="h-full w-full object-cover"
         />
+        {badge}
       </div>
     );
   }
@@ -69,6 +80,7 @@ export function NovelCover({
       <span className="font-semibold text-3xl text-white/90 drop-shadow-sm">
         {initials(title)}
       </span>
+      {badge}
     </div>
   );
 }

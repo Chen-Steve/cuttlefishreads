@@ -7,7 +7,6 @@ import { getAdminAccess } from "@/lib/access";
 import { ReviewButtons } from "./_components/review-buttons";
 
 export const metadata: Metadata = {
-  title: "Admin — Applications",
   robots: { index: false, follow: false },
 };
 

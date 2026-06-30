@@ -13,12 +13,14 @@ export function NovelCard({
   novel,
   compact = false,
   hideAuthor = false,
+  showChapterCount = false,
 }: {
   novel: Novel;
   /** Title and genres only — hides author and status. */
   compact?: boolean;
   /** Hides the author/translator line while keeping status and genres. */
   hideAuthor?: boolean;
+  showChapterCount?: boolean;
 }) {
   return (
     <Link
@@ -29,6 +31,7 @@ export function NovelCard({
         title={novel.title}
         slug={novel.slug}
         coverUrl={novel.coverUrl}
+        chapterCount={showChapterCount ? novel.chapterCount : undefined}
         className="transition-transform duration-300 group-hover:-translate-y-0.5"
       />
       <div

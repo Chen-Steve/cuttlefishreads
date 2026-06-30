@@ -9,7 +9,6 @@ import { getAdminAccess } from "@/lib/access";
 import { NovelForm } from "../../../_components/novel-form";
 
 export const metadata: Metadata = {
-  title: "Admin — Edit Novel",
   robots: { index: false, follow: false },
 };
 

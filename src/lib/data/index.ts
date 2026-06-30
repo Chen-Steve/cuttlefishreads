@@ -142,8 +142,8 @@ async function getUnlockedChapterNumbers(
 }
 
 async function fetchNovelRows(): Promise<DbNovel[]> {
-  const supabase = createClient(await cookies());
-  const { data, error } = await supabase
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from("novels")
     .select(NOVEL_LIST_COLUMNS)
     .order("updated_at", { ascending: false });
@@ -308,8 +308,8 @@ export async function getFeaturedNovels(): Promise<Novel[]> {
 }
 
 export async function getNewlyAddedNovels(): Promise<Novel[]> {
-  const supabase = createClient(await cookies());
-  const { data, error } = await supabase
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from("novels")
     .select(NOVEL_LIST_COLUMNS)
     .order("created_at", { ascending: false })
@@ -328,25 +328,32 @@ type DbRecentChapterRow = {
   title: string;
   published_at: string;
   is_free: boolean;
-  novels: { slug: string; title: string };
+  novels: { slug: string; title: string; cover_url: string | null };
 };
 
 type DbRecentChapterQueryRow = Omit<DbRecentChapterRow, "novels"> & {
-  novels: { slug: string; title: string } | { slug: string; title: string }[] | null;
+  novels:
+    | { slug: string; title: string; cover_url: string | null }
+    | { slug: string; title: string; cover_url: string | null }[]
+    | null;
 };
 
 function resolveNovelRef(
   novels: DbRecentChapterQueryRow["novels"],
-): { slug: string; title: string } | null {
+): { slug: string; title: string; cover_url: string | null } | null {
   if (!novels) return null;
   return Array.isArray(novels) ? (novels[0] ?? null) : novels;
 }
+
+const RECENT_CHAPTERS_PER_NOVEL = 2;
 
 export async function getRecentlyUpdatedNovels(): Promise<RecentlyUpdatedNovel[]> {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("chapters")
-    .select("number, title, published_at, is_free, novels!inner(slug, title)")
+    .select(
+      "number, title, published_at, is_free, novels!inner(slug, title, cover_url)",
+    )
     .eq("is_published", true);
 
   if (error) {
@@ -354,36 +361,71 @@ export async function getRecentlyUpdatedNovels(): Promise<RecentlyUpdatedNovel[]
     return [];
   }
 
-  const latestBySlug = new Map<string, RecentlyUpdatedNovel>();
+  type NovelAccumulator = {
+    slug: string;
+    title: string;
+    coverUrl?: string;
+    chapters: Array<{
+      number: number;
+      title: string;
+      isAdvanced: boolean;
+      publishedAt: string;
+    }>;
+  };
+
+  const bySlug = new Map<string, NovelAccumulator>();
 
   for (const row of (data ?? []) as DbRecentChapterQueryRow[]) {
     const novel = resolveNovelRef(row.novels);
     if (!novel) continue;
 
-    const existing = latestBySlug.get(novel.slug);
-    if (
-      existing &&
-      new Date(existing.updatedAt).getTime() >= new Date(row.published_at).getTime()
-    ) {
-      continue;
+    let entry = bySlug.get(novel.slug);
+    if (!entry) {
+      entry = {
+        slug: novel.slug,
+        title: novel.title,
+        coverUrl: novel.cover_url ?? undefined,
+        chapters: [],
+      };
+      bySlug.set(novel.slug, entry);
     }
 
-    latestBySlug.set(novel.slug, {
-      slug: novel.slug,
-      title: novel.title,
-      latestChapter: {
-        number: row.number,
-        title: row.title,
-        isAdvanced: !row.is_free,
-      },
-      updatedAt: row.published_at,
-      updatedAtLabel: formatRelativeDate(row.published_at),
+    entry.chapters.push({
+      number: row.number,
+      title: row.title,
+      isAdvanced: !row.is_free,
+      publishedAt: row.published_at,
     });
   }
 
-  return [...latestBySlug.values()].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-  );
+  return [...bySlug.values()]
+    .map((entry): RecentlyUpdatedNovel | null => {
+      const sorted = entry.chapters.sort(
+        (a, b) =>
+          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+      );
+      const latest = sorted[0];
+      if (!latest) return null;
+
+      return {
+        slug: entry.slug,
+        title: entry.title,
+        coverUrl: entry.coverUrl,
+        recentChapters: sorted.slice(0, RECENT_CHAPTERS_PER_NOVEL).map(
+          ({ number, title, isAdvanced }) => ({
+            number,
+            title,
+            isAdvanced,
+          }),
+        ),
+        updatedAt: latest.publishedAt,
+        updatedAtLabel: formatRelativeDate(latest.publishedAt),
+      };
+    })
+    .filter((novel): novel is RecentlyUpdatedNovel => novel !== null)
+    .sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
 }
 
 // Records a unique view for a novel. The visitor key is the logged-in user id

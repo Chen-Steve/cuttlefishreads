@@ -158,18 +158,12 @@ export function BulkBuyChapters({
   );
 }
 
-export function BulkBuyInfo({
-  advancedCount,
-}: {
-  advancedCount: number;
-}) {
+export function BulkBuyInfo() {
   return (
     <div className="rounded-xl border border-border/60 bg-background px-4 py-3">
       <p className="text-xs leading-relaxed text-muted">
-        Bulk buy becomes available once a novel has at least{" "}
-        {BULK_BUY_MIN_ADVANCED_CHAPTERS} advanced chapters. This novel currently
-        has {advancedCount}. Advanced chapters are  releases set by the
-        translator so NU can better pick up the story.
+        Bulk buy becomes available with at least{" "}
+        {BULK_BUY_MIN_ADVANCED_CHAPTERS} advanced chapters.
       </p>
     </div>
   );

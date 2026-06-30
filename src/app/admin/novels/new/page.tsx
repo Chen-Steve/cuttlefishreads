@@ -6,7 +6,6 @@ import { PageContainer } from "@/components/page-container";
 import { NovelForm } from "../../_components/novel-form";
 
 export const metadata: Metadata = {
-  title: "Admin — Create Novel",
   robots: { index: false, follow: false },
 };
 
