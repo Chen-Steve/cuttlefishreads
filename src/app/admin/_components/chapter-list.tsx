@@ -133,10 +133,6 @@ export function ChapterList({
             key={chapter.id}
             className="flex items-center gap-4 px-4 py-3.5"
           >
-            <span className="w-10 shrink-0 text-right text-sm font-semibold tabular-nums text-muted">
-              {chapter.number}
-            </span>
-
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
                 <span className="truncate">

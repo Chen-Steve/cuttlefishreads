@@ -123,6 +123,10 @@ export default async function AdminPage() {
       <div className="mt-8">
         <NovelsGrid novels={novels} translatorOptions={translatorOptions} />
       </div>
+
+      <p className="mt-8 text-center text-xs text-muted sm:hidden">
+        This workspace is best viewed on a desktop screen.
+      </p>
     </PageContainer>
   );
 }
