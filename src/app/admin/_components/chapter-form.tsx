@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useMemo, useRef, useState } from "react";
-import { Bold, Italic, Pilcrow } from "lucide-react";
+import { useActionState, useMemo, useState } from "react";
 
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import {
   formatSuggestedUnlockPreview,
   getSuggestedUnlockAt,
@@ -62,7 +62,6 @@ export function ChapterForm({
   const [unlockAt, setUnlockAt] = useState(() =>
     toDatetimeLocal(initial?.unlockAt ?? null),
   );
-  const contentRef = useRef<HTMLTextAreaElement>(null);
 
   const suggestedUnlockAt = useMemo(
     () => getSuggestedUnlockAt(latestChapterUnlockAt),
@@ -75,18 +74,6 @@ export function ChapterForm({
 
   function applySuggestedUnlockDate() {
     setUnlockAt(toDatetimeLocal(suggestedUnlockAt));
-  }
-
-  function wrapSelection(before: string, after: string) {
-    const el = contentRef.current;
-    if (!el) return;
-    const { selectionStart: start, selectionEnd: end, value } = el;
-    const selected = value.slice(start, end);
-    el.value =
-      value.slice(0, start) + before + selected + after + value.slice(end);
-    const cursor = start + before.length + selected.length;
-    el.focus();
-    el.setSelectionRange(cursor, cursor);
   }
 
   return (
@@ -136,49 +123,17 @@ export function ChapterForm({
         <label htmlFor="chapter-content" className={labelClass}>
           Content
         </label>
-        <div className="overflow-hidden rounded-xl border border-border bg-background focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25">
-          <div className="flex items-center gap-1 border-b border-border px-2 py-1.5">
-            <button
-              type="button"
-              onClick={() => wrapSelection("**", "**")}
-              title="Bold"
-              aria-label="Bold"
-              className="inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface hover:text-foreground"
-            >
-              <Bold className="size-4" strokeWidth={2} aria-hidden />
-            </button>
-            <button
-              type="button"
-              onClick={() => wrapSelection("_", "_")}
-              title="Italic"
-              aria-label="Italic"
-              className="inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface hover:text-foreground"
-            >
-              <Italic className="size-4" strokeWidth={2} aria-hidden />
-            </button>
-            <button
-              type="button"
-              onClick={() => wrapSelection("\n\n", "")}
-              title="New paragraph"
-              aria-label="New paragraph"
-              className="inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface hover:text-foreground"
-            >
-              <Pilcrow className="size-4" strokeWidth={1.75} aria-hidden />
-            </button>
-          </div>
-          <textarea
-            id="chapter-content"
-            name="content"
-            ref={contentRef}
-            required
-            rows={16}
-            defaultValue={initial?.content ?? ""}
-            placeholder="Write the chapter here. Separate paragraphs with a blank line."
-            className="block w-full resize-y bg-transparent px-3.5 py-3 text-sm leading-relaxed text-foreground outline-none placeholder:text-muted/70"
-          />
-        </div>
+        <RichTextEditor
+          id="chapter-content"
+          name="content"
+          defaultValue={initial?.content ?? ""}
+          placeholder="Write the chapter here."
+          className="min-h-[24rem]"
+        />
         <span className="text-xs text-muted">
-          Blank lines start new paragraphs. **bold** and _italic_ are supported.
+          Formatting shows as you type — use Ctrl+B, Ctrl+I, Ctrl+U or the
+          toolbar. Pasting from Word or Google Docs keeps bold, italic, and
+          underline.
         </span>
       </div>
 
@@ -218,17 +173,15 @@ export function ChapterForm({
           </span>
         ) : (
           <div className="flex flex-col gap-1.5">
-            <textarea
+            <RichTextEditor
               id="chapter-note"
               name="translatorNote"
-              rows={4}
               defaultValue={initial?.translatorNote ?? ""}
               placeholder="A short message just for this chapter."
-              className="block w-full resize-y rounded-xl border border-border bg-background px-3.5 py-3 text-sm leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
+              className="min-h-[6.5rem]"
             />
             <span className="text-xs text-muted">
-              Shown above the comments on this chapter only. **bold** and _italic_
-              are supported.
+              Shown above the comments on this chapter only.
             </span>
           </div>
         )}

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { updateSupportLinks, type SupportLinksState } from "../actions";
 
 const inputClass =
@@ -46,17 +47,16 @@ export function SupportLinksForm({
           Global message
           <span className="ml-1 font-normal opacity-60">(optional)</span>
         </label>
-        <textarea
+        <RichTextEditor
           id="global-note"
           name="globalNote"
-          rows={4}
           defaultValue={initial.globalNote ?? ""}
           placeholder="A default message shown at the end of chapters that use your global note."
-          className="block w-full resize-y rounded-xl border border-border bg-background px-3.5 py-3 text-sm leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
+          className="min-h-[6.5rem]"
         />
         <span className="text-xs text-muted">
-          Used on chapters set to &ldquo;Use global message.&rdquo; **bold** and
-          _italic_ are supported.
+          Used on chapters set to &ldquo;Use global message.&rdquo; Use Ctrl+B,
+          Ctrl+I, Ctrl+U or the toolbar for formatting.
         </span>
       </div>
 

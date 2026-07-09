@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useState } from "react";
 
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { GENRES, LANGUAGES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { createNovel, updateNovel, type AdminState } from "../actions";
@@ -130,12 +131,12 @@ export function NovelForm({
             <label htmlFor="novel-description" className={labelClass}>
               Description
             </label>
-            <textarea
+            <RichTextEditor
               id="novel-description"
               name="description"
               defaultValue={novel?.description ?? ""}
               placeholder="A short synopsis…"
-              className="min-h-[6.5rem] w-full flex-1 resize-y rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
+              className="min-h-[6.5rem]"
             />
           </div>
         </div>

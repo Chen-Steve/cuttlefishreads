@@ -1,15 +1,21 @@
 import type { ReactNode } from "react";
 
-const inlineMarkdownPattern = /(\*\*[^*]+?\*\*|_[^_]+?_)/g;
+const inlineMarkdownPattern = /(\*\*.+?\*\*|\+\+.+?\+\+|_[^_]+?_)/g;
 
 export function renderInlineMarkdown(text: string): ReactNode[] {
   return text.split(inlineMarkdownPattern).map((part, index) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    if (part.length > 4 && part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={index}>{renderInlineMarkdown(part.slice(2, -2))}</strong>
+      );
     }
 
-    if (part.startsWith("_") && part.endsWith("_")) {
-      return <em key={index}>{part.slice(1, -1)}</em>;
+    if (part.length > 4 && part.startsWith("++") && part.endsWith("++")) {
+      return <u key={index}>{renderInlineMarkdown(part.slice(2, -2))}</u>;
+    }
+
+    if (part.length > 2 && part.startsWith("_") && part.endsWith("_")) {
+      return <em key={index}>{renderInlineMarkdown(part.slice(1, -1))}</em>;
     }
 
     return part;
