@@ -1,24 +1,33 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
-const inlineMarkdownPattern = /(\*\*.+?\*\*|\+\+.+?\+\+|_[^_]+?_)/g;
+import {
+  INITIAL_INLINE_STYLE,
+  parseInlineMarkdown,
+  type InlineSegment,
+  type InlineStyle,
+} from "@/lib/inline-markdown";
 
-export function renderInlineMarkdown(text: string): ReactNode[] {
-  return text.split(inlineMarkdownPattern).map((part, index) => {
-    if (part.length > 4 && part.startsWith("**") && part.endsWith("**")) {
-      return (
-        <strong key={index}>{renderInlineMarkdown(part.slice(2, -2))}</strong>
-      );
-    }
+function renderSegments(segments: InlineSegment[]): ReactNode[] {
+  return segments.map((segment, index) => {
+    let node: ReactNode = segment.text;
+    if (segment.style.underline) node = <u>{node}</u>;
+    if (segment.style.italic) node = <em>{node}</em>;
+    if (segment.style.bold) node = <strong>{node}</strong>;
+    return <Fragment key={index}>{node}</Fragment>;
+  });
+}
 
-    if (part.length > 4 && part.startsWith("++") && part.endsWith("++")) {
-      return <u key={index}>{renderInlineMarkdown(part.slice(2, -2))}</u>;
-    }
-
-    if (part.length > 2 && part.startsWith("_") && part.endsWith("_")) {
-      return <em key={index}>{renderInlineMarkdown(part.slice(1, -1))}</em>;
-    }
-
-    return part;
+/**
+ * Render a sequence of paragraphs, carrying bold/italic/underline state across
+ * paragraph breaks so markers that open in one paragraph and close in a later
+ * one still format correctly instead of showing up as literal `**` / `_`.
+ */
+export function renderMarkdownParagraphs(paragraphs: string[]): ReactNode[][] {
+  let state: InlineStyle = INITIAL_INLINE_STYLE;
+  return paragraphs.map((paragraph) => {
+    const parsed = parseInlineMarkdown(paragraph, state);
+    state = parsed.state;
+    return renderSegments(parsed.segments);
   });
 }
 
@@ -34,10 +43,8 @@ export function splitTextParagraphs(text: string): string[] {
 export function ChapterContent({ paragraphs }: { paragraphs: string[] }) {
   return (
     <div className="space-y-5 text-base leading-7 text-foreground/90 sm:text-[1.05rem] sm:leading-8">
-      {paragraphs.map((paragraph, index) => (
-        <p key={index}>
-          {renderInlineMarkdown(paragraph)}
-        </p>
+      {renderMarkdownParagraphs(paragraphs).map((children, index) => (
+        <p key={index}>{children}</p>
       ))}
     </div>
   );

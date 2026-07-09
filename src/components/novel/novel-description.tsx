@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import {
-  renderInlineMarkdown,
+  renderMarkdownParagraphs,
   splitTextParagraphs,
 } from "@/components/reader/chapter-content";
 
@@ -30,9 +30,9 @@ export function NovelDescription({ synopsis }: { synopsis: string }) {
   return (
     <div className="mt-5">
       <div className="space-y-3 text-sm leading-relaxed text-foreground/90">
-        {paragraphs.map((paragraph, index) => (
+        {renderMarkdownParagraphs(paragraphs).map((children, index) => (
           <p key={index} className="whitespace-pre-wrap">
-            {renderInlineMarkdown(paragraph)}
+            {children}
           </p>
         ))}
       </div>

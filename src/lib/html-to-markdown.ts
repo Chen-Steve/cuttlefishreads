@@ -8,6 +8,13 @@
  * on or off while walking the pasted DOM.
  */
 
+import {
+  INITIAL_INLINE_STYLE,
+  parseInlineMarkdown,
+  type InlineSegment,
+  type InlineStyle,
+} from "@/lib/inline-markdown";
+
 type StyleFlag = boolean;
 
 function normalizeWhitespace(text: string): string {
@@ -250,32 +257,29 @@ function escapeHtml(text: string): string {
     .replace(/>/g, "&gt;");
 }
 
-const inlineMarkdownPattern = /(\*\*.+?\*\*|\+\+.+?\+\+|_[^_]+?_)/g;
-
-function inlineMarkdownToHtml(text: string): string {
-  return text
-    .split(inlineMarkdownPattern)
-    .map((part) => {
-      if (part.length > 4 && part.startsWith("**") && part.endsWith("**")) {
-        return `<strong>${inlineMarkdownToHtml(part.slice(2, -2))}</strong>`;
-      }
-      if (part.length > 4 && part.startsWith("++") && part.endsWith("++")) {
-        return `<u>${inlineMarkdownToHtml(part.slice(2, -2))}</u>`;
-      }
-      if (part.length > 2 && part.startsWith("_") && part.endsWith("_")) {
-        return `<em>${inlineMarkdownToHtml(part.slice(1, -1))}</em>`;
-      }
-      return escapeHtml(part);
-    })
-    .join("");
+function segmentToHtml(segment: InlineSegment): string {
+  let html = escapeHtml(segment.text);
+  if (segment.style.underline) html = `<u>${html}</u>`;
+  if (segment.style.italic) html = `<em>${html}</em>`;
+  if (segment.style.bold) html = `<strong>${html}</strong>`;
+  return html;
 }
 
-/** Convert stored Markdown into the HTML shown inside the rich-text editor. */
+/**
+ * Convert stored Markdown into the HTML shown inside the rich-text editor.
+ * Style state carries across paragraphs so markers spanning paragraph breaks
+ * format correctly; saving the editor then re-serializes them per paragraph.
+ */
 export function markdownToEditorHtml(markdown: string): string {
   const normalized = normalizeParagraphs(markdown);
   if (!normalized) return "";
+  let state: InlineStyle = INITIAL_INLINE_STYLE;
   return normalized
     .split(/\n+/)
-    .map((paragraph) => `<p>${inlineMarkdownToHtml(paragraph)}</p>`)
+    .map((paragraph) => {
+      const parsed = parseInlineMarkdown(paragraph, state);
+      state = parsed.state;
+      return `<p>${parsed.segments.map(segmentToHtml).join("")}</p>`;
+    })
     .join("");
 }

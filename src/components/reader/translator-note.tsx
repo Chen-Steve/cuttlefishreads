@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Coffee, Heart } from "lucide-react";
 
-import { renderInlineMarkdown, splitTextParagraphs } from "./chapter-content";
+import { renderMarkdownParagraphs, splitTextParagraphs } from "./chapter-content";
 
 function initials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -64,8 +64,8 @@ export function TranslatorNote({
 
           {paragraphs.length > 0 && (
             <div className="mt-1.5 space-y-1.5 text-sm leading-snug text-foreground/90">
-              {paragraphs.map((paragraph, index) => (
-                <p key={index}>{renderInlineMarkdown(paragraph)}</p>
+              {renderMarkdownParagraphs(paragraphs).map((children, index) => (
+                <p key={index}>{children}</p>
               ))}
             </div>
           )}

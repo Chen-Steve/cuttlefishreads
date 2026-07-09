@@ -64,7 +64,7 @@ export default async function EditChapterPage({
   const row = chapter as ChapterRow;
 
   return (
-    <PageContainer as="div" width="prose">
+    <PageContainer as="div">
       <Link
         href={`/admin/novels/${id}/chapters`}
         className="inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
@@ -73,11 +73,7 @@ export default async function EditChapterPage({
         Back to chapters
       </Link>
 
-      <h1 className="mt-3 text-xl font-semibold tracking-tight sm:text-2xl">
-        Edit chapter {row.number}
-      </h1>
-
-      <div className="mt-5 rounded-2xl border border-border bg-surface p-5 sm:p-6">
+      <div className="mt-3">
         <ChapterForm
           novelId={novel.id}
           latestChapterUnlockAt={latestUnlockRow?.unlock_at ?? null}

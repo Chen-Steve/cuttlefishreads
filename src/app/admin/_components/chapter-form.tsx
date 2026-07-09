@@ -85,8 +85,41 @@ export function ChapterForm({
     setUnlockAt(toDatetimeLocal(suggestedUnlockAt));
   }
 
+  const submitLabel = pending
+    ? isEdit
+      ? "Saving…"
+      : "Publishing…"
+    : isEdit
+      ? "Save changes"
+      : "Publish chapter";
+
+  const submitButtonClass =
+    "inline-flex h-11 shrink-0 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50";
+
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form action={action} className="flex flex-col">
+      {isEdit && (
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+            Edit chapter {initial!.number}
+          </h1>
+          <button
+            type="submit"
+            disabled={pending}
+            className={submitButtonClass}
+          >
+            {submitLabel}
+          </button>
+        </div>
+      )}
+
+      <div
+        className={
+          isEdit
+            ? "mt-5 flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5 sm:p-6"
+            : "flex flex-col gap-4"
+        }
+      >
       {state.error && (
         <p
           role="alert"
@@ -277,12 +310,11 @@ export function ChapterForm({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit"
+        className={`${submitButtonClass} w-full sm:w-fit`}
       >
-        {pending
-          ? isEdit ? "Saving…" : "Publishing…"
-          : isEdit ? "Save changes" : "Publish chapter"}
+        {submitLabel}
       </button>
+      </div>
     </form>
   );
 }
