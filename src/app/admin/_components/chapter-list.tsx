@@ -136,7 +136,9 @@ export function ChapterList({
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
                 <span className="truncate">
-                  {chapter.title || `Chapter ${chapter.number}`}
+                  {chapter.title
+                    ? `Chapter ${chapter.number}: ${chapter.title}`
+                    : `Chapter ${chapter.number}`}
                 </span>
                 <span className="shrink-0 text-xs font-normal tabular-nums text-muted">
                   {chapter.word_count.toLocaleString()} word
