@@ -138,6 +138,17 @@ export default async function NovelDetailPage({
     </div>
   );
 
+  const tagsDisplay =
+    novel.tags.length > 0 ? (
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        {novel.tags.map((tag) => (
+          <span key={tag} className="text-xs text-muted">
+            #{tag}
+          </span>
+        ))}
+      </div>
+    ) : null;
+
   const viewCountDisplay = (
     <p className="inline-flex items-center gap-1.5 text-xs text-muted sm:text-sm">
       <Eye className="size-3.5 shrink-0 sm:size-4" strokeWidth={1.75} aria-hidden />
@@ -179,6 +190,7 @@ export default async function NovelDetailPage({
           <div className="flex min-w-0 flex-1 flex-col gap-2 sm:hidden">
             {authorLine}
             {statusAndGenres}
+            {tagsDisplay}
             {viewCountDisplay}
           </div>
           {/* Desktop buttons below cover */}
@@ -196,6 +208,7 @@ export default async function NovelDetailPage({
           <div className="mt-1 hidden flex-col gap-4 sm:flex">
             {authorLine}
             {statusAndGenres}
+            {tagsDisplay}
             {viewCountDisplay}
           </div>
 

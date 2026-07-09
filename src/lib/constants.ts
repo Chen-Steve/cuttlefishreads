@@ -17,6 +17,7 @@ export type Language = (typeof LANGUAGES)[number];
 
 export const GENRES = [
   "Action",
+  "Adult",
   "Adventure",
   "BL",
   "Comedy",

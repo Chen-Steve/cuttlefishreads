@@ -37,10 +37,13 @@ export function ChapterForm({
   novelId,
   initial,
   latestChapterUnlockAt = null,
+  defaultCoinCost = null,
 }: {
   novelId: string;
   initial?: ChapterFormInitial;
   latestChapterUnlockAt?: string | null;
+  /** Cookie cost of the most recent paid chapter, reused as the default. */
+  defaultCoinCost?: number | null;
 }) {
   const isEdit = Boolean(initial);
 
@@ -59,9 +62,15 @@ export function ChapterForm({
   const [noteMode, setNoteMode] = useState<"global" | "unique">(
     initial?.useGlobalTranslatorNote === false ? "unique" : "global",
   );
-  const [unlockAt, setUnlockAt] = useState(() =>
-    toDatetimeLocal(initial?.unlockAt ?? null),
-  );
+  // New chapters continue from the previous chapter's schedule so the date
+  // picker opens on the right month instead of resetting to today.
+  const [unlockAt, setUnlockAt] = useState(() => {
+    if (initial) return toDatetimeLocal(initial.unlockAt);
+    if (latestChapterUnlockAt) {
+      return toDatetimeLocal(getSuggestedUnlockAt(latestChapterUnlockAt));
+    }
+    return "";
+  });
 
   const suggestedUnlockAt = useMemo(
     () => getSuggestedUnlockAt(latestChapterUnlockAt),
@@ -226,7 +235,7 @@ export function ChapterForm({
               name="coinCost"
               type="number"
               min={1}
-              defaultValue={initial?.coinCost ?? 5}
+              defaultValue={initial?.coinCost ?? defaultCoinCost ?? 5}
               className={`${inputClass} sm:w-44`}
             />
           </div>
@@ -254,9 +263,11 @@ export function ChapterForm({
               </button>
             </div>
             <span className="text-xs text-muted">
-              {latestChapterUnlockAt
-                ? `Next day sets ${suggestedUnlockLabel} — one day after the latest scheduled chapter.`
-                : `Next day sets ${suggestedUnlockLabel}.`}
+              {!isEdit && latestChapterUnlockAt
+                ? "Pre-filled one day after the latest scheduled chapter — adjust or clear it if this chapter shouldn't auto-unlock."
+                : latestChapterUnlockAt
+                  ? `Next day sets ${suggestedUnlockLabel} — one day after the latest scheduled chapter.`
+                  : `Next day sets ${suggestedUnlockLabel}.`}
               {" "}A paid chapter becomes free for everyone once this date passes.
             </span>
           </div>

@@ -31,14 +31,24 @@ export default async function AddChapterPage({
     notFound();
   }
 
-  const { data: latestUnlockRow } = await admin
-    .from("chapters")
-    .select("unlock_at")
-    .eq("novel_id", id)
-    .not("unlock_at", "is", null)
-    .order("unlock_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const [{ data: latestUnlockRow }, { data: latestPaidRow }] = await Promise.all([
+    admin
+      .from("chapters")
+      .select("unlock_at")
+      .eq("novel_id", id)
+      .not("unlock_at", "is", null)
+      .order("unlock_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    admin
+      .from("chapters")
+      .select("coin_cost")
+      .eq("novel_id", id)
+      .eq("is_free", false)
+      .order("number", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   return (
     <PageContainer as="div" width="prose">
@@ -54,6 +64,7 @@ export default async function AddChapterPage({
         <ChapterForm
           novelId={novel.id}
           latestChapterUnlockAt={latestUnlockRow?.unlock_at ?? null}
+          defaultCoinCost={latestPaidRow?.coin_cost ?? null}
         />
       </div>
     </PageContainer>
