@@ -209,6 +209,15 @@ function normalizeParagraphs(text: string): string {
     .trim();
 }
 
+/**
+ * Word uses <br> for manual/soft line breaks inside a paragraph. The editor's
+ * storage format uses blank lines for real paragraph boundaries, so reflow
+ * single line breaks while preserving blank-line paragraph breaks.
+ */
+function normalizePastedParagraphs(text: string): string {
+  return normalizeParagraphs(text).replace(/(?<!\n)\n(?!\n)/g, " ");
+}
+
 /** Serialize a live DOM subtree (e.g. the editor) into Markdown. */
 export function domToMarkdown(root: Element): string {
   const parts: string[] = [];
@@ -232,7 +241,7 @@ export function htmlToMarkdown(html: string): string | null {
   const root = doc.body;
   if (!root) return null;
 
-  const markdown = domToMarkdown(root);
+  const markdown = normalizePastedParagraphs(domToMarkdown(root));
   return markdown.length > 0 ? markdown : null;
 }
 
@@ -247,7 +256,7 @@ export function clipboardToMarkdown(
     const converted = htmlToMarkdown(html);
     if (converted !== null) return converted;
   }
-  return normalizeParagraphs(plain ?? "");
+  return normalizePastedParagraphs(plain ?? "");
 }
 
 function escapeHtml(text: string): string {
