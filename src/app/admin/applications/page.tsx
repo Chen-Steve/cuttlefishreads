@@ -92,41 +92,40 @@ export default async function ApplicationsPage() {
       {reviewed.length > 0 && (
         <div className="mt-10">
           <h2 className="text-sm font-semibold text-foreground">Reviewed</h2>
-          <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-surface">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs text-muted">
-                  <th className="px-4 py-3 font-medium">User</th>
-                  <th className="px-4 py-3 font-medium">Discord</th>
-                  <th className="px-4 py-3 font-medium">Date</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reviewed.map((app) => (
-                  <tr key={app.id} className="border-b border-border last:border-0">
-                    <td className="px-4 py-3 font-medium text-foreground">
-                      {app.username || "—"}
-                    </td>
-                    <td className="px-4 py-3 text-muted">{app.discord}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-muted">
-                      {formatDate(app.created_at)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={
-                          app.status === "approved"
-                            ? "rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600"
-                            : "rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-600"
-                        }
-                      >
-                        {app.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="mt-3 flex flex-col gap-3">
+            {reviewed.map((app) => (
+              <div
+                key={app.id}
+                className="rounded-2xl border border-border bg-surface p-5"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">
+                      {app.username || "(no username)"}
+                    </p>
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted">
+                      <span>{app.email}</span>
+                      <span aria-hidden>·</span>
+                      <span>Discord: {app.discord}</span>
+                      <span aria-hidden>·</span>
+                      <span>{formatDate(app.created_at)}</span>
+                    </p>
+                  </div>
+                  <span
+                    className={
+                      app.status === "approved"
+                        ? "rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600"
+                        : "rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-600"
+                    }
+                  >
+                    {app.status}
+                  </span>
+                </div>
+                <p className="mt-3 whitespace-pre-wrap rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm leading-relaxed text-foreground">
+                  {app.message}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       )}
