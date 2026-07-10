@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { Bookmark, Cookie, Eye, ShoppingCart } from "lucide-react";
 
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
 import {
-  getMonthlyViews,
-  getDailyViews,
-  type MonthlyViewPoint,
-  type DailyViewPoint,
-} from "@/lib/data";
+  getGoogleAnalyticsDashboard,
+  type GoogleAnalyticsDashboard,
+  type ViewsMode,
+} from "@/lib/google-analytics";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -19,7 +19,6 @@ type NovelStat = {
   id: string;
   slug: string;
   title: string;
-  views: number;
   bookmarks: number;
   purchases: number;
   coinsEarned: number;
@@ -45,8 +44,11 @@ export default async function DashboardPage({
   searchParams: Promise<{ view?: string }>;
 }) {
   const { view } = await searchParams;
-  const isDaily = view === "daily";
+  const mode: ViewsMode =
+    view === "monthly" ? "monthly" : view === "all" ? "all" : "daily";
   const access = await getAdminAccess();
+  if (!access?.hasWorkspace) notFound();
+
   const admin = createAdminClient();
 
   let novelsQuery = admin
@@ -54,7 +56,7 @@ export default async function DashboardPage({
     .select("id, slug, title")
     .order("updated_at", { ascending: false });
 
-  if (access && !access.isMasterAdmin) {
+  if (!access.isMasterAdmin) {
     novelsQuery = novelsQuery.eq("publisher_id", access.userId);
   }
 
@@ -66,19 +68,16 @@ export default async function DashboardPage({
   const novelIds = rows.map((n) => n.id);
   const slugs = rows.map((n) => n.slug);
 
-  // Aggregate in bulk. Each table is keyed differently: views/bookmarks by
-  // novel_id, chapter_unlocks by novel_slug.
-  const [viewsRes, bookmarksRes, unlocksRes, monthlyViews, dailyViews] =
+  // Aggregate in bulk. Bookmarks are keyed by novel_id; chapter_unlocks by
+  // novel_slug. Views come from GA4 only.
+  const [bookmarksRes, unlocksRes, googleAnalytics] =
     novelIds.length === 0
       ? [
           { data: [] },
           { data: [] },
-          { data: [] },
-          [] as MonthlyViewPoint[],
-          [] as DailyViewPoint[],
+          await getGoogleAnalyticsDashboard([], mode),
         ]
       : await Promise.all([
-          admin.from("novel_views").select("novel_id").in("novel_id", novelIds),
           admin.from("bookmarks").select("novel_id").in("novel_id", novelIds),
           admin
             .from("chapter_unlocks")
@@ -87,15 +86,9 @@ export default async function DashboardPage({
             )
             .in("novel_slug", slugs)
             .order("created_at", { ascending: false }),
-          getMonthlyViews(novelIds),
-          getDailyViews(novelIds),
+          getGoogleAnalyticsDashboard(slugs, mode),
         ]);
 
-  const viewsByNovel = tally(
-    ((viewsRes.data ?? []) as { novel_id: string }[]).map((r) => ({
-      key: r.novel_id,
-    })),
-  );
   const bookmarksByNovel = tally(
     ((bookmarksRes.data ?? []) as { novel_id: string }[]).map((r) => ({
       key: r.novel_id,
@@ -166,7 +159,6 @@ export default async function DashboardPage({
     id: n.id,
     slug: n.slug,
     title: n.title,
-    views: viewsByNovel.get(n.id) ?? 0,
     bookmarks: bookmarksByNovel.get(n.id) ?? 0,
     purchases: purchasesBySlug.get(n.slug) ?? 0,
     coinsEarned: earnedBySlug.get(n.slug) ?? 0,
@@ -174,13 +166,23 @@ export default async function DashboardPage({
 
   const totals = stats.reduce(
     (acc, s) => ({
-      views: acc.views + s.views,
       bookmarks: acc.bookmarks + s.bookmarks,
       purchases: acc.purchases + s.purchases,
       coinsEarned: acc.coinsEarned + s.coinsEarned,
     }),
-    { views: 0, bookmarks: 0, purchases: 0, coinsEarned: 0 },
+    { bookmarks: 0, purchases: 0, coinsEarned: 0 },
   );
+
+  // Total views from the same GA4 report that powers the chart for this mode.
+  const gaPoints =
+    mode === "daily" ? googleAnalytics.dailyViews : googleAnalytics.monthlyViews;
+  const totalViews = gaPoints.reduce(
+    (sum, point) =>
+      sum + Object.values(point.bySlug).reduce((s, n) => s + n, 0),
+    0,
+  );
+  const viewsLabel =
+    mode === "daily" ? "Views this month" : "All-time views";
 
   return (
     <PageContainer as="div">
@@ -192,23 +194,17 @@ export default async function DashboardPage({
       </p>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <SummaryCard icon={<Eye className="size-4" />} label="Total views" value={totals.views} />
+        <SummaryCard icon={<Eye className="size-4" />} label={viewsLabel} value={totalViews} />
         <SummaryCard icon={<Bookmark className="size-4" />} label="Bookmarks" value={totals.bookmarks} />
         <SummaryCard icon={<ShoppingCart className="size-4" />} label="Purchases" value={totals.purchases} />
         <SummaryCard icon={<Cookie className="size-4" />} label="Cookies earned" value={totals.coinsEarned} />
       </div>
 
-      {isDaily ? (
-        <DailyViewsChart
-          data={dailyViews as DailyViewPoint[]}
-          novels={rows}
-        />
-      ) : (
-        <MonthlyViewsChart
-          data={monthlyViews as MonthlyViewPoint[]}
-          novels={rows}
-        />
-      )}
+      <GoogleAnalyticsSection
+        analytics={googleAnalytics}
+        novels={rows}
+        mode={mode}
+      />
 
       <div className="mt-8 overflow-x-auto rounded-2xl border border-border bg-surface">
         {stats.length === 0 ? (
@@ -220,7 +216,6 @@ export default async function DashboardPage({
             <thead>
               <tr className="border-b border-border text-left text-xs text-muted">
                 <th className="px-4 py-3 font-medium">Novel</th>
-                <th className="px-4 py-3 text-right font-medium">Views</th>
                 <th className="px-4 py-3 text-right font-medium">Bookmarks</th>
                 <th className="px-4 py-3 text-right font-medium">Purchases</th>
                 <th className="px-4 py-3 text-right font-medium">Cookies</th>
@@ -231,9 +226,6 @@ export default async function DashboardPage({
                 <tr key={s.id} className="border-b border-border last:border-0">
                   <td className="px-4 py-3 font-medium text-foreground">
                     {s.title}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-foreground">
-                    {s.views.toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums text-foreground">
                     {s.bookmarks.toLocaleString()}
@@ -350,6 +342,61 @@ function SummaryCard({
   );
 }
 
+function GoogleAnalyticsSection({
+  analytics,
+  novels,
+  mode,
+}: {
+  analytics: GoogleAnalyticsDashboard;
+  novels: { id: string; slug: string; title: string }[];
+  mode: ViewsMode;
+}) {
+  if (!analytics.configured) {
+    return (
+      <section className="mt-8 rounded-2xl border border-dashed border-border px-4 py-8 text-center">
+        <h2 className="text-sm font-semibold text-foreground">
+          Connect Google Analytics
+        </h2>
+        <p className="mx-auto mt-1 max-w-xl text-sm text-muted">
+          Add the Google Analytics property ID, service-account email, and
+          private key to the server environment to display GA4 data here.
+        </p>
+      </section>
+    );
+  }
+
+  if (analytics.error) {
+    return (
+      <section className="mt-8 rounded-2xl border border-red-500/30 bg-red-500/5 px-4 py-6">
+        <h2 className="text-sm font-semibold text-red-600">
+          Google Analytics is unavailable
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          Check the GA4 property ID, service-account credentials, Data API
+          access, and the service account&apos;s Viewer permission.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-8">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Views</h2>
+          <p className="mt-0.5 text-sm text-muted">
+            Each novel&apos;s total combines its novel page and all chapter
+            page views.
+          </p>
+        </div>
+        <ViewToggle active={mode} />
+      </div>
+
+      <ViewsChart analytics={analytics} novels={novels} mode={mode} />
+    </section>
+  );
+}
+
 const MONTH_NAMES = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
@@ -360,14 +407,51 @@ const NOVEL_COLORS = [
   "#a855f7", "#14b8a6", "#f97316", "#ec4899", "#84cc16",
 ];
 
-// SVG chart constants
-const PT = 12;   // padding top
-const PR = 10;   // padding right
-const PB = 26;   // padding bottom (x-axis labels)
-const PL = 46;   // padding left (y-axis labels)
-const PLOT_H = 160;
-const REF_W = 680;
-const SVG_H = PT + PLOT_H + PB;
+function ViewToggle({ active }: { active: ViewsMode }) {
+  const options: { mode: ViewsMode; href: string; label: string }[] = [
+    { mode: "daily", href: "/admin/dashboard", label: "This month" },
+    {
+      mode: "monthly",
+      href: "/admin/dashboard?view=monthly",
+      label: "By month",
+    },
+    { mode: "all", href: "/admin/dashboard?view=all", label: "All time" },
+  ];
+
+  return (
+    <div className="flex items-center rounded-lg border border-border bg-surface p-0.5 text-xs font-medium">
+      {options.map((option) => (
+        <a
+          key={option.mode}
+          href={option.href}
+          className={`rounded-md px-3 py-1.5 transition-colors ${
+            active === option.mode
+              ? "bg-foreground text-background"
+              : "text-muted hover:text-foreground"
+          }`}
+        >
+          {option.label}
+        </a>
+      ))}
+    </div>
+  );
+}
+
+// Stacked bar chart (per day or per month), with native SVG tooltips.
+type ChartBar = {
+  key: string;
+  xLabel: string;
+  showLabel: boolean;
+  tooltipLabel: string;
+  segments: { slug: string; title: string; count: number }[];
+};
+
+const BAR_PT = 12;
+const BAR_PB = 26;
+const BAR_PL = 40;
+const BAR_PR = 8;
+const BAR_PLOT_H = 160;
+const BAR_REF_W = 680;
 
 function niceMax(v: number): number {
   if (v <= 0) return 5;
@@ -376,69 +460,48 @@ function niceMax(v: number): number {
   return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * exp;
 }
 
-function fmtTick(v: number): string {
-  if (v === 0) return "0";
-  if (v >= 1_000_000) {
-    const n = v / 1_000_000;
-    return `${n % 1 === 0 ? n : n.toFixed(1)}M`;
-  }
-  if (v >= 1_000) {
-    const n = v / 1_000;
-    return `${n % 1 === 0 ? n : n.toFixed(1)}K`;
-  }
-  return String(v);
-}
-
-type ChartBar = {
-  key: string;
-  xLabel: string;
-  showLabel: boolean;
-  total: number;
-  segments: { id: string; count: number }[];
-};
-
 function SvgBarChart({
   bars,
-  colorById,
-  highlightLast = false,
+  colorBySlug,
 }: {
   bars: ChartBar[];
-  colorById: Map<string, string>;
-  highlightLast?: boolean;
+  colorBySlug: Map<string, string>;
 }) {
-  const rawMax = Math.max(...bars.map((b) => b.total), 1);
-  const maxY = niceMax(rawMax);
+  const totals = bars.map((b) =>
+    b.segments.reduce((sum, s) => sum + s.count, 0),
+  );
+  const maxY = niceMax(Math.max(...totals, 1));
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(f * maxY));
 
-  const plotW = REF_W - PL - PR;
+  const plotW = BAR_REF_W - BAR_PL - BAR_PR;
   const slot = plotW / Math.max(bars.length, 1);
   const barW = Math.max(slot * 0.65, 2);
   const barOffset = (slot - barW) / 2;
-  const plotBottom = PT + PLOT_H;
+  const plotBottom = BAR_PT + BAR_PLOT_H;
 
   return (
     <svg
-      viewBox={`0 0 ${REF_W} ${SVG_H}`}
+      viewBox={`0 0 ${BAR_REF_W} ${BAR_PT + BAR_PLOT_H + BAR_PB}`}
       className="w-full"
       style={{ display: "block" }}
-      aria-hidden="true"
+      role="img"
+      aria-label="Views per novel"
     >
-      {/* Gridlines + Y-axis labels */}
       {ticks.map((tick) => {
-        const y = PT + PLOT_H - (tick / maxY) * PLOT_H;
+        const y = BAR_PT + BAR_PLOT_H - (tick / maxY) * BAR_PLOT_H;
         return (
           <g key={tick}>
             <line
-              x1={PL}
+              x1={BAR_PL}
               y1={y}
-              x2={REF_W - PR}
+              x2={BAR_REF_W - BAR_PR}
               y2={y}
               stroke="currentColor"
               strokeOpacity={tick === 0 ? 0.2 : 0.08}
               strokeWidth="1"
             />
             <text
-              x={PL - 8}
+              x={BAR_PL - 8}
               y={y + 4}
               textAnchor="end"
               fontSize="11"
@@ -446,42 +509,48 @@ function SvgBarChart({
               fillOpacity="0.45"
               fontFamily="inherit"
             >
-              {fmtTick(tick)}
+              {tick.toLocaleString()}
             </text>
           </g>
         );
       })}
 
-      {/* Bars */}
-      {bars.map(({ key, xLabel, showLabel, total, segments }, i) => {
-        const x = PL + i * slot + barOffset;
-        const isHighlighted = highlightLast && i === bars.length - 1;
+      {bars.map((bar, i) => {
+        const x = BAR_PL + i * slot + barOffset;
         let currentY = plotBottom;
 
         return (
-          <g key={key} opacity={isHighlighted || !highlightLast ? 1 : 0.6}>
-            <title>{xLabel}: {total} new readers</title>
-            {segments.map((seg) => {
-              const segH = Math.max((seg.count / maxY) * PLOT_H, 0);
+          <g key={bar.key}>
+            {bar.segments.map((seg) => {
+              const segH = Math.max((seg.count / maxY) * BAR_PLOT_H, 0);
               const rectY = currentY - segH;
               currentY -= segH;
               return (
                 <rect
-                  key={seg.id}
+                  key={seg.slug}
                   x={x}
                   y={rectY}
                   width={barW}
                   height={segH}
-                  fill={colorById.get(seg.id) ?? "#6366f1"}
+                  fill={colorBySlug.get(seg.slug) ?? "#6366f1"}
                   rx="2"
-                />
+                  className="hover:opacity-75"
+                >
+                  <title>{`${seg.title}: ${seg.count.toLocaleString()} views (${bar.tooltipLabel})`}</title>
+                </rect>
               );
             })}
-            {/* Zero-height placeholder so empty bars still get a tick mark */}
-            {total === 0 && (
-              <rect x={x} y={plotBottom - 1} width={barW} height={1} fill="currentColor" fillOpacity="0.1" />
+            {totals[i] === 0 && (
+              <rect
+                x={x}
+                y={plotBottom - 1}
+                width={barW}
+                height={1}
+                fill="currentColor"
+                fillOpacity="0.1"
+              />
             )}
-            {showLabel && (
+            {bar.showLabel && (
               <text
                 x={x + barW / 2}
                 y={plotBottom + 16}
@@ -491,7 +560,7 @@ function SvgBarChart({
                 fillOpacity="0.5"
                 fontFamily="inherit"
               >
-                {xLabel}
+                {bar.xLabel}
               </text>
             )}
           </g>
@@ -501,195 +570,233 @@ function SvgBarChart({
   );
 }
 
-function ChartLegend({
-  novels,
+type PieSlice = {
+  id: string;
+  title: string;
+  count: number;
+  share: number;
+};
+
+function pieSlicePath(
+  cx: number,
+  cy: number,
+  r: number,
+  startAngle: number,
+  endAngle: number,
+): string {
+  const x1 = cx + r * Math.cos(startAngle);
+  const y1 = cy + r * Math.sin(startAngle);
+  const x2 = cx + r * Math.cos(endAngle);
+  const y2 = cy + r * Math.sin(endAngle);
+  const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
+  return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+}
+
+function PieChart({
+  slices,
   colorById,
 }: {
-  novels: { id: string; title: string }[];
+  slices: PieSlice[];
   colorById: Map<string, string>;
 }) {
+  const size = 220;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = size / 2 - 4;
+
+  // Native SVG tooltips: hovering a slice shows the novel name and count.
+  let angle = -Math.PI / 2;
+
   return (
-    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
-      {novels.map((n) => (
-        <div key={n.id} className="flex items-center gap-1.5">
-          <span
-            className="inline-block size-2.5 shrink-0 rounded-[3px]"
-            style={{ background: colorById.get(n.id) }}
-          />
-          <span className="text-xs text-muted">{n.title}</span>
-        </div>
-      ))}
-    </div>
+    <svg
+      viewBox={`0 0 ${size} ${size}`}
+      className="w-full max-w-56"
+      role="img"
+      aria-label="Views per novel"
+    >
+      {slices.length === 1 ? (
+        <circle cx={cx} cy={cy} r={r} fill={colorById.get(slices[0].id)}>
+          <title>{`${slices[0].title}: ${slices[0].count.toLocaleString()} views (100%)`}</title>
+        </circle>
+      ) : (
+        slices.map((slice) => {
+          const start = angle;
+          const end = start + slice.share * Math.PI * 2;
+          angle = end;
+          return (
+            <path
+              key={slice.id}
+              d={pieSlicePath(cx, cy, r, start, end)}
+              fill={colorById.get(slice.id)}
+              stroke="var(--color-surface, #fff)"
+              strokeWidth="1.5"
+              className="transition-opacity hover:opacity-75"
+            >
+              <title>{`${slice.title}: ${slice.count.toLocaleString()} views (${Math.round(slice.share * 100)}%)`}</title>
+            </path>
+          );
+        })
+      )}
+    </svg>
   );
 }
 
-function ViewToggle({ active }: { active: "monthly" | "daily" }) {
-  return (
-    <div className="flex items-center rounded-lg border border-border bg-surface p-0.5 text-xs font-medium">
-      <a
-        href="/admin/dashboard"
-        className={`rounded-md px-3 py-1.5 transition-colors ${
-          active === "monthly"
-            ? "bg-foreground text-background"
-            : "text-muted hover:text-foreground"
-        }`}
-      >
-        Monthly
-      </a>
-      <a
-        href="/admin/dashboard?view=daily"
-        className={`rounded-md px-3 py-1.5 transition-colors ${
-          active === "daily"
-            ? "bg-foreground text-background"
-            : "text-muted hover:text-foreground"
-        }`}
-      >
-        This month
-      </a>
-    </div>
-  );
-}
-
-function MonthlyViewsChart({
-  data,
+function ViewsChart({
+  analytics,
   novels,
+  mode,
 }: {
-  data: MonthlyViewPoint[];
-  novels: { id: string; title: string }[];
+  analytics: GoogleAnalyticsDashboard;
+  novels: { id: string; slug: string; title: string }[];
+  mode: ViewsMode;
 }) {
-  const colorById = new Map(
-    novels.map((n, i) => [n.id, NOVEL_COLORS[i % NOVEL_COLORS.length]]),
+  const colorBySlug = new Map(
+    novels.map((n, i) => [n.slug, NOVEL_COLORS[i % NOVEL_COLORS.length]]),
   );
-  const totals = data.map((d) =>
-    Object.values(d.byNovel).reduce((s, c) => s + c, 0),
-  );
-  const grandTotal = totals.reduce((s, c) => s + c, 0);
-  const currentMonthTotal = totals[totals.length - 1] ?? 0;
-  const activeNovels = novels.filter((n) =>
-    data.some((d) => (d.byNovel[n.id] ?? 0) > 0),
-  );
-
-  const bars: ChartBar[] = data.map(({ month, byNovel }, i) => {
-    const [year, m] = month.split("-");
-    const label = `${MONTH_NAMES[parseInt(m, 10) - 1]} '${year.slice(2)}`;
-    return {
-      key: month,
-      xLabel: label,
-      showLabel: true,
-      total: totals[i],
-      segments: novels
-        .map((n) => ({ id: n.id, count: byNovel[n.id] ?? 0 }))
-        .filter((s) => s.count > 0),
-    };
-  });
-
-  return (
-    <section className="mt-8">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">New readers by month</h2>
-          <p className="mt-0.5 text-sm text-muted">
-            Unique visitors who discovered your novels, broken down by novel.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <ViewToggle active="monthly" />
-          <div className="text-right">
-            <p className="text-xs text-muted">This month</p>
-            <p className="text-xl font-semibold tabular-nums text-foreground">
-              {currentMonthTotal.toLocaleString()}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4 rounded-2xl border border-border bg-surface px-4 pb-4 pt-3">
-        {grandTotal === 0 ? (
-          <p className="py-8 text-center text-sm text-muted">No view data yet.</p>
-        ) : (
-          <>
-            <SvgBarChart bars={bars} colorById={colorById} highlightLast />
-            {activeNovels.length > 0 && (
-              <ChartLegend novels={activeNovels} colorById={colorById} />
-            )}
-          </>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function DailyViewsChart({
-  data,
-  novels,
-}: {
-  data: DailyViewPoint[];
-  novels: { id: string; title: string }[];
-}) {
-  const colorById = new Map(
-    novels.map((n, i) => [n.id, NOVEL_COLORS[i % NOVEL_COLORS.length]]),
-  );
-  const totals = data.map((d) =>
-    Object.values(d.byNovel).reduce((s, c) => s + c, 0),
-  );
-  const monthTotal = totals.reduce((s, c) => s + c, 0);
-  const activeNovels = novels.filter((n) =>
-    data.some((d) => (d.byNovel[n.id] ?? 0) > 0),
-  );
-
+  const titleBySlug = new Map(novels.map((n) => [n.slug, n.title]));
   const now = new Date();
-  const monthName = MONTH_NAMES[now.getMonth()];
-  const today = now.getDate();
 
-  // Show label every 5 days, always show day 1 and today.
-  const bars: ChartBar[] = data.map(({ day, byNovel }, i) => {
-    const dayNum = i + 1;
-    const showLabel = dayNum === 1 || dayNum % 5 === 0 || dayNum === today;
-    return {
-      key: day,
-      xLabel: String(dayNum),
-      showLabel,
-      total: totals[i],
-      segments: novels
-        .map((n) => ({ id: n.id, count: byNovel[n.id] ?? 0 }))
-        .filter((s) => s.count > 0),
-    };
-  });
+  const toSegments = (bySlug: Record<string, number>) =>
+    novels
+      .map((n) => ({
+        slug: n.slug,
+        title: n.title,
+        count: bySlug[n.slug] ?? 0,
+      }))
+      .filter((s) => s.count > 0);
+
+  let bars: ChartBar[] = [];
+  let periodLabel = "";
+
+  if (mode === "daily") {
+    periodLabel = `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+    const today = now.getDate();
+    bars = analytics.dailyViews.map((point, i) => {
+      const dayNum = i + 1;
+      return {
+        key: point.date,
+        xLabel: String(dayNum),
+        showLabel: dayNum === 1 || dayNum % 5 === 0 || dayNum === today,
+        tooltipLabel: point.date,
+        segments: toSegments(point.bySlug),
+      };
+    });
+  } else if (mode === "monthly") {
+    periodLabel = "By month";
+    bars = analytics.monthlyViews.map((point) => {
+      const [year, m] = point.month.split("-");
+      const label = `${MONTH_NAMES[parseInt(m, 10) - 1]} '${year.slice(2)}`;
+      return {
+        key: point.month,
+        xLabel: label,
+        showLabel: true,
+        tooltipLabel: label,
+        segments: toSegments(point.bySlug),
+      };
+    });
+  } else {
+    periodLabel = "All time";
+  }
+
+  // All-time totals per novel (also drives the pie).
+  const totalsBySlug = new Map<string, number>();
+  for (const point of analytics.monthlyViews) {
+    for (const [slug, count] of Object.entries(point.bySlug)) {
+      totalsBySlug.set(slug, (totalsBySlug.get(slug) ?? 0) + count);
+    }
+  }
+
+  const allTimeTotal = [...totalsBySlug.values()].reduce(
+    (sum, c) => sum + c,
+    0,
+  );
+  const total =
+    mode === "all"
+      ? allTimeTotal
+      : bars.reduce(
+          (sum, bar) =>
+            sum + bar.segments.reduce((s, seg) => s + seg.count, 0),
+          0,
+        );
+
+  const slices: PieSlice[] = novels
+    .map((n) => ({
+      id: n.slug,
+      title: n.title,
+      count: totalsBySlug.get(n.slug) ?? 0,
+      share:
+        allTimeTotal > 0 ? (totalsBySlug.get(n.slug) ?? 0) / allTimeTotal : 0,
+    }))
+    .filter((s) => s.count > 0)
+    .sort((a, b) => b.count - a.count);
+
+  const activeNovels = novels.filter((n) =>
+    mode === "all"
+      ? (totalsBySlug.get(n.slug) ?? 0) > 0
+      : bars.some((bar) => bar.segments.some((s) => s.slug === n.slug)),
+  );
 
   return (
-    <section className="mt-8">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">
-            New readers — {monthName} {now.getFullYear()}
-          </h2>
-          <p className="mt-0.5 text-sm text-muted">
-            Day-by-day unique visitors for the current month.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <ViewToggle active="daily" />
-          <div className="text-right">
-            <p className="text-xs text-muted">Month total</p>
-            <p className="text-xl font-semibold tabular-nums text-foreground">
-              {monthTotal.toLocaleString()}
-            </p>
-          </div>
-        </div>
+    <div className="mt-4 rounded-2xl border border-border bg-surface p-5">
+      <div className="flex items-baseline justify-between gap-4">
+        <p className="text-xs font-medium text-muted">{periodLabel}</p>
+        <p className="text-sm font-semibold tabular-nums text-foreground">
+          {total.toLocaleString()} views
+        </p>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-border bg-surface px-4 pb-4 pt-3">
-        {monthTotal === 0 ? (
-          <p className="py-8 text-center text-sm text-muted">No views yet this month.</p>
-        ) : (
-          <>
-            <SvgBarChart bars={bars} colorById={colorById} highlightLast />
-            {activeNovels.length > 0 && (
-              <ChartLegend novels={activeNovels} colorById={colorById} />
-            )}
-          </>
-        )}
-      </div>
-    </section>
+      {total === 0 ? (
+        <p className="py-8 text-center text-sm text-muted">
+          No views in this period.
+        </p>
+      ) : mode === "all" ? (
+        <div className="mt-3 flex flex-col items-center gap-6 sm:flex-row sm:gap-10">
+          <PieChart slices={slices} colorById={colorBySlug} />
+          <ul className="flex w-full min-w-0 flex-1 flex-col gap-2">
+            {slices.map((slice) => (
+              <li
+                key={slice.id}
+                className="flex items-center justify-between gap-3 text-sm"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <span
+                    className="inline-block size-2.5 shrink-0 rounded-full"
+                    style={{ background: colorBySlug.get(slice.id) }}
+                  />
+                  <span className="truncate text-foreground">
+                    {slice.title}
+                  </span>
+                </span>
+                <span className="shrink-0 tabular-nums text-muted">
+                  {slice.count.toLocaleString()} ·{" "}
+                  {Math.round(slice.share * 100)}%
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <>
+          <div className="mt-2">
+            <SvgBarChart bars={bars} colorBySlug={colorBySlug} />
+          </div>
+          {activeNovels.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+              {activeNovels.map((n) => (
+                <div key={n.id} className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block size-2.5 shrink-0 rounded-full"
+                    style={{ background: colorBySlug.get(n.slug) }}
+                  />
+                  <span className="text-xs text-muted">
+                    {titleBySlug.get(n.slug)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }

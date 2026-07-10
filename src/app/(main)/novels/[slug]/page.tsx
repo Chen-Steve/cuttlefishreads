@@ -18,12 +18,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   getChapters,
   getNovel,
-  getNovelViewCount,
   getUserCoins,
   isNovelBookmarked,
   isUserAuthenticated,
-  recordNovelView,
 } from "@/lib/data";
+import { getNovelPageViews } from "@/lib/google-analytics";
 import { novelDescription } from "@/lib/seo";
 
 const statusLabel = {
@@ -80,10 +79,7 @@ export default async function NovelDetailPage({
     notFound();
   }
 
-  const viewCount = await getNovelViewCount(novel.id);
-
-  // Fire-and-forget unique view tracking; never block rendering on it.
-  void recordNovelView(slug);
+  const viewCount = await getNovelPageViews(slug);
 
   const firstChapter = chapters[0];
   const bulkBuy = getBulkBuyState(chapters);
