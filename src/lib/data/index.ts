@@ -577,9 +577,12 @@ export async function getBookmarkedSlugs(): Promise<Set<string>> {
   const { data: auth } = await supabase.auth.getClaims();
   if (!auth?.claims) return new Set();
 
+  // Bookmarks are publicly readable (for /u/<username> profiles), so always
+  // scope personal-library reads to the signed-in user.
   const { data, error } = await supabase
     .from("bookmarks")
-    .select("novel_slug");
+    .select("novel_slug")
+    .eq("user_id", auth.claims.sub);
 
   if (error) {
     console.error("getBookmarkedSlugs:", error);
@@ -596,6 +599,7 @@ export async function isNovelBookmarked(slug: string): Promise<boolean> {
   const { data } = await supabase
     .from("bookmarks")
     .select("id")
+    .eq("user_id", auth.claims.sub)
     .eq("novel_slug", slug)
     .maybeSingle();
 

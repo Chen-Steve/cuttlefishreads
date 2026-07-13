@@ -116,9 +116,14 @@ export async function toggleBookmark(
     return { error: "Novel not found." };
   }
 
+  const userId = auth.claims.sub;
+
+  // Bookmarks are publicly readable for profiles — always scope by user_id
+  // so we never toggle another reader's bookmark for the same novel.
   const { data: existing } = await supabase
     .from("bookmarks")
     .select("id")
+    .eq("user_id", userId)
     .eq("novel_slug", novelSlug)
     .maybeSingle();
 
@@ -126,7 +131,8 @@ export async function toggleBookmark(
     const { error } = await supabase
       .from("bookmarks")
       .delete()
-      .eq("id", existing.id);
+      .eq("id", existing.id)
+      .eq("user_id", userId);
     if (error) return { error: error.message };
 
     revalidatePath(`/novels/${novelSlug}`);
@@ -135,7 +141,7 @@ export async function toggleBookmark(
   }
 
   const { error } = await supabase.from("bookmarks").insert({
-    user_id: auth.claims.sub,
+    user_id: userId,
     novel_id: novel.id,
     novel_slug: novelSlug,
   });

@@ -8,7 +8,10 @@
 --
 -- Privacy boundary:
 --   * profiles.username  -> public (already select-granted to anon/authenticated)
---   * bookmarks          -> public (this file)
+--   * bookmarks          -> public select (this file). Personal-library reads in
+--                           app code MUST still filter by user_id — public SELECT
+--                           is only so /u/<username> can show another reader's
+--                           bookmarks without a service-role client.
 --   * coin_purchases     -> PRIVATE. Purchase history stays owner-only (its
 --                           select policy in schema.sql is intentionally left
 --                           untouched), so it is never exposed on a profile.
