@@ -50,16 +50,55 @@ export function CoinPackages({
     const status = searchParams.get("stripe");
     if (!status) return;
 
-    if (status === "success") {
-      setSuccess(
-        "Payment received. Cookies will appear in your balance shortly."
-      );
-      router.refresh();
-    } else if (status === "cancel") {
+    const sessionId = searchParams.get("session_id");
+
+    if (status === "cancel") {
       setError("Stripe checkout was canceled.");
+      router.replace("/shop", { scroll: false });
+      return;
     }
 
-    router.replace("/shop", { scroll: false });
+    if (status !== "success") return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        if (sessionId) {
+          const res = await fetch("/api/stripe/confirm-session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (cancelled) return;
+          if (res.ok && data.coins != null) {
+            setSuccess(`Success! ${data.coins} cookies added to your balance.`);
+          } else {
+            setSuccess(
+              "Payment received. Cookies will appear in your balance shortly."
+            );
+          }
+        } else {
+          setSuccess(
+            "Payment received. Cookies will appear in your balance shortly."
+          );
+        }
+        router.refresh();
+      } catch {
+        if (!cancelled) {
+          setSuccess(
+            "Payment received. Cookies will appear in your balance shortly."
+          );
+        }
+      } finally {
+        if (!cancelled) router.replace("/shop", { scroll: false });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [searchParams, router]);
 
   async function buyWithPayPal(input: OrderInput, id: string) {
