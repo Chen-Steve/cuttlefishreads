@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Cookie } from "lucide-react";
 
 import {
@@ -13,19 +13,24 @@ import {
 } from "@/lib/coin-packages";
 import { usePayPal } from "./use-paypal";
 import { PayPalPayButton } from "./paypal-pay-button";
+import { StripePayButton } from "./stripe-pay-button";
 
 export function CoinPackages({
   packages,
   clientId,
+  stripeEnabled = false,
 }: {
   packages: readonly CoinPackage[];
   clientId?: string;
+  stripeEnabled?: boolean;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { ready, startPurchase } = usePayPal(clientId);
 
   const [customCoins, setCustomCoins] = useState<number | "">(MIN_COINS);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [stripePendingId, setStripePendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -37,10 +42,28 @@ export function CoinPackages({
     ? validCustomCoins * CENTS_PER_COIN
     : null;
 
-  const paymentsEnabled = Boolean(clientId) && ready;
+  const paypalReady = Boolean(clientId) && ready;
+  const anyPaymentMethod = paypalReady || stripeEnabled;
+  const busy = pendingId !== null || stripePendingId !== null;
 
-  async function buy(input: OrderInput, id: string) {
-    if (!paymentsEnabled || pendingId) return;
+  useEffect(() => {
+    const status = searchParams.get("stripe");
+    if (!status) return;
+
+    if (status === "success") {
+      setSuccess(
+        "Payment received. Cookies will appear in your balance shortly."
+      );
+      router.refresh();
+    } else if (status === "cancel") {
+      setError("Stripe checkout was canceled.");
+    }
+
+    router.replace("/shop", { scroll: false });
+  }, [searchParams, router]);
+
+  async function buyWithPayPal(input: OrderInput, id: string) {
+    if (!paypalReady || busy) return;
     setError(null);
     setSuccess(null);
     setPendingId(id);
@@ -84,7 +107,34 @@ export function CoinPackages({
     }
   }
 
-  const buyDisabled = !paymentsEnabled || pendingId !== null;
+  async function buyWithStripe(input: OrderInput, id: string) {
+    if (!stripeEnabled || busy) return;
+    setError(null);
+    setSuccess(null);
+    setStripePendingId(id);
+
+    try {
+      const res = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Could not start the payment.");
+      }
+      if (!data.url) {
+        throw new Error("Could not start the payment.");
+      }
+      window.location.assign(data.url as string);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Payment failed.");
+      setStripePendingId(null);
+    }
+  }
+
+  const paypalDisabled = !paypalReady || busy;
+  const stripeDisabled = !stripeEnabled || busy;
 
   return (
     <>
@@ -146,13 +196,20 @@ export function CoinPackages({
                 ${dollars.toFixed(2)}
               </p>
 
-              <PayPalPayButton
-                unavailable={!clientId}
-                loading={Boolean(clientId) && !ready}
-                disabled={buyDisabled}
-                onPay={() => buy({ packageId: pkg.id }, pkg.id)}
-                className="mt-5"
-              />
+              <div className="mt-5 flex flex-col gap-2">
+                <PayPalPayButton
+                  unavailable={!clientId}
+                  loading={Boolean(clientId) && !ready}
+                  disabled={paypalDisabled}
+                  onPay={() => buyWithPayPal({ packageId: pkg.id }, pkg.id)}
+                />
+                <StripePayButton
+                  unavailable={!stripeEnabled}
+                  loading={stripePendingId === pkg.id}
+                  disabled={stripeDisabled}
+                  onPay={() => buyWithStripe({ packageId: pkg.id }, pkg.id)}
+                />
+              </div>
             </div>
           );
         })}
@@ -204,24 +261,32 @@ export function CoinPackages({
             </span>
           </div>
 
-          <PayPalPayButton
-            unavailable={!clientId}
-            loading={Boolean(clientId) && !ready}
-            disabled={
-              buyDisabled || validCustomCoins === null
-            }
-            onPay={() =>
-              validCustomCoins &&
-              buy({ customCoins: validCustomCoins }, "pack_custom")
-            }
-            className="mt-0 sm:ml-auto sm:max-w-[200px]"
-          />
+          <div className="mt-0 flex w-full flex-col gap-2 sm:ml-auto sm:max-w-[220px]">
+            <PayPalPayButton
+              unavailable={!clientId}
+              loading={Boolean(clientId) && !ready}
+              disabled={paypalDisabled || validCustomCoins === null}
+              onPay={() =>
+                validCustomCoins &&
+                buyWithPayPal({ customCoins: validCustomCoins }, "pack_custom")
+              }
+            />
+            <StripePayButton
+              unavailable={!stripeEnabled}
+              loading={stripePendingId === "pack_custom"}
+              disabled={stripeDisabled || validCustomCoins === null}
+              onPay={() =>
+                validCustomCoins &&
+                buyWithStripe({ customCoins: validCustomCoins }, "pack_custom")
+              }
+            />
+          </div>
         </div>
       </div>
 
       <p className="mt-4 text-xs text-muted">
-        {clientId
-          ? "Secure payment via PayPal. Prices in USD."
+        {anyPaymentMethod
+          ? "Secure payment via PayPal or Stripe. Prices in USD."
           : "Payments are temporarily unavailable."}
       </p>
     </>

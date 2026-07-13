@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -6,6 +7,7 @@ import { PageContainer } from "@/components/page-container";
 import { createClient } from "@/utils/supabase/server";
 import { COIN_PACKAGES } from "@/lib/coin-packages";
 import { SITE } from "@/lib/constants";
+import { isStripeConfigured } from "@/lib/stripe";
 import { CoinPackages } from "./_components/coin-packages";
 
 export const metadata: Metadata = {
@@ -19,6 +21,7 @@ export default async function ShopPage() {
   if (!data?.claims) redirect("/login");
 
   const paypalClientId = process.env.PAYPAL_CLIENT_ID;
+  const stripeEnabled = isStripeConfigured();
 
   return (
     <PageContainer as="section" className="pt-4 pb-8 sm:pt-5 sm:pb-10 lg:pt-6 lg:pb-12">
@@ -26,7 +29,13 @@ export default async function ShopPage() {
         Cookie Shop
       </h1>
 
-      <CoinPackages packages={COIN_PACKAGES} clientId={paypalClientId} />
+      <Suspense fallback={null}>
+        <CoinPackages
+          packages={COIN_PACKAGES}
+          clientId={paypalClientId}
+          stripeEnabled={stripeEnabled}
+        />
+      </Suspense>
 
       <p className="mt-6 text-xs text-muted">
         Having issues?{" "}
