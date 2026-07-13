@@ -42,6 +42,10 @@ export async function POST(request: NextRequest) {
       case "checkout.session.completed":
       case "checkout.session.async_payment_succeeded": {
         const session = event.data.object as Stripe.Checkout.Session;
+        // Async payment methods complete the session before the money moves.
+        // Acknowledge with 200 and credit later via async_payment_succeeded —
+        // erroring here would make Stripe retry an event that never turns paid.
+        if (session.payment_status !== "paid") break;
         await fulfillCheckoutSession(session);
         break;
       }

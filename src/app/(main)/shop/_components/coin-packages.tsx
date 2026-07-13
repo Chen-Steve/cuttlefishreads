@@ -8,6 +8,7 @@ import {
   type CoinPackage,
   type OrderInput,
   MIN_COINS,
+  MAX_COINS,
   CENTS_PER_COIN,
   centsToAmountString,
 } from "@/lib/coin-packages";
@@ -35,7 +36,9 @@ export function CoinPackages({
   const [success, setSuccess] = useState<string | null>(null);
 
   const validCustomCoins =
-    typeof customCoins === "number" && customCoins >= MIN_COINS
+    typeof customCoins === "number" &&
+    customCoins >= MIN_COINS &&
+    customCoins <= MAX_COINS
       ? customCoins
       : null;
   const customPriceCents = validCustomCoins
@@ -258,7 +261,7 @@ export function CoinPackages({
       <div className="mt-6 rounded-2xl border border-border bg-surface p-5 sm:p-6">
         <p className="text-sm font-semibold text-foreground">Custom amount</p>
         <p className="mt-0.5 text-xs text-muted">
-          minimum {MIN_COINS}.
+          minimum {MIN_COINS}, maximum {MAX_COINS.toLocaleString()}.
         </p>
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -272,6 +275,7 @@ export function CoinPackages({
                 id="custom-cookies"
                 type="number"
                 min={MIN_COINS}
+                max={MAX_COINS}
                 step={1}
                 value={customCoins}
                 onChange={(e) => {
@@ -289,6 +293,11 @@ export function CoinPackages({
                   Minimum is {MIN_COINS} cookies.
                 </p>
               )}
+            {typeof customCoins === "number" && customCoins > MAX_COINS && (
+              <p className="text-xs text-red-500">
+                Maximum is {MAX_COINS.toLocaleString()} cookies.
+              </p>
+            )}
           </div>
 
           <div className="flex h-11 items-center gap-1.5">

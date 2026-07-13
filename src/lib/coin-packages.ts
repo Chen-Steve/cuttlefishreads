@@ -4,6 +4,7 @@
 // price; it only sends a package id or a custom coin amount.
 
 export const MIN_COINS = 50;
+export const MAX_COINS = 50_000;
 // Base rate: 10 coins = $1.00 → 10 cents per coin.
 export const CENTS_PER_COIN = 10;
 export const CURRENCY = "USD";
@@ -106,7 +107,7 @@ export function computeOrder(input: OrderInput): ComputedOrder | null {
 
   if ("customCoins" in input) {
     const n = Math.floor(input.customCoins);
-    if (!Number.isFinite(n) || n < MIN_COINS) return null;
+    if (!Number.isFinite(n) || n < MIN_COINS || n > MAX_COINS) return null;
     return {
       packageId: CUSTOM_PACKAGE_ID,
       coins: n,
