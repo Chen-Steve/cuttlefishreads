@@ -7,7 +7,6 @@ import { ArrowRight, Cookie, ShoppingBag, X } from "lucide-react";
 
 import { bulkUnlockChapters } from "@/app/(main)/novels/actions";
 import {
-  BULK_BUY_DISCOUNT_RATE,
   BULK_BUY_MIN_ADVANCED_CHAPTERS,
   getBulkBuyState,
 } from "@/lib/bulk-buy";
@@ -30,7 +29,7 @@ export function BulkBuyChapters({
   const [showInsufficientPopup, setShowInsufficientPopup] = useState(false);
   const [pending, startTransition] = useTransition();
   const bulkBuy = getBulkBuyState(chapters);
-  const canAfford = userCoins >= bulkBuy.discountedPrice;
+  const canAfford = userCoins >= bulkBuy.fullPrice;
 
   if (!bulkBuy.eligible || bulkBuy.purchasableCount === 0) return null;
 
@@ -54,8 +53,6 @@ export function BulkBuyChapters({
     });
   }
 
-  const discountPercent = Math.round(BULK_BUY_DISCOUNT_RATE * 100);
-
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
@@ -65,7 +62,7 @@ export function BulkBuyChapters({
               className="inline-flex h-8 w-full items-center justify-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-500/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:text-amber-400 sm:w-fit"
             >
               <ShoppingBag className="size-3.5" strokeWidth={1.75} aria-hidden />
-              Sign in to buy all chapters ({discountPercent}% off)
+              Sign in to buy all chapters
             </Link>
           ) : (
             <button
@@ -74,10 +71,9 @@ export function BulkBuyChapters({
               disabled={pending}
               className="inline-flex h-8 w-full items-center justify-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-500/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 dark:text-amber-400 sm:w-fit"
             >
-              <ShoppingBag className="size-3.5" strokeWidth={1.75} aria-hidden />
               {pending
                 ? "Unlocking…"
-                : `Buy all ${bulkBuy.purchasableCount} chapters for ${bulkBuy.discountedPrice.toLocaleString()} cookies`}
+                : `Buy all ${bulkBuy.purchasableCount} chapters for ${bulkBuy.fullPrice.toLocaleString()} cookies`}
               <span className="inline-flex items-center gap-1 font-normal text-amber-600/80 dark:text-amber-400/80">
                 <Cookie className="size-3" strokeWidth={1.75} aria-hidden />
               </span>
@@ -129,7 +125,7 @@ export function BulkBuyChapters({
             <p className="mt-2 text-center text-sm text-muted">
               You need{" "}
               <span className="font-semibold text-foreground">
-                {bulkBuy.discountedPrice.toLocaleString()} cookies
+                {bulkBuy.fullPrice.toLocaleString()} cookies
               </span>{" "}
               but only have{" "}
               <span className="font-semibold text-foreground">

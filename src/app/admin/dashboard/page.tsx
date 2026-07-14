@@ -167,8 +167,7 @@ export default async function DashboardPage({
     purchasesByNovel.has(n.slug),
   );
 
-  // Earnings are the exact translator share credited per unlock (70% of list;
-  // the platform absorbs any bulk discount).
+  // Earnings are the exact translator share credited per unlock (70% of list).
   const stats: NovelStat[] = rows.map((n) => ({
     id: n.id,
     slug: n.slug,

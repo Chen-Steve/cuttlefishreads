@@ -1,13 +1,11 @@
 import type { Chapter } from "@/types";
 
 export const BULK_BUY_MIN_ADVANCED_CHAPTERS = 10;
-export const BULK_BUY_DISCOUNT_RATE = 0.1;
 
 export type BulkBuyState = {
   eligible: boolean;
   purchasableCount: number;
   fullPrice: number;
-  discountedPrice: number;
 };
 
 export function getBulkBuyState(chapters: Chapter[]): BulkBuyState {
@@ -19,6 +17,5 @@ export function getBulkBuyState(chapters: Chapter[]): BulkBuyState {
     eligible: advancedCount >= BULK_BUY_MIN_ADVANCED_CHAPTERS,
     purchasableCount: purchasable.length,
     fullPrice,
-    discountedPrice: Math.floor(fullPrice * (1 - BULK_BUY_DISCOUNT_RATE)),
   };
 }

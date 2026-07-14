@@ -63,7 +63,7 @@ export type BulkUnlockState = {
   coinsSpent?: number;
 };
 
-// Unlocks every remaining purchasable advanced chapter for a novel at 10% off.
+// Unlocks every remaining purchasable advanced chapter for a novel at list price.
 // Pricing and eligibility are enforced inside bulk_unlock_chapters().
 export async function bulkUnlockChapters(
   novelSlug: string,
