@@ -33,7 +33,7 @@ export function ReviewButtons({ applicationId }: { applicationId: string }) {
           type="button"
           disabled={pending}
           onClick={() => run(() => approveApplication(applicationId))}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3 text-xs font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3 text-xs font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Check className="size-3.5" strokeWidth={2} aria-hidden />
           Approve

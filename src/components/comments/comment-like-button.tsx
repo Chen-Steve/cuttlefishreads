@@ -65,6 +65,11 @@ export function CommentLikeButton({
         onClick={handleClick}
         disabled={pending}
         aria-pressed={liked}
+        aria-label={
+          liked
+            ? `Unlike comment, ${count} ${count === 1 ? "like" : "likes"}`
+            : `Like comment, ${count} ${count === 1 ? "like" : "likes"}`
+        }
         className={
           liked
             ? "inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"

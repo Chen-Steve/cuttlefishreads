@@ -99,7 +99,7 @@ export function PaginatedRecentlyUpdatedList({
                 className={cn(
                   "inline-flex size-9 items-center justify-center rounded-lg text-sm font-medium tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
                   safePage + 1 === item
-                    ? "bg-accent text-white"
+                    ? "bg-accent text-accent-foreground"
                     : "text-foreground hover:bg-surface hover:text-accent",
                 )}
               >

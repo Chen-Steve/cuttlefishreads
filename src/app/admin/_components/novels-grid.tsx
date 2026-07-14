@@ -177,7 +177,7 @@ export function NovelsGrid({
                 className={cn(
                   "rounded-lg px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors",
                   statusFilter === f.value
-                    ? "bg-accent text-white"
+                    ? "bg-accent text-accent-foreground"
                     : "bg-surface text-muted hover:text-foreground",
                 )}
               >

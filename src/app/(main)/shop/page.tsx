@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -38,7 +39,14 @@ export default async function ShopPage() {
       </Suspense>
 
       <p className="mt-6 text-xs text-muted">
-        Having issues?{" "}
+        Cookie purchases are generally final. See our{" "}
+        <Link
+          href="/refund"
+          className="font-medium text-foreground underline-offset-2 hover:text-accent hover:underline"
+        >
+          Refund Policy
+        </Link>
+        . Having issues?{" "}
         <a
           href={SITE.discordUrl}
           target="_blank"

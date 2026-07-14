@@ -66,6 +66,11 @@ export function ChapterOrderToggle() {
       type="button"
       onClick={() => writeChapterOrderPreference(!newestFirst)}
       aria-pressed={newestFirst}
+      aria-label={
+        newestFirst
+          ? "Chapter order: newest first. Click to show oldest first."
+          : "Chapter order: oldest first. Click to show newest first."
+      }
       className={cn(
         "inline-flex h-8 items-center gap-1 rounded-lg border border-border bg-background px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
         newestFirst && "border-accent/40 bg-accent/5 text-accent",

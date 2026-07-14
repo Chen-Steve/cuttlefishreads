@@ -5,11 +5,14 @@
 :root {
   --background: #faf7f2;
   --foreground: #3d3229;
-  --muted: #6b5d52;
+  /* Muted keeps ≥4.5:1 on background for WCAG AA body text */
+  --muted: #5f5146;
   --border: #e8dfd4;
   --surface: #fffdf9;
-  --accent: #b8956a;
-  --accent-hover: #a6845c;
+  /* Darker accent so white button text and accent links meet AA contrast */
+  --accent: #705530;
+  --accent-hover: #5c4526;
+  --accent-foreground: #ffffff;
   color-scheme: light;
 }
 
@@ -17,11 +20,14 @@
   /* Warm charcoal — soft contrast, not pure black / white */
   --background: #1c1916;
   --foreground: #e4ddd4;
-  --muted: #a89a8c;
+  --muted: #b5a798;
   --border: #3a342e;
   --surface: #26211c;
-  --accent: #c4a574;
-  --accent-hover: #d0b486;
+  /* Lighter accent so it stays readable on dark surfaces */
+  --accent: #d4b896;
+  --accent-hover: #e0c9a8;
+  /* Dark text on the light accent fill */
+  --accent-foreground: #1c1916;
   color-scheme: dark;
 }
 
@@ -33,6 +39,7 @@
   --color-surface: var(--surface);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
   --font-sans: var(--font-national-park), system-ui, sans-serif;
 }
 

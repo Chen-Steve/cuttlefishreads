@@ -11,7 +11,7 @@ import { isScheduledUnlock } from "@/lib/unlock-countdown";
 import { cookiesLabel } from "@/lib/utils";
 
 const btnClass =
-  "inline-flex h-11 items-center justify-center rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-colors hover:bg-accent-hover";
+  "inline-flex h-11 items-center justify-center rounded-xl bg-accent px-6 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover";
 
 function CoinCost({ amount }: { amount: number }) {
   return (

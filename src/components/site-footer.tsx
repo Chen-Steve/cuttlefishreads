@@ -25,6 +25,8 @@ const linkGroups = [
     links: [
       { href: "/privacy", label: "Privacy policy" },
       { href: "/terms", label: "Terms of service" },
+      { href: "/refund", label: "Refund policy" },
+      { href: "/guidelines", label: "Community guidelines" },
       { href: "/dmca", label: "DMCA" },
     ],
   },
@@ -74,6 +76,7 @@ export function SiteFooter() {
               >
                 <DiscordIcon className="size-3.5" />
                 Discord
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </div>
           </div>

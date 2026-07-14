@@ -181,7 +181,7 @@ function CommentRow({ comment }: { comment: NovelComment }) {
                     type="button"
                     onClick={handleSubmit}
                     disabled={pending || !body.trim()}
-                    className="inline-flex h-8 items-center rounded-lg bg-accent px-3 text-xs font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+                    className="inline-flex h-8 items-center rounded-lg bg-accent px-3 text-xs font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50"
                   >
                     {pending ? "Posting…" : "Post reply"}
                   </button>

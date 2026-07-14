@@ -27,8 +27,9 @@ export default async function Home() {
 
   return (
     <PageContainer className="pt-3 pb-6 sm:py-8 lg:py-10">
+      <h1 className="sr-only sm:hidden">{SITE.name}</h1>
       <section className="relative hidden overflow-hidden rounded-xl border border-border bg-surface px-4 py-6 sm:block sm:px-8 sm:py-9">
-        <span className="absolute inset-0 opacity-[0.06] [background-image:repeating-linear-gradient(135deg,transparent,transparent_14px,var(--accent)_14px,var(--accent)_15px)]" />
+        <span className="absolute inset-0 opacity-[0.06] [background-image:repeating-linear-gradient(135deg,transparent,transparent_14px,var(--accent)_14px,var(--accent)_15px)]" aria-hidden />
         <div className="relative max-w-2xl">
           <p className="text-xs font-medium uppercase tracking-widest text-accent">
             {SITE.name}
@@ -43,7 +44,7 @@ export default async function Home() {
           <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <Link
               href="/novels"
-              className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               Browse novels
               <ArrowRight className="size-3.5" strokeWidth={2} aria-hidden />
@@ -63,6 +64,7 @@ export default async function Home() {
             >
               <DiscordIcon className="size-3.5" />
               Discord
+              <span className="sr-only"> (opens in a new tab)</span>
             </a>
           </div>
         </div>

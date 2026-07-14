@@ -99,7 +99,7 @@ export function NovelForm({
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif,image/*"
             onChange={(event) => setCoverFile(event.target.files?.[0] ?? null)}
-            className="block w-full text-transparent text-xs file:mr-0 file:rounded-lg file:border-0 file:bg-accent file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-accent-hover"
+            className="block w-full text-transparent text-xs file:mr-0 file:rounded-lg file:border-0 file:bg-accent file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-accent-foreground hover:file:bg-accent-hover"
           />
           {coverFile ? (
             <span className="text-[0.7rem] leading-tight text-muted">
@@ -236,7 +236,7 @@ export function NovelForm({
           type="submit"
           disabled={pending}
           className={cn(
-            "inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit",
+            "inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit",
             !isEdit && "w-full",
           )}
         >

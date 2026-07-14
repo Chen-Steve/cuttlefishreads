@@ -60,7 +60,7 @@ export default async function ApplyPage() {
           <div className="mt-5 flex flex-col gap-2 sm:flex-row">
             <Link
               href="/signup?redirect=/apply"
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               Create an account
             </Link>
@@ -106,7 +106,7 @@ export default async function ApplyPage() {
           {application.status === "approved" && (
             <Link
               href="/admin"
-              className="mt-3 inline-flex h-10 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
+              className="mt-3 inline-flex h-10 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
             >
               Go to workspace
             </Link>
@@ -117,7 +117,7 @@ export default async function ApplyPage() {
           <p className="font-semibold">You&apos;re already a translator.</p>
           <Link
             href="/admin"
-            className="mt-3 inline-flex h-10 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
+            className="mt-3 inline-flex h-10 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
           >
             Go to workspace
           </Link>

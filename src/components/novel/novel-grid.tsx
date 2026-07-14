@@ -4,6 +4,7 @@ import { NovelCard } from "./novel-card";
 export function NovelGrid({
   novels,
   compact = false,
+  dense = false,
   hideAuthor = false,
   tightMobile = false,
   tightGap = false,
@@ -11,6 +12,8 @@ export function NovelGrid({
 }: {
   novels: Novel[];
   compact?: boolean;
+  /** More columns and smaller cards (implies compact card chrome). */
+  dense?: boolean;
   hideAuthor?: boolean;
   /** Tighter row gap on small screens (compact grids only). */
   tightMobile?: boolean;
@@ -29,20 +32,23 @@ export function NovelGrid({
   return (
     <div
       className={
-        compact
-          ? tightMobile
-            ? "grid grid-cols-2 gap-x-2.5 gap-y-2.5 sm:grid-cols-3 sm:gap-x-3 sm:gap-y-5 lg:grid-cols-4 xl:grid-cols-5"
-            : "grid grid-cols-2 gap-x-2.5 gap-y-4 sm:grid-cols-3 sm:gap-x-3 sm:gap-y-5 lg:grid-cols-4 xl:grid-cols-5"
-          : tightGap
-            ? "grid grid-cols-2 gap-x-2 gap-y-2.5 sm:grid-cols-3 sm:gap-x-2.5 sm:gap-y-3.5 lg:grid-cols-4 lg:gap-x-3 lg:gap-y-4 xl:grid-cols-5"
-            : "grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-4 xl:grid-cols-5"
+        dense
+          ? "grid grid-cols-3 gap-x-2 gap-y-2.5 sm:grid-cols-4 sm:gap-x-2.5 sm:gap-y-3 lg:grid-cols-6 xl:grid-cols-7"
+          : compact
+            ? tightMobile
+              ? "grid grid-cols-2 gap-x-2.5 gap-y-2.5 sm:grid-cols-3 sm:gap-x-3 sm:gap-y-5 lg:grid-cols-4 xl:grid-cols-5"
+              : "grid grid-cols-2 gap-x-2.5 gap-y-4 sm:grid-cols-3 sm:gap-x-3 sm:gap-y-5 lg:grid-cols-4 xl:grid-cols-5"
+            : tightGap
+              ? "grid grid-cols-2 gap-x-2 gap-y-2.5 sm:grid-cols-3 sm:gap-x-2.5 sm:gap-y-3.5 lg:grid-cols-4 lg:gap-x-3 lg:gap-y-4 xl:grid-cols-5"
+              : "grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-4 xl:grid-cols-5"
       }
     >
       {novels.map((novel) => (
         <NovelCard
           key={novel.id}
           novel={novel}
-          compact={compact}
+          compact={compact || dense}
+          dense={dense}
           hideAuthor={hideAuthor}
           showChapterCount={showChapterCount}
         />

@@ -60,7 +60,7 @@ export function NovelsBrowser({ novels }: { novels: Novel[] }) {
     cn(
       "inline-flex h-7 shrink-0 items-center rounded-full px-2.5 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
       active
-        ? "bg-accent text-white"
+        ? "bg-accent text-accent-foreground"
         : "bg-surface text-muted hover:bg-border hover:text-foreground",
     );
 
@@ -122,7 +122,7 @@ export function NovelsBrowser({ novels }: { novels: Novel[] }) {
           <SlidersHorizontal className="size-3.5" strokeWidth={1.75} aria-hidden />
           {filtersOpen ? "Hide filters" : "Show filters"}
           {activePillFilters > 0 ? (
-            <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+            <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold leading-none text-accent-foreground">
               {activePillFilters}
             </span>
           ) : null}
@@ -148,6 +148,7 @@ export function NovelsBrowser({ novels }: { novels: Novel[] }) {
                 key={opt.value}
                 type="button"
                 onClick={() => setStatus(opt.value)}
+                aria-pressed={status === opt.value}
                 className={pillClass(status === opt.value)}
               >
                 {opt.label}
@@ -161,6 +162,7 @@ export function NovelsBrowser({ novels }: { novels: Novel[] }) {
                 key={g}
                 type="button"
                 onClick={() => setGenre(genre === g ? null : g)}
+                aria-pressed={genre === g}
                 className={pillClass(genre === g)}
               >
                 {g}

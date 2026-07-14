@@ -33,7 +33,7 @@ export default async function LibraryPage() {
               <div className="mt-4 flex items-center justify-center gap-3">
                 <Link
                   href="/login"
-                  className="inline-flex h-9 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  className="inline-flex h-9 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                   Sign in
                 </Link>

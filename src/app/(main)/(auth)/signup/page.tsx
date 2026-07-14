@@ -61,6 +61,7 @@ export default async function SignupPage({
       footerLinkLabel="Sign in"
       googleAction={signInWithGoogle}
       googleRedirectTo={safeRedirect}
+      showLegalNotice
     />
   );
 }

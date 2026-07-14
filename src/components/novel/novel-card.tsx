@@ -12,22 +12,28 @@ const statusLabel: Record<Novel["status"], string> = {
 export function NovelCard({
   novel,
   compact = false,
+  dense = false,
   hideAuthor = false,
   showChapterCount = false,
 }: {
   novel: Novel;
   /** Title and genres only — hides author and status. */
   compact?: boolean;
+  /** Smaller cover grid cards — title only, tighter padding. */
+  dense?: boolean;
   /** Hides the author/translator line while keeping status and genres. */
   hideAuthor?: boolean;
   showChapterCount?: boolean;
 }) {
   const cardGenres = genresExcludingCoverBadges(novel.genres);
+  const showMeta = !dense && (cardGenres.length > 0 || !compact);
 
   return (
     <Link
       href={`/novels/${novel.slug}`}
-      className={`group flex flex-col rounded-xl outline-offset-2 transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-accent ${compact ? "gap-2 p-1" : "gap-3 p-2"}`}
+      className={`group flex flex-col rounded-xl outline-offset-2 transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-accent ${
+        dense ? "gap-1.5 p-0.5" : compact ? "gap-2 p-1" : "gap-3 p-2"
+      }`}
     >
       <NovelCover
         title={novel.title}
@@ -38,15 +44,21 @@ export function NovelCard({
         className="transition-transform duration-300 group-hover:-translate-y-0.5"
       />
       <div
-        className={`flex min-w-0 flex-col px-1 ${compact ? "gap-1" : "gap-1.5"}`}
+        className={`flex min-w-0 flex-col ${
+          dense ? "gap-0.5 px-0.5" : compact ? "gap-1 px-1" : "gap-1.5 px-1"
+        }`}
       >
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
+        <h3
+          className={`line-clamp-2 font-semibold leading-snug text-foreground ${
+            dense ? "text-xs" : "text-sm"
+          }`}
+        >
           {novel.title}
         </h3>
         {!compact && !hideAuthor ? (
           <p className="text-xs text-muted">{novel.author}</p>
         ) : null}
-        {cardGenres.length > 0 || !compact ? (
+        {showMeta ? (
           <div
             className={`${compact ? "mt-0.5" : "mt-1"} -mx-1 min-w-0 overflow-x-auto px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden`}
           >

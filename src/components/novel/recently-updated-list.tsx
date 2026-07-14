@@ -25,6 +25,7 @@ export function RecentlyUpdatedList({
         >
           <Link
             href={`/novels/${novel.slug}`}
+            aria-label={novel.title}
             className="group/cover shrink-0 outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent"
           >
             <NovelCover

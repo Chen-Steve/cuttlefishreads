@@ -62,7 +62,7 @@ export function BulkBuyChapters({
         {!isLoggedIn ? (
             <Link
               href="/login"
-              className="inline-flex h-8 mb-2 w-full items-center justify-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-500/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:text-amber-400 sm:w-fit"
+              className="inline-flex h-8 w-full items-center justify-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-500/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:text-amber-400 sm:w-fit"
             >
               <ShoppingBag className="size-3.5" strokeWidth={1.75} aria-hidden />
               Sign in to buy all chapters ({discountPercent}% off)
@@ -139,7 +139,7 @@ export function BulkBuyChapters({
             </p>
             <Link
               href="/shop"
-              className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               Go to shop
               <ArrowRight className="size-4" strokeWidth={2} aria-hidden />

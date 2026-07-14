@@ -117,7 +117,11 @@ export function CommentItem({
 
           {editing ? (
             <div className="mt-3 space-y-2">
+              <label htmlFor={`edit-comment-${comment.id}`} className="sr-only">
+                Edit comment
+              </label>
               <textarea
+                id={`edit-comment-${comment.id}`}
                 value={body}
                 onChange={(event) => setBody(event.target.value)}
                 rows={3}
@@ -130,7 +134,7 @@ export function CommentItem({
                   type="button"
                   onClick={handleSave}
                   disabled={pending || !body.trim()}
-                  className="inline-flex h-8 items-center rounded-lg bg-accent px-3 text-xs font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+                  className="inline-flex h-8 items-center rounded-lg bg-accent px-3 text-xs font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50"
                 >
                   Save
                 </button>

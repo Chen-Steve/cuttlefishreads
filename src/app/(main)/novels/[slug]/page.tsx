@@ -157,7 +157,7 @@ export default async function NovelDetailPage({
       {firstChapter ? (
         <Link
           href={`/novels/${novel.slug}/${firstChapter.number}`}
-          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           <BookOpen className="size-4" strokeWidth={1.75} aria-hidden />
           Start reading
@@ -218,7 +218,7 @@ export default async function NovelDetailPage({
       </div>
 
       <section className="mt-4">
-        <div className="flex flex-col gap-2 sm:mb-2">
+        <div className="mb-3 flex flex-col gap-2">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold tracking-tight text-foreground">
               Chapters:

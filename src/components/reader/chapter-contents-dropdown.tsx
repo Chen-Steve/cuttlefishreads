@@ -111,11 +111,14 @@ export function ChapterContentsDropdown({
                   {chapter.title || `Chapter ${chapter.number}`}
                 </span>
                 {chapter.locked ? (
-                  <Lock
-                    className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400"
-                    strokeWidth={1.75}
-                    aria-label="Locked"
-                  />
+                  <>
+                    <span className="sr-only">Locked</span>
+                    <Lock
+                      className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400"
+                      strokeWidth={1.75}
+                      aria-hidden
+                    />
+                  </>
                 ) : null}
               </Link>
             );

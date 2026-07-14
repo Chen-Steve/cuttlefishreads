@@ -81,6 +81,7 @@ export function TranslatorNote({
                 >
                   <Coffee className="size-3.5" strokeWidth={2} aria-hidden />
                   Ko-fi
+                  <span className="sr-only"> (opens in a new tab)</span>
                 </a>
               )}
               {patreonUrl && (
@@ -92,6 +93,7 @@ export function TranslatorNote({
                 >
                   <Heart className="size-3.5" strokeWidth={2} aria-hidden />
                   Patreon
+                  <span className="sr-only"> (opens in a new tab)</span>
                 </a>
               )}
             </div>

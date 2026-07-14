@@ -480,8 +480,10 @@ export async function getUserBookmarkedNovels(
 }
 
 export async function getUserCreatedNovels(userId: string): Promise<Novel[]> {
-  const supabase = createClient(await cookies());
-  const { data, error } = await supabase
+  // Use the admin client so chapters(count) isn't zeroed out by RLS
+  // (public chapter reads go through the service role elsewhere too).
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from("novels")
     .select(NOVEL_LIST_COLUMNS)
     .eq("publisher_id", userId)
@@ -492,7 +494,7 @@ export async function getUserCreatedNovels(userId: string): Promise<Novel[]> {
     return [];
   }
 
-  return (data ?? []).map((row) => mapNovel(row as DbNovel));
+  return ((data ?? []) as DbNovel[]).map(mapNovel);
 }
 
 export async function getChapters(slug: string): Promise<Chapter[]> {

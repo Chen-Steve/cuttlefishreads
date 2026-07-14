@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Check, ChevronDown, Minus, Plus, RotateCcw, Type } from "lucide-react";
 
 import { useReaderSettings } from "@/hooks/use-reader-settings";
@@ -15,6 +21,14 @@ import {
 } from "@/lib/reader-settings";
 import { cn } from "@/lib/utils";
 
+function getFocusable(container: HTMLElement) {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((el) => !el.hasAttribute("disabled") && el.tabIndex !== -1);
+}
+
 export function ReaderSettingsPanel({
   placement = "down",
 }: {
@@ -22,31 +36,81 @@ export function ReaderSettingsPanel({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const dialogId = useId();
   const titleId = useId();
+  const sizeLabelId = useId();
+  const fontLabelId = useId();
+  const lineLabelId = useId();
+  const paragraphLabelId = useId();
+  const backgroundLabelId = useId();
   const { settings, updateSettings, resetSettings } = useReaderSettings();
 
   useEffect(() => {
     if (!open) return;
+
+    const panel = panelRef.current;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+
+    // Move focus into the panel once it mounts.
+    requestAnimationFrame(() => {
+      const focusable = panel ? getFocusable(panel) : [];
+      (focusable[0] ?? panel)?.focus();
+    });
+
     function onClickOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
+
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setOpen(false);
+        return;
+      }
+      if (e.key !== "Tab" || !panel) return;
+
+      const focusable = getFocusable(panel);
+      if (focusable.length === 0) {
+        e.preventDefault();
+        panel.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
+
     document.addEventListener("mousedown", onClickOutside);
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("mousedown", onClickOutside);
       document.removeEventListener("keydown", onKeyDown);
+      // Restore focus to the trigger when the panel closes.
+      if (previouslyFocused && document.contains(previouslyFocused)) {
+        previouslyFocused.focus();
+      } else {
+        triggerRef.current?.focus();
+      }
     };
   }, [open]);
 
   return (
     <div ref={ref} className="relative justify-self-center">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="dialog"
@@ -61,11 +125,14 @@ export function ReaderSettingsPanel({
 
       {open ? (
         <div
+          ref={panelRef}
           role="dialog"
+          aria-modal="true"
           id={dialogId}
           aria-labelledby={titleId}
+          tabIndex={-1}
           className={cn(
-            "absolute left-1/2 z-30 w-[min(17.5rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-border bg-surface p-2.5 shadow-md",
+            "absolute left-1/2 z-30 w-[min(17.5rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-border bg-surface p-2.5 shadow-md outline-none",
             placement === "up" ? "bottom-full mb-1.5" : "top-full mt-1.5",
           )}
         >
@@ -88,8 +155,9 @@ export function ReaderSettingsPanel({
           </div>
 
           <div className="divide-y divide-border/60">
-            <SettingRow label="Size">
+            <SettingRow label="Size" labelId={sizeLabelId}>
               <Stepper
+                labelledBy={sizeLabelId}
                 ariaLabel="Font size"
                 value={settings.fontSize}
                 display={`${settings.fontSize}px`}
@@ -98,15 +166,17 @@ export function ReaderSettingsPanel({
               />
             </SettingRow>
 
-            <SettingRow label="Font">
+            <SettingRow label="Font" labelId={fontLabelId}>
               <FontSelect
+                labelledBy={fontLabelId}
                 value={settings.fontFamily}
                 onChange={(fontFamily) => updateSettings({ fontFamily })}
               />
             </SettingRow>
 
-            <SettingRow label="Line">
+            <SettingRow label="Line" labelId={lineLabelId}>
               <Stepper
+                labelledBy={lineLabelId}
                 ariaLabel="Line spacing"
                 value={settings.lineSpacing}
                 display={settings.lineSpacing.toFixed(1)}
@@ -115,8 +185,9 @@ export function ReaderSettingsPanel({
               />
             </SettingRow>
 
-            <SettingRow label="Paragraph">
+            <SettingRow label="Paragraph" labelId={paragraphLabelId}>
               <Stepper
+                labelledBy={paragraphLabelId}
                 ariaLabel="Paragraph spacing"
                 value={settings.paragraphSpacing}
                 display={settings.paragraphSpacing.toFixed(2)}
@@ -128,9 +199,15 @@ export function ReaderSettingsPanel({
             </SettingRow>
 
             <div className="py-2">
+              <p
+                id={backgroundLabelId}
+                className="mb-1.5 text-xs font-medium text-muted"
+              >
+                Background
+              </p>
               <div
                 role="group"
-                aria-label="Background color"
+                aria-labelledby={backgroundLabelId}
                 className="flex items-center justify-between gap-1"
               >
                 {BACKGROUND_OPTIONS.map((option) => {
@@ -181,26 +258,32 @@ export function ReaderSettingsPanel({
 
 function SettingRow({
   label,
+  labelId,
   children,
 }: {
   label: string;
+  labelId: string;
   children: ReactNode;
 }) {
   return (
     <div className="flex items-center justify-between gap-2 py-1.5">
-      <span className="text-xs font-medium text-muted">{label}</span>
+      <span id={labelId} className="text-xs font-medium text-muted">
+        {label}
+      </span>
       {children}
     </div>
   );
 }
 
 function Stepper({
+  labelledBy,
   ariaLabel,
   value,
   display,
   range,
   onChange,
 }: {
+  labelledBy: string;
   ariaLabel: string;
   value: number;
   display: string;
@@ -214,6 +297,7 @@ function Stepper({
   return (
     <div
       role="group"
+      aria-labelledby={labelledBy}
       aria-label={ariaLabel}
       className="inline-flex h-7 items-center overflow-hidden rounded-lg border border-border bg-background"
     >
@@ -222,7 +306,7 @@ function Stepper({
         aria-label={`Decrease ${ariaLabel.toLowerCase()}`}
         disabled={value <= range.min}
         onClick={() => step(-1)}
-        className="inline-flex h-full w-7 items-center justify-center text-foreground transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:text-muted/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+        className="inline-flex h-full w-7 items-center justify-center text-foreground transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:text-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
       >
         <Minus className="size-3" strokeWidth={2} aria-hidden />
       </button>
@@ -237,7 +321,7 @@ function Stepper({
         aria-label={`Increase ${ariaLabel.toLowerCase()}`}
         disabled={value >= range.max}
         onClick={() => step(1)}
-        className="inline-flex h-full w-7 items-center justify-center text-foreground transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:text-muted/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+        className="inline-flex h-full w-7 items-center justify-center text-foreground transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:text-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
       >
         <Plus className="size-3" strokeWidth={2} aria-hidden />
       </button>
@@ -246,16 +330,18 @@ function Stepper({
 }
 
 function FontSelect({
+  labelledBy,
   value,
   onChange,
 }: {
+  labelledBy: string;
   value: ReaderFontFamily;
   onChange: (value: ReaderFontFamily) => void;
 }) {
   return (
     <div className="relative">
       <select
-        aria-label="Font type"
+        aria-labelledby={labelledBy}
         value={value}
         onChange={(e) => onChange(e.target.value as ReaderFontFamily)}
         className="h-7 w-36 appearance-none rounded-lg border border-border bg-background pr-6 pl-2 text-xs text-foreground transition-colors hover:border-accent/60 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"

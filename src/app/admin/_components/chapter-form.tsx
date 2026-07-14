@@ -112,7 +112,7 @@ export function ChapterForm({
       : "Publish chapter";
 
   const submitButtonClass =
-    "inline-flex h-11 shrink-0 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50";
+    "inline-flex h-11 shrink-0 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50";
 
   const cardClass =
     "flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5 sm:p-6";

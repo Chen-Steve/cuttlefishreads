@@ -111,6 +111,7 @@ export function CommentForm({
                   disabled={pending}
                   aria-haspopup="menu"
                   aria-expanded={chapterMenuOpen}
+                  aria-label="Comment scope"
                   className="inline-flex h-9 w-24 max-w-full items-center justify-between gap-1 rounded-xl px-2 text-sm font-medium leading-none text-muted transition-colors hover:bg-background hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
                 >
                   <span className="truncate">
@@ -172,7 +173,7 @@ export function CommentForm({
           <button
             type="submit"
             disabled={pending || !body.trim()}
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             <MessageSquare className="size-4" strokeWidth={1.75} aria-hidden />
             {pending ? "Posting…" : "Post comment"}
@@ -180,7 +181,7 @@ export function CommentForm({
         ) : (
           <Link
             href="/login"
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             <LogIn className="size-4" strokeWidth={1.75} aria-hidden />
             Sign in to comment

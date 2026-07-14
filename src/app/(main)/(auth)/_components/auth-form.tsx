@@ -22,6 +22,8 @@ function PasswordInput({
   placeholder,
   value,
   onChange,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
 }: {
   id: string;
   name: string;
@@ -29,6 +31,8 @@ function PasswordInput({
   placeholder?: string;
   value: string;
   onChange: (value: string) => void;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }) {
   const [visible, setVisible] = useState(false);
 
@@ -42,7 +46,9 @@ function PasswordInput({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-11 w-full rounded-xl border border-border bg-background px-3.5 pr-11 text-base text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
+        className="h-11 w-full rounded-xl border border-border bg-background px-3.5 pr-11 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/25"
       />
       <button
         type="button"
@@ -100,6 +106,7 @@ export function AuthForm({
   hiddenFields,
   googleAction,
   googleRedirectTo,
+  showLegalNotice = false,
 }: {
   title: string;
   subtitle: string;
@@ -112,6 +119,8 @@ export function AuthForm({
   hiddenFields?: Record<string, string>;
   googleAction?: (redirectTo?: string) => Promise<void>;
   googleRedirectTo?: string;
+  /** Show age / Terms acceptance line (signup). */
+  showLegalNotice?: boolean;
 }) {
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
     action,
@@ -165,6 +174,14 @@ export function AuthForm({
                   placeholder={field.placeholder}
                   value={values[field.name] ?? ""}
                   onChange={(v) => setField(field.name, v)}
+                  aria-invalid={state.error ? true : undefined}
+                  aria-describedby={
+                    state.error
+                      ? "auth-form-error"
+                      : state.message
+                        ? "auth-form-status"
+                        : undefined
+                  }
                 />
               ) : (
                 <input
@@ -175,7 +192,15 @@ export function AuthForm({
                   placeholder={field.placeholder}
                   value={values[field.name] ?? ""}
                   onChange={(e) => setField(field.name, e.target.value)}
-                  className="h-11 rounded-xl border border-border bg-background px-3.5 text-base text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25"
+                  aria-invalid={state.error ? true : undefined}
+                  aria-describedby={
+                    state.error
+                      ? "auth-form-error"
+                      : state.message
+                        ? "auth-form-status"
+                        : undefined
+                  }
+                  className="h-11 rounded-xl border border-border bg-background px-3.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/25"
                 />
               )}
             </div>
@@ -183,6 +208,7 @@ export function AuthForm({
 
           {state.error ? (
             <p
+              id="auth-form-error"
               role="alert"
               className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400"
             >
@@ -192,6 +218,7 @@ export function AuthForm({
 
           {state.message ? (
             <p
+              id="auth-form-status"
               role="status"
               className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-sm text-emerald-700 dark:text-emerald-400"
             >
@@ -202,7 +229,7 @@ export function AuthForm({
           <button
             type="submit"
             disabled={pending}
-            className="mt-2 inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-2 inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending ? "Please wait…" : submitLabel}
           </button>
@@ -226,6 +253,34 @@ export function AuthForm({
               </button>
             </form>
           </>
+        ) : null}
+
+        {showLegalNotice ? (
+          <p className="mt-4 text-center text-xs leading-relaxed text-muted">
+            By creating an account you confirm you are at least 18 and agree to
+            our{" "}
+            <Link
+              href="/terms"
+              className="font-medium text-accent underline-offset-2 hover:underline"
+            >
+              Terms
+            </Link>
+            ,{" "}
+            <Link
+              href="/privacy"
+              className="font-medium text-accent underline-offset-2 hover:underline"
+            >
+              Privacy Policy
+            </Link>
+            , and{" "}
+            <Link
+              href="/guidelines"
+              className="font-medium text-accent underline-offset-2 hover:underline"
+            >
+              Community Guidelines
+            </Link>
+            .
+          </p>
         ) : null}
 
       <p className="mt-6 text-center text-sm text-muted">

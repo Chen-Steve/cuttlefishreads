@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
 import { publicPageMetadata } from "@/lib/seo";
 import { SITE } from "@/lib/constants";
@@ -17,7 +19,7 @@ export default function PrivacyPage() {
           Privacy Policy
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Last updated: June 6, 2026
+          Last updated: July 14, 2026
         </p>
 
         <Section title="1. Introduction">
@@ -30,7 +32,14 @@ export default function PrivacyPage() {
           </p>
           <p>
             Please read this policy carefully. If you disagree with its terms,
-            please discontinue use of the site.
+            please discontinue use of the site. Our{" "}
+            <Link
+              href="/terms"
+              className="text-accent underline-offset-2 hover:underline"
+            >
+              Terms of Service
+            </Link>{" "}
+            also apply to your use of {SITE.name}.
           </p>
         </Section>
 
@@ -43,7 +52,8 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong>Profile data:</strong> Information you voluntarily provide
-              when updating your profile, such as a display name.
+              when updating your profile, such as a display name or public
+              translator details.
             </li>
             <li>
               <strong>Reading activity:</strong> Progress data (e.g., chapters
@@ -51,14 +61,23 @@ export default function PrivacyPage() {
               devices.
             </li>
             <li>
-              <strong>Usage data:</strong> Standard server logs including IP
-              address, browser type, pages visited, and referring URLs. This data
-              is used solely for site security and performance.
+              <strong>User content:</strong> Comments and other materials you
+              choose to post on the Service.
             </li>
             <li>
-              <strong>Payment data:</strong> If you purchase cookies, payment is
-              processed by our third-party payment provider. We do not store your
-              full card details.
+              <strong>Usage data:</strong> Standard server logs including IP
+              address, browser type, pages visited, and referring URLs. This data
+              is used for site security, abuse prevention, and performance.
+            </li>
+            <li>
+              <strong>Payment data:</strong> If you purchase Cookies, payment is
+              processed by our third-party payment providers (such as PayPal or
+              Stripe). We receive limited transaction details needed to credit
+              your account. We do not store your full card details.
+            </li>
+            <li>
+              <strong>Communications:</strong> Messages you send us for support
+              or applications (for example, translator applications).
             </li>
           </ul>
         </Section>
@@ -68,7 +87,9 @@ export default function PrivacyPage() {
           <ul>
             <li>Create and manage your account.</li>
             <li>Save and synchronise your reading progress and library.</li>
-            <li>Process cookie purchases and maintain your balance.</li>
+            <li>Process Cookie purchases and maintain your balance.</li>
+            <li>Display public profile information you choose to share.</li>
+            <li>Moderate comments and enforce our Community Guidelines.</li>
             <li>Respond to your inquiries and support requests.</li>
             <li>
               Send transactional emails (e.g., password reset, email
@@ -88,9 +109,14 @@ export default function PrivacyPage() {
           <ul>
             <li>
               <strong>Service providers:</strong> Trusted vendors (e.g., hosting,
-              authentication, payment processing) who assist in operating the
-              site. They are contractually obligated to keep your data
-              confidential.
+              authentication, payment processing, analytics) who assist in
+              operating the site. They are obligated to use your data only to
+              provide services to us.
+            </li>
+            <li>
+              <strong>Public display:</strong> Username and content you post
+              publicly (such as comments or a public profile) are visible to
+              others.
             </li>
             <li>
               <strong>Legal requirements:</strong> We may disclose information if
@@ -100,12 +126,28 @@ export default function PrivacyPage() {
           </ul>
         </Section>
 
-        <Section title="5. Cookies">
+        <Section title="5. Cookies and Similar Technologies">
           <p>
-            We use cookies and similar tracking technologies to maintain your
-            session (login state) and remember preferences. You can instruct your
-            browser to refuse all cookies; however, some parts of the site may
-            not function correctly without them.
+            We use cookies and similar technologies for essential site functions
+            and limited analytics:
+          </p>
+          <ul>
+            <li>
+              <strong>Essential cookies:</strong> Keep you signed in, protect
+              against abuse, and remember preferences needed for the Service to
+              work.
+            </li>
+            <li>
+              <strong>Analytics:</strong> We may use privacy-conscious analytics
+              (for example, aggregated page-view statistics) to understand which
+              novels and pages are popular and to improve the Service.
+            </li>
+          </ul>
+          <p>
+            You can instruct your browser to refuse or delete cookies; however,
+            some parts of the site (including signing in) may not function
+            correctly without essential cookies. We do not use cookies to sell
+            your personal information.
           </p>
         </Section>
 
@@ -114,7 +156,9 @@ export default function PrivacyPage() {
             We retain your personal data for as long as your account is active or
             as needed to provide services. You may request deletion of your
             account and associated data by contacting us. We will fulfil such
-            requests within a reasonable timeframe, subject to legal obligations.
+            requests within a reasonable timeframe, subject to legal obligations,
+            dispute resolution, and records we must keep for security or
+            accounting (for example, purchase history).
           </p>
         </Section>
 
@@ -129,10 +173,10 @@ export default function PrivacyPage() {
 
         <Section title="8. Children's Privacy">
           <p>
-            {SITE.name} is not directed to children under the age of 13. We do
-            not knowingly collect personal information from children under 13. If
-            you believe a child has provided us with personal data, please contact
-            us and we will delete it promptly.
+            {SITE.name} is intended for adults. You must be at least 18 years old
+            to use the Service. We do not knowingly collect personal information
+            from anyone under 18. If you believe a minor has provided us with
+            personal data, please contact us and we will delete it promptly.
           </p>
         </Section>
 
@@ -148,7 +192,16 @@ export default function PrivacyPage() {
         <Section title="10. Contact Us">
           <p>
             If you have questions or concerns about this Privacy Policy, please
-            contact us through the site&apos;s contact channels.
+            contact us through our{" "}
+            <a
+              href={SITE.discordUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent underline-offset-2 hover:underline"
+            >
+              Discord community
+            </a>
+            .
           </p>
         </Section>
       </article>
@@ -161,7 +214,7 @@ function Section({
   children,
 }: {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section className="mt-8">

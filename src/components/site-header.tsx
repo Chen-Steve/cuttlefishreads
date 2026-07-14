@@ -200,6 +200,7 @@ function AccountDropdown({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-label={username ? `Account menu for ${username}` : "Account menu"}
         className={navIconLinkClass}
       >
         <User className="size-5 shrink-0 sm:size-4" strokeWidth={1.75} aria-hidden />
@@ -353,7 +354,7 @@ export function SiteHeader({
             className={cn(navIconLinkClass, "sm:hidden")}
           >
             <span className={navIconWrapperClass}>
-              <Search className="size-5" strokeWidth={1.75} aria-hidden />
+              <BookOpen className="size-5" strokeWidth={1.75} aria-hidden />
             </span>
           </Link>
 

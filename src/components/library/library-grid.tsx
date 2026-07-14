@@ -39,7 +39,7 @@ function SelectableNovelCard({
       <span
         className={`absolute right-3 top-3 z-10 flex size-6 items-center justify-center rounded-md border transition-colors ${
           selected
-            ? "border-accent bg-accent text-white"
+            ? "border-accent bg-accent text-accent-foreground"
             : "border-border bg-background/90 text-transparent group-hover:border-accent/50"
         }`}
         aria-hidden
