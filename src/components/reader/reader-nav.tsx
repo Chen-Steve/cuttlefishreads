@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { Chapter, ChapterSummary } from "@/types";
 import { cn } from "@/lib/utils";
 import { ChapterContentsDropdown } from "./chapter-contents-dropdown";
+import { ReaderSettingsPanel } from "./reader-settings-panel";
 
 export function ReaderNav({
   slug,
@@ -11,6 +12,7 @@ export function ReaderNav({
   chapters,
   currentChapter,
   menuPlacement = "down",
+  showSettings = false,
 }: {
   slug: string;
   previous?: Chapter;
@@ -18,10 +20,16 @@ export function ReaderNav({
   chapters: ChapterSummary[];
   currentChapter: number;
   menuPlacement?: "up" | "down";
+  showSettings?: boolean;
 }) {
   return (
     <nav
-      className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3"
+      className={cn(
+        "grid items-center gap-2 sm:gap-3",
+        showSettings
+          ? "grid-cols-[1fr_auto_auto_1fr]"
+          : "grid-cols-[1fr_auto_1fr]",
+      )}
       aria-label="Chapter navigation"
     >
       <div className="justify-self-start">
@@ -39,6 +47,9 @@ export function ReaderNav({
           placement={menuPlacement}
         />
       </div>
+      {showSettings ? (
+        <ReaderSettingsPanel placement={menuPlacement} />
+      ) : null}
       <div className="justify-self-end">
         <ReaderLink
           href={next ? `/novels/${slug}/${next.number}` : undefined}

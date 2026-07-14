@@ -3,6 +3,7 @@ import Script from "next/script";
 import { GoogleAnalyticsPageViews } from "@/components/google-analytics-page-views";
 import { Toaster } from "@/components/ui/sonner";
 import { nationalPark } from "@/lib/fonts";
+import { readerFontVariables } from "@/lib/reader-fonts";
 import { SITE } from "@/lib/constants";
 import { GA_MEASUREMENT_ID } from "@/lib/google-analytics-id";
 import { siteUrl } from "@/lib/seo";
@@ -60,7 +61,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${nationalPark.className} ${nationalPark.variable} h-full antialiased`}
+      className={`${nationalPark.className} ${nationalPark.variable} ${readerFontVariables} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />

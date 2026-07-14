@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Coffee, Heart } from "lucide-react";
 
-import { renderMarkdownParagraphs, splitTextParagraphs } from "./chapter-content";
+import { renderMarkdownParagraphs, splitTextParagraphs } from "./chapter-markdown";
 
 function initials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);

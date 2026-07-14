@@ -173,11 +173,6 @@ export function ChapterForm({
               placeholder="Write the chapter here."
               className="min-h-[24rem]"
             />
-            <span className="text-xs text-muted">
-              Formatting shows as you type — use Ctrl+B, Ctrl+I, Ctrl+U or the
-              toolbar. Pasting from Word or Google Docs keeps bold, italic, and
-              underline.
-            </span>
           </div>
 
           <fieldset className="flex flex-col gap-2">

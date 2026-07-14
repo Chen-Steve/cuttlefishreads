@@ -102,6 +102,7 @@ export default async function ChapterReaderPage({
             next={next}
             chapters={chapters}
             currentChapter={chapterNumber}
+            showSettings
           />
         </div>
       </header>

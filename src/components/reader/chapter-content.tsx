@@ -1,48 +1,24 @@
-import { Fragment, type ReactNode } from "react";
+"use client";
 
-import {
-  INITIAL_INLINE_STYLE,
-  parseInlineMarkdown,
-  type InlineSegment,
-  type InlineStyle,
-} from "@/lib/inline-markdown";
+import { useReaderSettings } from "@/hooks/use-reader-settings";
+import { readerContentStyle } from "@/lib/reader-settings";
+import { cn } from "@/lib/utils";
 
-function renderSegments(segments: InlineSegment[]): ReactNode[] {
-  return segments.map((segment, index) => {
-    let node: ReactNode = segment.text;
-    if (segment.style.underline) node = <u>{node}</u>;
-    if (segment.style.italic) node = <em>{node}</em>;
-    if (segment.style.bold) node = <strong>{node}</strong>;
-    return <Fragment key={index}>{node}</Fragment>;
-  });
-}
-
-/**
- * Render a sequence of paragraphs, carrying bold/italic/underline state across
- * paragraph breaks so markers that open in one paragraph and close in a later
- * one still format correctly instead of showing up as literal `**` / `_`.
- */
-export function renderMarkdownParagraphs(paragraphs: string[]): ReactNode[][] {
-  let state: InlineStyle = INITIAL_INLINE_STYLE;
-  return paragraphs.map((paragraph) => {
-    const parsed = parseInlineMarkdown(paragraph, state);
-    state = parsed.state;
-    return renderSegments(parsed.segments);
-  });
-}
-
-export function splitTextParagraphs(text: string): string[] {
-  return text
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .split(/\n\n+/)
-    .map((paragraph) => paragraph.replace(/\s+$/, ""))
-    .filter((paragraph) => paragraph.trim().length > 0);
-}
+import { renderMarkdownParagraphs } from "./chapter-markdown";
 
 export function ChapterContent({ paragraphs }: { paragraphs: string[] }) {
+  const { settings } = useReaderSettings();
+  const style = readerContentStyle(settings);
+  const padded = settings.background !== "default";
+
   return (
-    <div className="space-y-5 text-base leading-7 text-foreground/90 sm:text-[1.05rem] sm:leading-8">
+    <div
+      className={cn(
+        "flex flex-col rounded-xl",
+        padded && "px-4 py-5 sm:px-6 sm:py-6",
+      )}
+      style={style}
+    >
       {renderMarkdownParagraphs(paragraphs).map((children, index) => (
         <p key={index}>{children}</p>
       ))}

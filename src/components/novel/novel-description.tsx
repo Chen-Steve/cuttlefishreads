@@ -5,7 +5,7 @@ import { useState } from "react";
 import {
   renderMarkdownParagraphs,
   splitTextParagraphs,
-} from "@/components/reader/chapter-content";
+} from "@/components/reader/chapter-markdown";
 
 const COLLAPSED_DESCRIPTION_LENGTH = 400;
 
