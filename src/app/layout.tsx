@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Suspense } from "react";
 import { GoogleAnalyticsPageViews } from "@/components/google-analytics-page-views";
 import { Toaster } from "@/components/ui/sonner";
 import { nationalPark } from "@/lib/fonts";
@@ -80,9 +79,7 @@ export default function RootLayout({
         `}
       </Script>
       <body className="flex min-h-full flex-col bg-background text-foreground">
-        <Suspense fallback={null}>
-          <GoogleAnalyticsPageViews />
-        </Suspense>
+        <GoogleAnalyticsPageViews />
         {children}
         <Toaster />
       </body>

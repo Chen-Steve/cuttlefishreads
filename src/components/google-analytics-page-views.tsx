@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 import { GA_MEASUREMENT_ID } from "@/lib/google-analytics-id";
 
@@ -17,7 +17,6 @@ declare global {
  */
 export function GoogleAnalyticsPageViews() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const isFirstPath = useRef(true);
 
   useEffect(() => {
@@ -29,13 +28,10 @@ export function GoogleAnalyticsPageViews() {
       return;
     }
 
-    const query = searchParams.toString();
-    const pagePath = query ? `${pathname}?${query}` : pathname;
-
     window.gtag("config", GA_MEASUREMENT_ID, {
-      page_path: pagePath,
+      page_path: pathname,
     });
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   return null;
 }

@@ -8,6 +8,7 @@ import { getAdminAccess } from "@/lib/access";
 import {
   getAllTimeViewsBySlug,
   getGoogleAnalyticsDashboard,
+  isGoogleAnalyticsConfigured,
   type GoogleAnalyticsDashboard,
   type ViewsMode,
 } from "@/lib/google-analytics";
@@ -70,15 +71,21 @@ export default async function DashboardPage({
   const novelIds = rows.map((n) => n.id);
   const slugs = rows.map((n) => n.slug);
 
-  // Aggregate in bulk. Bookmarks are keyed by novel_id; chapter_unlocks by
-  // novel_slug. Views come from GA4 only — all-time totals use the same
-  // query as the public novel page so the numbers match.
+  // Views: all-time totals always come from getAllTimeViewsBySlug (same as
+  // public novel pages). Chart reports are only fetched for daily/monthly modes.
+  const emptyAnalytics: GoogleAnalyticsDashboard = {
+    configured: isGoogleAnalyticsConfigured(),
+    error: false,
+    dailyViews: [],
+    monthlyViews: [],
+  };
+
   const [bookmarksRes, unlocksRes, googleAnalytics, allTimeViewsBySlug] =
     novelIds.length === 0
       ? [
           { data: [] },
           { data: [] },
-          await getGoogleAnalyticsDashboard([], mode),
+          emptyAnalytics,
           {} as Record<string, number>,
         ]
       : await Promise.all([
@@ -90,7 +97,9 @@ export default async function DashboardPage({
             )
             .in("novel_slug", slugs)
             .order("created_at", { ascending: false }),
-          getGoogleAnalyticsDashboard(slugs, mode),
+          mode === "all"
+            ? Promise.resolve(emptyAnalytics)
+            : getGoogleAnalyticsDashboard(slugs, mode),
           getAllTimeViewsBySlug(slugs),
         ]);
 
