@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 
 import type { Genre, Language } from "@/lib/constants";
+import { getAllTimeViewsBySlug } from "@/lib/google-analytics";
 import type {
   Chapter,
   ChapterSummary,
@@ -260,51 +261,14 @@ export async function getNovel(slug: string): Promise<Novel | undefined> {
 }
 
 export async function getFeaturedNovels(): Promise<Novel[]> {
-  const admin = createAdminClient();
-  const { data: viewRows, error: viewsError } = await admin
-    .from("novel_views")
-    .select("novel_id");
+  const novels = await getNovels();
+  if (novels.length === 0) return [];
 
-  if (viewsError) {
-    console.error("getFeaturedNovels views:", viewsError);
-    const novels = await getNovels();
-    return novels.slice(0, 5);
-  }
+  const viewsBySlug = await getAllTimeViewsBySlug(novels.map((n) => n.slug));
 
-  const viewCounts = new Map<string, number>();
-  for (const row of (viewRows ?? []) as { novel_id: string }[]) {
-    viewCounts.set(row.novel_id, (viewCounts.get(row.novel_id) ?? 0) + 1);
-  }
-
-  const topIds = [...viewCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([id]) => id);
-
-  if (topIds.length === 0) {
-    const novels = await getNovels();
-    return novels.slice(0, 5);
-  }
-
-  const { data: rows, error } = await admin
-    .from("novels")
-    .select(NOVEL_LIST_COLUMNS)
-    .in("id", topIds);
-
-  if (error) {
-    console.error("getFeaturedNovels novels:", error);
-    const novels = await getNovels();
-    return novels.slice(0, 5);
-  }
-
-  const byId = new Map(
-    ((rows ?? []) as DbNovel[]).map((row) => [row.id, row]),
-  );
-
-  return topIds
-    .map((id) => byId.get(id))
-    .filter((row): row is DbNovel => row != null)
-    .map(mapNovel);
+  return [...novels]
+    .sort((a, b) => (viewsBySlug[b.slug] ?? 0) - (viewsBySlug[a.slug] ?? 0))
+    .slice(0, 5);
 }
 
 export async function getNewlyAddedNovels(): Promise<Novel[]> {
@@ -426,150 +390,6 @@ export async function getRecentlyUpdatedNovels(): Promise<RecentlyUpdatedNovel[]
     .sort(
       (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
-}
-
-// Records a unique view for a novel. The visitor key is the logged-in user id
-// when available, otherwise the anonymous cf_vid cookie (set in middleware).
-// The unique (novel_id, visitor_key) constraint dedupes repeat views, so this
-// is a no-op after the first view from a given visitor.
-export async function recordNovelView(slug: string): Promise<void> {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const { data: auth } = await supabase.auth.getClaims();
-  const userId = (auth?.claims?.sub as string | undefined) ?? null;
-  const visitorKey = userId ?? cookieStore.get("cf_vid")?.value ?? null;
-  if (!visitorKey) return;
-
-  const novel = await fetchNovelIdBySlug(slug);
-  if (!novel) return;
-
-  const admin = createAdminClient();
-  await admin
-    .from("novel_views")
-    .upsert(
-      { novel_id: novel.id, novel_slug: slug, visitor_key: visitorKey },
-      { onConflict: "novel_id,visitor_key", ignoreDuplicates: true },
-    );
-}
-
-export type MonthlyViewPoint = {
-  month: string;
-  byNovel: Record<string, number>;
-};
-
-/**
- * Returns new-reader counts grouped by month (since launch) broken down
- * per novel. Each point's `byNovel` maps novelId → count for that month.
- * `month` is formatted as "YYYY-MM".
- */
-export async function getMonthlyViews(
-  novelIds: string[],
-): Promise<MonthlyViewPoint[]> {
-  if (novelIds.length === 0) return [];
-
-  const LAUNCH_YEAR = 2026;
-  const LAUNCH_MONTH = 6; // June
-
-  const since = new Date(LAUNCH_YEAR, LAUNCH_MONTH - 1, 1);
-
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("novel_views")
-    .select("novel_id, created_at")
-    .in("novel_id", novelIds)
-    .gte("created_at", since.toISOString());
-
-  if (error) {
-    console.error("getMonthlyViews:", error);
-    return [];
-  }
-
-  // counts[month][novelId] = count
-  const counts = new Map<string, Record<string, number>>();
-  for (const row of (data ?? []) as { novel_id: string; created_at: string }[]) {
-    const d = new Date(row.created_at);
-    const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const byNovel = counts.get(month) ?? {};
-    byNovel[row.novel_id] = (byNovel[row.novel_id] ?? 0) + 1;
-    counts.set(month, byNovel);
-  }
-
-  // Fill every month from launch to now so gaps show as zero.
-  const points: MonthlyViewPoint[] = [];
-  const now = new Date();
-  const cursor = new Date(LAUNCH_YEAR, LAUNCH_MONTH - 1, 1);
-  while (
-    cursor.getFullYear() < now.getFullYear() ||
-    (cursor.getFullYear() === now.getFullYear() &&
-      cursor.getMonth() <= now.getMonth())
-  ) {
-    const month = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
-    points.push({ month, byNovel: counts.get(month) ?? {} });
-    cursor.setMonth(cursor.getMonth() + 1);
-  }
-  return points;
-}
-
-export type DailyViewPoint = { day: string; byNovel: Record<string, number> };
-
-/**
- * Returns new-reader counts for each day of the current calendar month,
- * broken down per novel. `day` is formatted as "YYYY-MM-DD".
- */
-export async function getDailyViews(
-  novelIds: string[],
-): Promise<DailyViewPoint[]> {
-  if (novelIds.length === 0) return [];
-
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("novel_views")
-    .select("novel_id, created_at")
-    .in("novel_id", novelIds)
-    .gte("created_at", monthStart.toISOString())
-    .lt("created_at", monthEnd.toISOString());
-
-  if (error) {
-    console.error("getDailyViews:", error);
-    return [];
-  }
-
-  const counts = new Map<string, Record<string, number>>();
-  for (const row of (data ?? []) as { novel_id: string; created_at: string }[]) {
-    const d = new Date(row.created_at);
-    const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const byNovel = counts.get(day) ?? {};
-    byNovel[row.novel_id] = (byNovel[row.novel_id] ?? 0) + 1;
-    counts.set(day, byNovel);
-  }
-
-  // Fill every day of the current month up to today.
-  const points: DailyViewPoint[] = [];
-  const today = now.getDate();
-  for (let d = 1; d <= today; d++) {
-    const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-    points.push({ day, byNovel: counts.get(day) ?? {} });
-  }
-  return points;
-}
-
-export async function getNovelViewCount(novelId: string): Promise<number> {
-  const admin = createAdminClient();
-  const { count, error } = await admin
-    .from("novel_views")
-    .select("*", { count: "exact", head: true })
-    .eq("novel_id", novelId);
-
-  if (error) {
-    console.error("getNovelViewCount:", error);
-    return 0;
-  }
-
-  return count ?? 0;
 }
 
 export async function getBookmarkedSlugs(): Promise<Set<string>> {

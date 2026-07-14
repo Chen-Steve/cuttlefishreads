@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Home } from "lucide-react";
 
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
 type NavLink = { href: string; label: string };
@@ -104,53 +105,59 @@ export function AdminNav({ isMasterAdmin }: { isMasterAdmin: boolean }) {
 
   return (
     <nav className="border-b border-border bg-surface">
-      <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-        <ScrollArrow
-          direction="left"
-          disabled={!canScrollLeft}
-          onClick={() => scrollTabs(-1)}
-        />
-        <ScrollArrow
-          direction="right"
-          disabled={!canScrollRight}
-          onClick={() => scrollTabs(1)}
-        />
+      <div className="relative mx-auto flex w-full max-w-6xl items-stretch px-4 sm:px-6 lg:px-8">
+        <div className="relative min-w-0 flex-1">
+          <ScrollArrow
+            direction="left"
+            disabled={!canScrollLeft}
+            onClick={() => scrollTabs(-1)}
+          />
+          <ScrollArrow
+            direction="right"
+            disabled={!canScrollRight}
+            onClick={() => scrollTabs(1)}
+          />
 
-        <div
-          ref={scrollRef}
-          className="flex items-center gap-1 overflow-x-hidden touch-pan-y pl-7 pr-7 sm:overflow-x-visible sm:px-0"
-        >
-          <Link
-            href="/"
-            className="mr-1 inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground sm:mr-2 sm:px-2.5"
+          <div
+            ref={scrollRef}
+            className="flex items-center gap-1 overflow-x-hidden touch-pan-y pl-7 pr-7 sm:overflow-x-visible sm:px-0"
           >
-            <Home className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
-            <span className="hidden sm:inline">Home</span>
-          </Link>
+            <Link
+              href="/"
+              className="mr-1 inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground sm:mr-2 sm:px-2.5"
+            >
+              <Home className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
+              <span className="hidden sm:inline">Home</span>
+            </Link>
 
-          <div className="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden />
+            <div className="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden />
 
-          {links.map((link) => {
-            const active =
-              link.href === "/admin"
-                ? pathname === "/admin"
-                : pathname.startsWith(link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                data-active={active ? "true" : undefined}
-                className={cn(
-                  "relative -mb-px shrink-0 whitespace-nowrap border-b-2 px-2.5 py-3 text-xs font-medium transition-colors sm:px-3 sm:py-3.5 sm:text-sm",
-                  active
-                    ? "border-accent text-foreground"
-                    : "border-transparent text-muted hover:text-foreground",
-                )}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
+            {links.map((link) => {
+              const active =
+                link.href === "/admin"
+                  ? pathname === "/admin"
+                  : pathname.startsWith(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  data-active={active ? "true" : undefined}
+                  className={cn(
+                    "relative -mb-px shrink-0 whitespace-nowrap border-b-2 px-2.5 py-3 text-xs font-medium transition-colors sm:px-3 sm:py-3.5 sm:text-sm",
+                    active
+                      ? "border-accent text-foreground"
+                      : "border-transparent text-muted hover:text-foreground",
+                  )}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center pl-2">
+          <ThemeToggle />
         </div>
       </div>
     </nav>

@@ -160,7 +160,7 @@ export function LibraryGrid({ novels }: { novels: Novel[] }) {
                 setConfirming(true);
               }}
               disabled={selectedCount === 0 || pending}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-background px-3 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-rose-200 dark:border-rose-500/30 bg-background px-3 text-sm font-semibold text-rose-600 dark:text-rose-400 transition-colors hover:bg-rose-50 dark:hover:bg-rose-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Trash2 className="size-3.5" strokeWidth={1.75} aria-hidden />
               Remove selected
@@ -220,7 +220,7 @@ export function LibraryGrid({ novels }: { novels: Novel[] }) {
       ) : null}
 
       {error ? (
-        <p role="alert" className="mb-4 text-sm text-red-600">
+        <p role="alert" className="mb-4 text-sm text-red-600 dark:text-red-400">
           {error}
         </p>
       ) : null}

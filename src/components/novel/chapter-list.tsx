@@ -105,14 +105,17 @@ export function ChapterList({
           <li key={chapter.id}>
             <Link
               href={`/novels/${slug}/${chapter.number}`}
-              className="group flex items-center gap-4 px-4 py-3 outline-offset-2 transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-accent"
+              className="group flex items-center gap-3 px-4 py-3 outline-offset-2 transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-accent"
             >
-              <span className="w-8 shrink-0 text-sm font-semibold tabular-nums text-accent">
-                {chapter.number}
-              </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-foreground">
-                  {chapter.title || `Chapter ${chapter.number}`}
+                  Chapter {chapter.number}
+                  {chapter.title ? (
+                    <span className="font-normal text-muted">
+                      {" "}
+                      · {chapter.title}
+                    </span>
+                  ) : null}
                 </span>
                 {!(chapter.locked && isScheduledUnlock(chapter.unlockAt)) ? (
                   <span className="block text-xs text-muted">
@@ -121,7 +124,7 @@ export function ChapterList({
                 ) : null}
               </span>
               {chapter.adminAccess ? (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-700">
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-400">
                   <ShieldCheck className="size-3" strokeWidth={2} aria-hidden />
                   Admin access
                 </span>

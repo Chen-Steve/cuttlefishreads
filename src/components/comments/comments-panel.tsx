@@ -111,7 +111,7 @@ export function CommentsPanel({
             {pending ? "Loading…" : "Load more comments"}
           </button>
           {error ? (
-            <p role="alert" className="text-xs text-red-600">
+            <p role="alert" className="text-xs text-red-600 dark:text-red-400">
               {error}
             </p>
           ) : null}

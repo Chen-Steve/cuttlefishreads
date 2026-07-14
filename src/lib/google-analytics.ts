@@ -62,7 +62,11 @@ function escapeRegex(value: string): string {
 }
 
 function novelPathFilter(slugs: string[]): FilterExpression {
-  const alternatives = slugs.map(escapeRegex).join("|");
+  // Longest-first so "cool" does not steal paths belonging to "cooler".
+  const alternatives = [...slugs]
+    .sort((a, b) => b.length - a.length)
+    .map(escapeRegex)
+    .join("|");
   return {
     filter: {
       fieldName: "pagePath",
@@ -70,7 +74,9 @@ function novelPathFilter(slugs: string[]): FilterExpression {
         matchType:
           protos.google.analytics.data.v1beta.Filter.StringFilter.MatchType
             .FULL_REGEXP,
-        value: `^/novels/(${alternatives})(/.*)?$`,
+        // Novel detail page + numeric chapter pages only
+        // e.g. /novels/my-novel and /novels/my-novel/12
+        value: `^/novels/(${alternatives})(/\\d+)?/?$`,
         caseSensitive: true,
       },
     },
@@ -86,11 +92,12 @@ function metricValue(
 
 /** Maps a pagePath like "/novels/my-novel/12" back to its novel slug. */
 function slugForPath(path: string, slugsByLength: string[]): string | null {
+  const normalized = path.replace(/\/+$/, "") || "/";
   return (
-    slugsByLength.find(
-      (slug) =>
-        path === `/novels/${slug}` || path.startsWith(`/novels/${slug}/`),
-    ) ?? null
+    slugsByLength.find((slug) => {
+      if (normalized === `/novels/${slug}`) return true;
+      return new RegExp(`^/novels/${escapeRegex(slug)}/\\d+$`).test(normalized);
+    }) ?? null
   );
 }
 
@@ -219,25 +226,15 @@ export async function getGoogleAnalyticsDashboard(
 }
 
 /**
- * All-time novel + chapter page views for a single novel (GA4 screenPageViews).
- * Cached for an hour so reader pages don't hit the Data API on every request.
+ * All-time novel detail + chapter page views, keyed by slug, in ONE GA
+ * request (GA4 caps concurrent Data API requests, so never fan out per slug).
+ * Throws on failure so errors are never cached as zero counts.
  */
-export async function getNovelPageViews(slug: string): Promise<number> {
-  if (!slug || !getConfiguration()) return 0;
-
-  return unstable_cache(
-    async () => fetchNovelPageViews(slug),
-    ["ga4-novel-page-views", slug],
-    {
-      revalidate: NOVEL_VIEW_COUNT_REVALIDATE_SECONDS,
-      tags: [`ga4-novel-views:${slug}`],
-    },
-  )();
-}
-
-async function fetchNovelPageViews(slug: string): Promise<number> {
+async function fetchAllTimeViewsBySlug(
+  slugs: string[],
+): Promise<Record<string, number>> {
   const config = getConfiguration();
-  if (!config) return 0;
+  if (!config || slugs.length === 0) return {};
 
   const client = new BetaAnalyticsDataClient({
     credentials: {
@@ -249,20 +246,67 @@ async function fetchNovelPageViews(slug: string): Promise<number> {
   try {
     const [report] = await client.runReport({
       property: `properties/${config.propertyId}`,
-      dimensionFilter: novelPathFilter([slug]),
+      dimensionFilter: novelPathFilter(slugs),
       metrics: [{ name: "screenPageViews" }],
+      dimensions: [{ name: "pagePath" }],
       dateRanges: [{ startDate: LAUNCH_DATE, endDate: "today" }],
-      limit: 1,
+      limit: 100_000,
     });
 
-    return metricValue(report.rows?.[0] ?? null, 0);
-  } catch (error) {
-    console.error(
-      `[google-analytics] Unable to load page views for ${slug}:`,
-      error,
-    );
-    return 0;
+    const slugsByLength = [...slugs].sort((a, b) => b.length - a.length);
+    const totals: Record<string, number> = {};
+    for (const slug of slugs) totals[slug] = 0;
+    for (const row of report.rows ?? []) {
+      const slug = slugForPath(
+        row.dimensionValues?.[0]?.value ?? "",
+        slugsByLength,
+      );
+      if (!slug) continue;
+      totals[slug] = (totals[slug] ?? 0) + metricValue(row, 0);
+    }
+    return totals;
   } finally {
     await client.close();
   }
+}
+
+/**
+ * All-time views for many novels — single batched GA request, cached for an
+ * hour per slug set. Both the admin dashboard and public novel pages resolve
+ * through this, so they always run the identical GA query.
+ */
+export async function getAllTimeViewsBySlug(
+  slugs: string[],
+): Promise<Record<string, number>> {
+  if (!getConfiguration() || slugs.length === 0) return {};
+
+  const unique = [...new Set(slugs.filter(Boolean))].sort();
+
+  try {
+    return await unstable_cache(
+      () => fetchAllTimeViewsBySlug(unique),
+      // Bump the version whenever the query shape changes to bust stale counts.
+      ["ga4-all-time-views-v5", unique.join("|")],
+      {
+        revalidate: NOVEL_VIEW_COUNT_REVALIDATE_SECONDS,
+        tags: unique.map((slug) => `ga4-novel-views:${slug}`),
+      },
+    )();
+  } catch (error) {
+    console.error(
+      "[google-analytics] Unable to load all-time views by slug:",
+      error,
+    );
+    return {};
+  }
+}
+
+/**
+ * All-time novel detail + chapter page views for a single novel
+ * (GA4 screenPageViews for `/novels/{slug}` and `/novels/{slug}/{n}`).
+ */
+export async function getNovelPageViews(slug: string): Promise<number> {
+  if (!slug) return 0;
+  const totals = await getAllTimeViewsBySlug([slug]);
+  return totals[slug] ?? 0;
 }

@@ -184,7 +184,7 @@ export function CoinPackages({
       {error && (
         <p
           role="alert"
-          className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600"
+          className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400"
         >
           {error}
         </p>
@@ -192,7 +192,7 @@ export function CoinPackages({
       {success && (
         <p
           role="status"
-          className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-sm text-emerald-700"
+          className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-sm text-emerald-700 dark:text-emerald-400"
         >
           {success}
         </p>
@@ -289,12 +289,12 @@ export function CoinPackages({
             {typeof customCoins === "number" &&
               customCoins > 0 &&
               customCoins < MIN_COINS && (
-                <p className="text-xs text-red-500">
+                <p className="text-xs text-red-500 dark:text-red-400">
                   Minimum is {MIN_COINS} cookies.
                 </p>
               )}
             {typeof customCoins === "number" && customCoins > MAX_COINS && (
-              <p className="text-xs text-red-500">
+              <p className="text-xs text-red-500 dark:text-red-400">
                 Maximum is {MAX_COINS.toLocaleString()} cookies.
               </p>
             )}

@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { Suspense } from "react";
+import { GoogleAnalyticsPageViews } from "@/components/google-analytics-page-views";
 import { Toaster } from "@/components/ui/sonner";
 import { nationalPark } from "@/lib/fonts";
 import { SITE } from "@/lib/constants";
+import { GA_MEASUREMENT_ID } from "@/lib/google-analytics-id";
 import { siteUrl } from "@/lib/seo";
+import { themeInitScript } from "@/lib/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -56,11 +60,15 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${nationalPark.className} ${nationalPark.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <Script
         async
-        src="https://www.googletagmanager.com/gtag/js?id=G-LJ3SXGLR01"
+        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
         strategy="afterInteractive"
       />
       <Script id="google-analytics" strategy="afterInteractive">
@@ -68,10 +76,13 @@ export default function RootLayout({
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', 'G-LJ3SXGLR01');
+          gtag('config', '${GA_MEASUREMENT_ID}');
         `}
       </Script>
       <body className="flex min-h-full flex-col bg-background text-foreground">
+        <Suspense fallback={null}>
+          <GoogleAnalyticsPageViews />
+        </Suspense>
         {children}
         <Toaster />
       </body>

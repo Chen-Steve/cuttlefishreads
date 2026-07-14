@@ -80,7 +80,7 @@ export default async function ChapterReaderPage({
   }
 
   return (
-    <PageContainer as="article" width="narrow">
+    <PageContainer as="article" width="narrow" className="pt-4 sm:pt-6 lg:pt-6">
       <span data-hide-main-footer hidden />
       <header className="mb-4 text-center">
         <Link

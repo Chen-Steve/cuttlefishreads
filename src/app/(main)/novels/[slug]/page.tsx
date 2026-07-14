@@ -172,7 +172,7 @@ export default async function NovelDetailPage({
   );
 
   return (
-    <PageContainer as="article" width="prose">
+    <PageContainer as="article" width="prose" className="pt-4 sm:pt-6 lg:pt-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
         {/* Left column: cover + buttons (desktop) */}
         <div className="flex items-start gap-4 sm:w-40 sm:shrink-0 sm:flex-col">

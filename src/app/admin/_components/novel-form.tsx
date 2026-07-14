@@ -68,7 +68,7 @@ export function NovelForm({
       {state.error && (
         <p
           role="alert"
-          className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600"
+          className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400"
         >
           {state.error}
         </p>
@@ -79,7 +79,7 @@ export function NovelForm({
           <label htmlFor="novel-cover" className={labelClass}>
             Cover
           </label>
-          <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg border border-border bg-background ring-1 ring-black/5">
+          <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg border border-border bg-background ring-1 ring-black/5 dark:ring-white/10">
             {displayCover ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img

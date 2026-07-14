@@ -145,11 +145,11 @@ export function ChapterList({
                   {chapter.word_count === 1 ? "" : "s"}
                 </span>
                 {chapter.is_published ? (
-                  <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
+                  <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
                     Published
                   </span>
                 ) : (
-                  <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">
+                  <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
                     Draft
                   </span>
                 )}
@@ -158,7 +158,7 @@ export function ChapterList({
                 <span>{unlockLabel(chapter)}</span>
                 <span aria-hidden>·</span>
                 {chapter.is_free ? (
-                  <span className="text-emerald-600">Free</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">Free</span>
                 ) : (
                   <span>{chapter.coin_cost} cookies</span>
                 )}

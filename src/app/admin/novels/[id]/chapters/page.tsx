@@ -84,7 +84,7 @@ export default async function ChaptersListPage({
               ? "No chapters yet"
               : `${rows.length} chapter${rows.length !== 1 ? "s" : ""}`}
             {draftCount > 0 && (
-              <span className="text-amber-600">
+              <span className="text-amber-600 dark:text-amber-400">
                 {" · "}
                 {draftCount} draft{draftCount !== 1 ? "s" : ""}
               </span>

@@ -65,13 +65,13 @@ export function ChapterRowActions({
         onClick={remove}
         disabled={pending}
         title="Delete"
-        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-rose-200 bg-background px-3 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:opacity-50"
+        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-rose-200 dark:border-rose-500/30 bg-background px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 transition-colors hover:bg-rose-50 dark:hover:bg-rose-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:opacity-50"
       >
         <Trash2 className="size-3.5" strokeWidth={1.75} aria-hidden />
         <span className="hidden sm:inline">Delete</span>
       </button>
       {error && (
-        <span className="text-xs text-rose-600" role="alert">
+        <span className="text-xs text-rose-600 dark:text-rose-400" role="alert">
           {error}
         </span>
       )}

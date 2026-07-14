@@ -15,7 +15,7 @@ const btnClass =
 
 function CoinCost({ amount }: { amount: number }) {
   return (
-    <span className="inline-flex items-center gap-1 font-semibold text-amber-600">
+    <span className="inline-flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
       {amount}
       <Cookie className="size-3.5" strokeWidth={1.75} aria-hidden />
     </span>
@@ -60,7 +60,7 @@ export function ChapterUnlockGate({
   return (
     <div className="rounded-2xl border border-border bg-surface px-6 py-10 text-center">
       <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-amber-500/10">
-        <Lock className="size-5 text-amber-600" strokeWidth={1.75} aria-hidden />
+        <Lock className="size-5 text-amber-600 dark:text-amber-400" strokeWidth={1.75} aria-hidden />
       </div>
       <h2 className="mt-4 text-lg font-semibold text-foreground">
         This chapter is locked
@@ -90,7 +90,7 @@ export function ChapterUnlockGate({
       {error && (
         <p
           role="alert"
-          className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600"
+          className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400"
         >
           {cookiesLabel(error)}
         </p>

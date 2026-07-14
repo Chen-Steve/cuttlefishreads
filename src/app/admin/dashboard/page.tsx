@@ -6,6 +6,7 @@ import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
 import {
+  getAllTimeViewsBySlug,
   getGoogleAnalyticsDashboard,
   type GoogleAnalyticsDashboard,
   type ViewsMode,
@@ -19,6 +20,7 @@ type NovelStat = {
   id: string;
   slug: string;
   title: string;
+  views: number;
   bookmarks: number;
   purchases: number;
   coinsEarned: number;
@@ -69,13 +71,15 @@ export default async function DashboardPage({
   const slugs = rows.map((n) => n.slug);
 
   // Aggregate in bulk. Bookmarks are keyed by novel_id; chapter_unlocks by
-  // novel_slug. Views come from GA4 only.
-  const [bookmarksRes, unlocksRes, googleAnalytics] =
+  // novel_slug. Views come from GA4 only — all-time totals use the same
+  // query as the public novel page so the numbers match.
+  const [bookmarksRes, unlocksRes, googleAnalytics, allTimeViewsBySlug] =
     novelIds.length === 0
       ? [
           { data: [] },
           { data: [] },
           await getGoogleAnalyticsDashboard([], mode),
+          {} as Record<string, number>,
         ]
       : await Promise.all([
           admin.from("bookmarks").select("novel_id").in("novel_id", novelIds),
@@ -87,6 +91,7 @@ export default async function DashboardPage({
             .in("novel_slug", slugs)
             .order("created_at", { ascending: false }),
           getGoogleAnalyticsDashboard(slugs, mode),
+          getAllTimeViewsBySlug(slugs),
         ]);
 
   const bookmarksByNovel = tally(
@@ -159,6 +164,7 @@ export default async function DashboardPage({
     id: n.id,
     slug: n.slug,
     title: n.title,
+    views: allTimeViewsBySlug[n.slug] ?? 0,
     bookmarks: bookmarksByNovel.get(n.id) ?? 0,
     purchases: purchasesBySlug.get(n.slug) ?? 0,
     coinsEarned: earnedBySlug.get(n.slug) ?? 0,
@@ -173,16 +179,13 @@ export default async function DashboardPage({
     { bookmarks: 0, purchases: 0, coinsEarned: 0 },
   );
 
-  // Total views from the same GA4 report that powers the chart for this mode.
-  const gaPoints =
-    mode === "daily" ? googleAnalytics.dailyViews : googleAnalytics.monthlyViews;
-  const totalViews = gaPoints.reduce(
-    (sum, point) =>
-      sum + Object.values(point.bySlug).reduce((s, n) => s + n, 0),
+  // Always all-time so this matches the view counts on public novel pages
+  // (novel page + chapter pages, same GA query and cache).
+  const totalViews = Object.values(allTimeViewsBySlug).reduce(
+    (sum, n) => sum + n,
     0,
   );
-  const viewsLabel =
-    mode === "daily" ? "Views this month" : "All-time views";
+  const viewsLabel = "All-time views";
 
   return (
     <PageContainer as="div">
@@ -202,6 +205,7 @@ export default async function DashboardPage({
 
       <GoogleAnalyticsSection
         analytics={googleAnalytics}
+        allTimeViewsBySlug={allTimeViewsBySlug}
         novels={rows}
         mode={mode}
       />
@@ -216,6 +220,7 @@ export default async function DashboardPage({
             <thead>
               <tr className="border-b border-border text-left text-xs text-muted">
                 <th className="px-4 py-3 font-medium">Novel</th>
+                <th className="px-4 py-3 text-right font-medium">Views</th>
                 <th className="px-4 py-3 text-right font-medium">Bookmarks</th>
                 <th className="px-4 py-3 text-right font-medium">Purchases</th>
                 <th className="px-4 py-3 text-right font-medium">Cookies</th>
@@ -228,12 +233,15 @@ export default async function DashboardPage({
                     {s.title}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums text-foreground">
+                    {s.views.toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-foreground">
                     {s.bookmarks.toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums text-foreground">
                     {s.purchases.toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600">
+                  <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600 dark:text-amber-400">
                     {formatCoins(s.coinsEarned)}
                   </td>
                 </tr>
@@ -270,7 +278,7 @@ export default async function DashboardPage({
                     <span className="text-xs text-muted">
                       {purchases.length.toLocaleString()} purchase
                       {purchases.length === 1 ? "" : "s"} ·{" "}
-                      <span className="font-semibold text-amber-600">
+                      <span className="font-semibold text-amber-600 dark:text-amber-400">
                         {formatCoins(earned)} cookies
                       </span>
                     </span>
@@ -303,7 +311,7 @@ export default async function DashboardPage({
                           <td className="px-4 py-3 text-right tabular-nums text-muted">
                             {new Date(p.createdAt).toLocaleDateString()}
                           </td>
-                          <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600">
+                          <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600 dark:text-amber-400">
                             {formatCoins(p.earned)}
                           </td>
                         </tr>
@@ -344,10 +352,12 @@ function SummaryCard({
 
 function GoogleAnalyticsSection({
   analytics,
+  allTimeViewsBySlug,
   novels,
   mode,
 }: {
   analytics: GoogleAnalyticsDashboard;
+  allTimeViewsBySlug: Record<string, number>;
   novels: { id: string; slug: string; title: string }[];
   mode: ViewsMode;
 }) {
@@ -368,7 +378,7 @@ function GoogleAnalyticsSection({
   if (analytics.error) {
     return (
       <section className="mt-8 rounded-2xl border border-red-500/30 bg-red-500/5 px-4 py-6">
-        <h2 className="text-sm font-semibold text-red-600">
+        <h2 className="text-sm font-semibold text-red-600 dark:text-red-400">
           Google Analytics is unavailable
         </h2>
         <p className="mt-1 text-sm text-muted">
@@ -392,7 +402,12 @@ function GoogleAnalyticsSection({
         <ViewToggle active={mode} />
       </div>
 
-      <ViewsChart analytics={analytics} novels={novels} mode={mode} />
+      <ViewsChart
+        analytics={analytics}
+        allTimeViewsBySlug={allTimeViewsBySlug}
+        novels={novels}
+        mode={mode}
+      />
     </section>
   );
 }
@@ -643,17 +658,18 @@ function PieChart({
 
 function ViewsChart({
   analytics,
+  allTimeViewsBySlug,
   novels,
   mode,
 }: {
   analytics: GoogleAnalyticsDashboard;
+  allTimeViewsBySlug: Record<string, number>;
   novels: { id: string; slug: string; title: string }[];
   mode: ViewsMode;
 }) {
   const colorBySlug = new Map(
     novels.map((n, i) => [n.slug, NOVEL_COLORS[i % NOVEL_COLORS.length]]),
   );
-  const titleBySlug = new Map(novels.map((n) => [n.slug, n.title]));
   const now = new Date();
 
   const toSegments = (bySlug: Record<string, number>) =>
@@ -698,16 +714,9 @@ function ViewsChart({
     periodLabel = "All time";
   }
 
-  // All-time totals per novel (also drives the pie).
-  const totalsBySlug = new Map<string, number>();
-  for (const point of analytics.monthlyViews) {
-    for (const [slug, count] of Object.entries(point.bySlug)) {
-      totalsBySlug.set(slug, (totalsBySlug.get(slug) ?? 0) + count);
-    }
-  }
-
-  const allTimeTotal = [...totalsBySlug.values()].reduce(
-    (sum, c) => sum + c,
+  // Same all-time totals as public novel pages (novel page + chapter pages).
+  const allTimeTotal = novels.reduce(
+    (sum, n) => sum + (allTimeViewsBySlug[n.slug] ?? 0),
     0,
   );
   const total =
@@ -723,16 +732,18 @@ function ViewsChart({
     .map((n) => ({
       id: n.slug,
       title: n.title,
-      count: totalsBySlug.get(n.slug) ?? 0,
+      count: allTimeViewsBySlug[n.slug] ?? 0,
       share:
-        allTimeTotal > 0 ? (totalsBySlug.get(n.slug) ?? 0) / allTimeTotal : 0,
+        allTimeTotal > 0
+          ? (allTimeViewsBySlug[n.slug] ?? 0) / allTimeTotal
+          : 0,
     }))
     .filter((s) => s.count > 0)
     .sort((a, b) => b.count - a.count);
 
   const activeNovels = novels.filter((n) =>
     mode === "all"
-      ? (totalsBySlug.get(n.slug) ?? 0) > 0
+      ? (allTimeViewsBySlug[n.slug] ?? 0) > 0
       : bars.some((bar) => bar.segments.some((s) => s.slug === n.slug)),
   );
 
@@ -789,7 +800,7 @@ function ViewsChart({
                     style={{ background: colorBySlug.get(n.slug) }}
                   />
                   <span className="text-xs text-muted">
-                    {titleBySlug.get(n.slug)}
+                    {n.title}
                   </span>
                 </div>
               ))}

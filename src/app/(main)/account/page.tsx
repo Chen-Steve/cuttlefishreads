@@ -133,7 +133,7 @@ export default async function AccountPage() {
                   <td className="px-5 py-3 font-medium text-foreground">
                     {packageLabel(p.package_id)}
                   </td>
-                  <td className="whitespace-nowrap px-5 py-3 text-right font-medium text-amber-600">
+                  <td className="whitespace-nowrap px-5 py-3 text-right font-medium text-amber-600 dark:text-amber-400">
                     +{p.coins.toLocaleString()}
                   </td>
                   <td className="whitespace-nowrap px-5 py-3 text-right text-foreground">
@@ -188,7 +188,7 @@ export default async function AccountPage() {
                   <td className="whitespace-nowrap px-5 py-3 text-foreground">
                     Ch. {u.chapter_number}
                   </td>
-                  <td className="whitespace-nowrap px-5 py-3 text-right font-semibold text-amber-600">
+                  <td className="whitespace-nowrap px-5 py-3 text-right font-semibold text-amber-600 dark:text-amber-400">
                     −{u.coins_spent.toLocaleString()} cookies
                   </td>
                 </tr>
@@ -205,7 +205,7 @@ export default async function AccountPage() {
       <form action={signOut} className="mt-10">
         <button
           type="submit"
-          className="inline-flex h-11 items-center justify-center rounded-xl border border-dashed border-red-500 bg-background px-5 text-sm font-semibold text-red-500 transition-colors hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+          className="inline-flex h-11 items-center justify-center rounded-xl border border-dashed border-red-500 bg-background px-5 text-sm font-semibold text-red-500 dark:text-red-400 transition-colors hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
         >
           Sign out
         </button>

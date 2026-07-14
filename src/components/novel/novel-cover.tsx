@@ -94,7 +94,7 @@ export function NovelCover({
     return (
       <div
         className={cn(
-          "relative aspect-[3/4] overflow-hidden rounded-lg shadow-sm ring-1 ring-black/5",
+          "relative aspect-[3/4] overflow-hidden rounded-lg shadow-sm ring-1 ring-black/5 dark:ring-white/10",
           className,
         )}
       >
@@ -114,7 +114,7 @@ export function NovelCover({
   return (
     <div
       className={cn(
-        "relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br shadow-sm ring-1 ring-black/5",
+        "relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br shadow-sm ring-1 ring-black/5 dark:ring-white/10",
         paletteFor(slug),
         className,
       )}

@@ -177,7 +177,7 @@ export function CommentItem({
                   type="button"
                   onClick={() => setConfirmingDelete(true)}
                   disabled={pending}
-                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-background hover:text-red-600 disabled:opacity-50"
+                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-background hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50"
                 >
                   <Trash2 className="size-3.5" strokeWidth={1.75} aria-hidden />
                   Delete
@@ -227,7 +227,7 @@ export function CommentItem({
           ) : null}
 
           {error ? (
-            <p role="alert" className="mt-2 text-xs text-red-600">
+            <p role="alert" className="mt-2 text-xs text-red-600 dark:text-red-400">
               {error}
             </p>
           ) : null}

@@ -19,17 +19,17 @@ const STATUS_COPY: Record<ApplicationRow["status"], { title: string; body: strin
   pending: {
     title: "Application under review",
     body: "Your application is in the queue. We'll reach out on Discord if it's approved.",
-    tone: "border-amber-500/30 bg-amber-500/10 text-amber-700",
+    tone: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
   },
   approved: {
     title: "You're a translator!",
     body: "Your application was approved. Head to your workspace to start uploading novels.",
-    tone: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700",
+    tone: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
   },
   rejected: {
     title: "Application not approved",
     body: "Unfortunately this application wasn't approved. Reach out on Discord if you have questions.",
-    tone: "border-red-500/30 bg-red-500/10 text-red-600",
+    tone: "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400",
   },
 };
 
@@ -113,7 +113,7 @@ export default async function ApplyPage() {
           )}
         </div>
       ) : profile?.role === "translator" ? (
-        <div className="mt-8 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-5 text-sm text-emerald-700">
+        <div className="mt-8 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-5 text-sm text-emerald-700 dark:text-emerald-400">
           <p className="font-semibold">You&apos;re already a translator.</p>
           <Link
             href="/admin"

@@ -24,9 +24,9 @@ export function ApplyForm({
 
   if (state.success) {
     return (
-      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-6 text-sm text-emerald-700">
+      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-6 text-sm text-emerald-700 dark:text-emerald-400">
         <p className="font-semibold">Application received.</p>
-        <p className="mt-1 text-emerald-700/90">
+        <p className="mt-1 text-emerald-700/90 dark:text-emerald-400/90">
           Thanks for applying. We&apos;ll review it and reach out on Discord if
           you&apos;re approved.
         </p>
@@ -39,7 +39,7 @@ export function ApplyForm({
       {state.error && (
         <p
           role="alert"
-          className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600"
+          className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400"
         >
           {state.error}
         </p>

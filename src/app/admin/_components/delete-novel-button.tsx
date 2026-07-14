@@ -34,7 +34,7 @@ export function DeleteNovelButton({
           }
         });
       }}
-      className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border border-rose-200 bg-background px-4 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border border-rose-200 dark:border-rose-500/30 bg-background px-4 text-sm font-semibold text-rose-600 dark:text-rose-400 transition-colors hover:bg-rose-50 dark:hover:bg-rose-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
     >
       <Trash2 className="size-4" strokeWidth={1.75} aria-hidden />
       {pending ? "Deleting…" : "Delete"}

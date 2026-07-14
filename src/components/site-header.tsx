@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { BookOpen, ChevronDown, Cookie, LogIn, LogOut, Library, PenLine, Search, Settings, ShoppingBag, User } from "lucide-react";
 
 import { signOut } from "@/app/(main)/(auth)/actions";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
 type SearchMatch = {
@@ -384,6 +385,8 @@ export function SiteHeader({
               <span className="hidden lg:inline">{label}</span>
             </Link>
           ))}
+
+          <ThemeToggle />
 
           {isAuthenticated ? (
             <AccountDropdown

@@ -26,7 +26,7 @@ export function StripePayButton({
   if (loading) {
     return (
       <div
-        className={`flex h-[45px] w-full items-center justify-center rounded bg-black/5 text-sm text-muted ${className ?? ""}`}
+        className={`flex h-[45px] w-full items-center justify-center rounded bg-black/5 dark:bg-white/5 text-sm text-muted ${className ?? ""}`}
       >
         Redirecting…
       </div>

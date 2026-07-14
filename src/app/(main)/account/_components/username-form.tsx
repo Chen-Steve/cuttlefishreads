@@ -42,7 +42,7 @@ export function UsernameForm({ currentUsername }: { currentUsername: string | nu
       {state.error && (
         <p
           role="alert"
-          className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-600"
+          className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400"
         >
           {state.error}
         </p>
@@ -50,7 +50,7 @@ export function UsernameForm({ currentUsername }: { currentUsername: string | nu
       {state.message && (
         <p
           role="status"
-          className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700"
+          className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400"
         >
           {state.message}
         </p>

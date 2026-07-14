@@ -28,7 +28,7 @@ export function SupportLinksForm({
       {state.error && (
         <p
           role="alert"
-          className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600"
+          className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400"
         >
           {state.error}
         </p>
@@ -36,7 +36,7 @@ export function SupportLinksForm({
       {state.message && (
         <p
           role="status"
-          className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-sm text-emerald-700"
+          className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-sm text-emerald-700 dark:text-emerald-400"
         >
           {state.message}
         </p>
