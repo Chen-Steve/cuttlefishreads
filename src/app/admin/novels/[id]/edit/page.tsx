@@ -35,7 +35,7 @@ export default async function EditNovelPage({
   }
 
   return (
-    <PageContainer as="div" width="prose">
+    <PageContainer as="div" width="default">
       <Link
         href="/admin"
         className="inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
@@ -43,7 +43,7 @@ export default async function EditNovelPage({
         <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
         Back to novels
       </Link>
-      <div className="mt-4 rounded-2xl border border-border bg-surface p-5 sm:p-6">
+      <div className="mt-4">
         <NovelForm novel={novel} />
       </div>
     </PageContainer>

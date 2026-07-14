@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default async function CreateNovelPage() {
   return (
-    <PageContainer as="div" width="prose">
+    <PageContainer as="div" width="default">
       <Link
         href="/admin"
         className="inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
@@ -24,7 +24,7 @@ export default async function CreateNovelPage() {
         Create novel
       </h1>
 
-      <div className="mt-8 rounded-2xl border border-border bg-surface p-5 sm:p-6">
+      <div className="mt-8">
         <NovelForm />
       </div>
     </PageContainer>
