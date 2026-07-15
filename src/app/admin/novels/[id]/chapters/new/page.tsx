@@ -62,7 +62,7 @@ export default async function AddChapterPage({
     <PageContainer as="div">
       <Link
         href={`/admin/novels/${id}/chapters`}
-        className="inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
+        className="inline-flex h-9 items-center gap-1 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
         Back to chapters

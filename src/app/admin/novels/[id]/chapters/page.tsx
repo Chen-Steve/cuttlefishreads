@@ -69,27 +69,18 @@ export default async function ChaptersListPage({
     <PageContainer as="div">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Link
-            href="/admin"
-            className="inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
-          >
-            <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
-            Back to novels
-          </Link>
-          <h1 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
-            {novel.title}
-          </h1>
-          <p className="mt-0.5 text-sm text-muted">
-            {rows.length === 0
-              ? "No chapters yet"
-              : `${rows.length} chapter${rows.length !== 1 ? "s" : ""}`}
-            {draftCount > 0 && (
-              <span className="text-amber-600 dark:text-amber-400">
-                {" · "}
-                {draftCount} draft{draftCount !== 1 ? "s" : ""}
-              </span>
-            )}
-          </p>
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <Link
+              href="/admin"
+              className="inline-flex h-9 shrink-0 items-center gap-1 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
+              Back to novels
+            </Link>
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+              {novel.title}
+            </h1>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

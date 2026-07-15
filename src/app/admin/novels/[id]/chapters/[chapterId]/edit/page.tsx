@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/page-container";
@@ -65,31 +63,21 @@ export default async function EditChapterPage({
 
   return (
     <PageContainer as="div">
-      <Link
-        href={`/admin/novels/${id}/chapters`}
-        className="inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-foreground"
-      >
-        <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
-        Back to chapters
-      </Link>
-
-      <div className="mt-3">
-        <ChapterForm
-          novelId={novel.id}
-          latestChapterUnlockAt={latestUnlockRow?.unlock_at ?? null}
-          initial={{
-            chapterId: row.id,
-            number: row.number,
-            title: row.title,
-            content: row.content,
-            translatorNote: row.translator_note,
-            useGlobalTranslatorNote: row.use_global_translator_note,
-            isFree: row.is_free,
-            coinCost: row.coin_cost,
-            unlockAt: row.unlock_at,
-          }}
-        />
-      </div>
+      <ChapterForm
+        novelId={novel.id}
+        latestChapterUnlockAt={latestUnlockRow?.unlock_at ?? null}
+        initial={{
+          chapterId: row.id,
+          number: row.number,
+          title: row.title,
+          content: row.content,
+          translatorNote: row.translator_note,
+          useGlobalTranslatorNote: row.use_global_translator_note,
+          isFree: row.is_free,
+          coinCost: row.coin_cost,
+          unlockAt: row.unlock_at,
+        }}
+      />
     </PageContainer>
   );
 }

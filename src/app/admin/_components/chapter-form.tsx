@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
@@ -141,10 +143,19 @@ export function ChapterForm({
   return (
     <form action={action} className="flex flex-col gap-4">
       {isEdit && (
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-            Edit chapter {initial!.number}
-          </h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <Link
+              href={`/admin/novels/${novelId}/chapters`}
+              className="inline-flex h-9 shrink-0 items-center gap-1 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
+              Back to chapters
+            </Link>
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+              Edit chapter {initial!.number}
+            </h1>
+          </div>
           <button
             type="submit"
             disabled={pending}
