@@ -8,7 +8,7 @@ import { getAdminAccess, type AdminAccess } from "@/lib/access";
 import { slugify } from "@/lib/utils";
 import { GENRES, type Genre, LANGUAGES, type Language } from "@/lib/constants";
 
-export type AdminState = { error?: string };
+export type AdminState = { error?: string; success?: string };
 
 export type SupportLinksState = { error?: string; message?: string };
 
@@ -722,6 +722,10 @@ export async function updateChapter(
     .eq("id", existing.novel_id);
 
   revalidatePath("/admin");
+  revalidatePath(`/admin/novels/${existing.novel_id}/chapters`);
+  revalidatePath(
+    `/admin/novels/${existing.novel_id}/chapters/${chapterId}/edit`,
+  );
   revalidatePath("/novels", "layout");
-  redirect(`/admin/novels/${existing.novel_id}/chapters`);
+  return { success: "Chapter saved." };
 }

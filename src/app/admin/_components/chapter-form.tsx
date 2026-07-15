@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import {
@@ -58,6 +59,26 @@ export function ChapterForm({
     boundAction,
     {},
   );
+  const wasPending = useRef(false);
+
+  // Stay on the edit page and report save results with a toast.
+  useEffect(() => {
+    if (!isEdit) return;
+    if (pending) {
+      wasPending.current = true;
+      return;
+    }
+    if (!wasPending.current) return;
+    wasPending.current = false;
+
+    if (state.error) {
+      toast.error(state.error);
+      return;
+    }
+    if (state.success) {
+      toast.success(state.success);
+    }
+  }, [isEdit, pending, state.error, state.success]);
 
   const [access, setAccess] = useState<"free" | "paid">(
     initial && !initial.isFree ? "paid" : "free",
@@ -134,7 +155,7 @@ export function ChapterForm({
         </div>
       )}
 
-      {state.error && (
+      {!isEdit && state.error && (
         <p
           role="alert"
           className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400"
@@ -172,58 +193,9 @@ export function ChapterForm({
               defaultValue={initial?.content ?? ""}
               placeholder="Write the chapter here."
               className="min-h-[24rem]"
+              enableFootnotes
             />
           </div>
-
-          <fieldset className="flex flex-col gap-2">
-            <legend className={labelClass}>
-              Translator&apos;s note
-              <span className="ml-1 font-normal opacity-60">(optional)</span>
-            </legend>
-            <div className="flex flex-wrap gap-2">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2 text-sm font-medium text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:checked]:text-accent">
-                <input
-                  type="radio"
-                  name="noteMode"
-                  value="global"
-                  checked={noteMode === "global"}
-                  onChange={() => setNoteMode("global")}
-                  className="size-3.5 accent-accent"
-                />
-                Use global message
-              </label>
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2 text-sm font-medium text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:checked]:text-accent">
-                <input
-                  type="radio"
-                  name="noteMode"
-                  value="unique"
-                  checked={noteMode === "unique"}
-                  onChange={() => setNoteMode("unique")}
-                  className="size-3.5 accent-accent"
-                />
-                Write unique message
-              </label>
-            </div>
-            {noteMode === "global" ? (
-              <span className="text-xs text-muted">
-                Uses the global message from workspace Settings, with your
-                Ko-fi / Patreon links.
-              </span>
-            ) : (
-              <div className="flex flex-col gap-1.5">
-                <RichTextEditor
-                  id="chapter-note"
-                  name="translatorNote"
-                  defaultValue={initial?.translatorNote ?? ""}
-                  placeholder="A short message just for this chapter."
-                  className="min-h-[6.5rem]"
-                />
-                <span className="text-xs text-muted">
-                  Shown above the comments on this chapter only.
-                </span>
-              </div>
-            )}
-          </fieldset>
         </div>
 
         {/* Sidebar: publishing options, sticky so they're always in reach */}
@@ -337,6 +309,56 @@ export function ChapterForm({
               </div>
             </>
           )}
+
+          <fieldset className="flex flex-col gap-2">
+            <legend className={labelClass}>
+              Translator&apos;s note
+              <span className="ml-1 font-normal opacity-60">(optional)</span>
+            </legend>
+            <div className="flex flex-col gap-2">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2 text-sm font-medium text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:checked]:text-accent">
+                <input
+                  type="radio"
+                  name="noteMode"
+                  value="global"
+                  checked={noteMode === "global"}
+                  onChange={() => setNoteMode("global")}
+                  className="size-3.5 accent-accent"
+                />
+                Use global message
+              </label>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2 text-sm font-medium text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:checked]:text-accent">
+                <input
+                  type="radio"
+                  name="noteMode"
+                  value="unique"
+                  checked={noteMode === "unique"}
+                  onChange={() => setNoteMode("unique")}
+                  className="size-3.5 accent-accent"
+                />
+                Write unique message
+              </label>
+            </div>
+            {noteMode === "global" ? (
+              <span className="text-xs text-muted">
+                Uses the global message from workspace Settings, with your
+                Ko-fi / Patreon links.
+              </span>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                <RichTextEditor
+                  id="chapter-note"
+                  name="translatorNote"
+                  defaultValue={initial?.translatorNote ?? ""}
+                  placeholder="A short message just for this chapter."
+                  className="min-h-[6.5rem]"
+                />
+                <span className="text-xs text-muted">
+                  Shown above the comments on this chapter only.
+                </span>
+              </div>
+            )}
+          </fieldset>
 
           <button
             type="submit"

@@ -43,6 +43,24 @@
   --font-sans: var(--font-national-park), system-ui, sans-serif;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Highlight the active footnote / return target after navigating. */
+[id^="cf-fn"]:target,
+[id^="cf-fnref"]:target {
+  border-radius: 0.15em;
+  background-color: color-mix(in srgb, var(--accent) 22%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, type ClipboardEvent } from "react";
-import { Bold, Italic, Underline } from "lucide-react";
+import { Bold, Italic, Superscript, Underline } from "lucide-react";
 
+import { nextFootnoteLabel } from "@/lib/footnotes";
 import {
   clipboardToMarkdown,
   domToMarkdown,
@@ -24,6 +25,7 @@ export function RichTextEditor({
   defaultValue = "",
   placeholder,
   className,
+  enableFootnotes = false,
 }: {
   id?: string;
   name: string;
@@ -31,6 +33,8 @@ export function RichTextEditor({
   placeholder?: string;
   /** Applied to the editable area, e.g. a min-height. */
   className?: string;
+  /** Show a toolbar control that inserts `[^n]` + a definition line. */
+  enableFootnotes?: boolean;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -50,6 +54,40 @@ export function RichTextEditor({
   function exec(command: "bold" | "italic" | "underline") {
     editorRef.current?.focus();
     document.execCommand(command);
+    sync();
+  }
+
+  function insertFootnote() {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    editor.focus();
+
+    const selection = window.getSelection();
+    const selectedText =
+      selection?.toString().replace(/\s+/g, " ").trim() ?? "";
+    const label = nextFootnoteLabel(domToMarkdown(editor));
+    // Inline form: [^1: note text] — definition travels with the marker.
+    const snippet = selectedText
+      ? `[^${label}: ${selectedText}]`
+      : `[^${label}: ]`;
+
+    document.execCommand("insertText", false, snippet);
+
+    // Empty note — put the caret before `]` so the author can type the note.
+    if (!selectedText && selection?.rangeCount) {
+      const range = selection.getRangeAt(0);
+      if (
+        range.startContainer.nodeType === Node.TEXT_NODE &&
+        range.startOffset > 0
+      ) {
+        range.setStart(range.startContainer, range.startOffset - 1);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }
+
     sync();
   }
 
@@ -99,6 +137,24 @@ export function RichTextEditor({
         >
           <Underline className="size-4" strokeWidth={2} aria-hidden />
         </button>
+        {enableFootnotes ? (
+          <>
+            <span
+              aria-hidden
+              className="mx-0.5 h-4 w-px shrink-0 bg-border"
+            />
+            <button
+              type="button"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={insertFootnote}
+              title="Insert footnote — type after the colon, e.g. [^1: your note]"
+              aria-label="Insert footnote"
+              className={toolbarButtonClass}
+            >
+              <Superscript className="size-4" strokeWidth={2} aria-hidden />
+            </button>
+          </>
+        ) : null}
       </div>
       <div
         id={id}
