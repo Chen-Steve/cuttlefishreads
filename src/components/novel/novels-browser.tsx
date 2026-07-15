@@ -1,7 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowUpDown,
+  Check,
+  ChevronDown,
+  Search,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 
 import { GENRES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -10,6 +17,13 @@ import { NovelGrid } from "./novel-grid";
 
 type Status = Novel["status"] | "all";
 
+type SortOption =
+  | "updated"
+  | "title-asc"
+  | "title-desc"
+  | "views-desc"
+  | "views-asc";
+
 const STATUS_OPTIONS: { value: Status; label: string }[] = [
   { value: "all", label: "All" },
   { value: "ongoing", label: "Ongoing" },
@@ -17,17 +31,154 @@ const STATUS_OPTIONS: { value: Status; label: string }[] = [
   { value: "hiatus", label: "Hiatus" },
 ];
 
-export function NovelsBrowser({ novels }: { novels: Novel[] }) {
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "updated", label: "Recently updated" },
+  { value: "title-asc", label: "Title A–Z" },
+  { value: "title-desc", label: "Title Z–A" },
+  { value: "views-desc", label: "Most views" },
+  { value: "views-asc", label: "Least views" },
+];
+
+function SortDropdown({
+  value,
+  onChange,
+}: {
+  value: SortOption;
+  onChange: (value: SortOption) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected =
+    SORT_OPTIONS.find((opt) => opt.value === value) ?? SORT_OPTIONS[0];
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Sort novels: ${selected.label}`}
+        className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium leading-none text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      >
+        <ArrowUpDown className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
+        <span className="max-w-40 truncate">{selected.label}</span>
+        <ChevronDown
+          className={cn(
+            "size-3.5 shrink-0 transition-transform duration-150",
+            open && "rotate-180",
+          )}
+          strokeWidth={1.75}
+          aria-hidden
+        />
+      </button>
+
+      {open ? (
+        <div
+          role="menu"
+          className="absolute top-full right-0 z-30 mt-1.5 min-w-48 overflow-hidden rounded-xl border border-border bg-surface shadow-md"
+        >
+          {SORT_OPTIONS.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
+              >
+                <span className="min-w-0 flex-1 truncate text-left">
+                  {opt.label}
+                </span>
+                {isSelected ? (
+                  <Check
+                    className="size-4 shrink-0 text-muted"
+                    strokeWidth={1.75}
+                    aria-hidden
+                  />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function sortNovels(
+  novels: Novel[],
+  sort: SortOption,
+  viewsBySlug: Record<string, number>,
+): Novel[] {
+  const items = [...novels];
+  switch (sort) {
+    case "title-asc":
+      return items.sort((a, b) =>
+        a.title.localeCompare(b.title, undefined, { sensitivity: "base" }),
+      );
+    case "title-desc":
+      return items.sort((a, b) =>
+        b.title.localeCompare(a.title, undefined, { sensitivity: "base" }),
+      );
+    case "views-desc":
+      return items.sort(
+        (a, b) => (viewsBySlug[b.slug] ?? 0) - (viewsBySlug[a.slug] ?? 0),
+      );
+    case "views-asc":
+      return items.sort(
+        (a, b) => (viewsBySlug[a.slug] ?? 0) - (viewsBySlug[b.slug] ?? 0),
+      );
+    case "updated":
+    default:
+      return items.sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
+  }
+}
+
+export function NovelsBrowser({
+  novels,
+  viewsBySlug = {},
+}: {
+  novels: Novel[];
+  viewsBySlug?: Record<string, number>;
+}) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<Status>("all");
   const [genre, setGenre] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortOption>("updated");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return novels.filter((novel) => {
+    const matched = novels.filter((novel) => {
       if (status !== "all" && novel.status !== status) return false;
-      if (genre && !novel.genres.includes(genre as (typeof GENRES)[number])) return false;
+      if (genre && !novel.genres.includes(genre as (typeof GENRES)[number]))
+        return false;
       if (q) {
         const haystack = [
           novel.title,
@@ -44,7 +195,8 @@ export function NovelsBrowser({ novels }: { novels: Novel[] }) {
       }
       return true;
     });
-  }, [novels, query, status, genre]);
+    return sortNovels(matched, sort, viewsBySlug);
+  }, [novels, query, status, genre, sort, viewsBySlug]);
 
   const hasFilters = query.trim() !== "" || status !== "all" || genre !== null;
   const activePillFilters =
@@ -88,30 +240,37 @@ export function NovelsBrowser({ novels }: { novels: Novel[] }) {
         </div>
       </header>
 
-      {/* Search + status */}
       <div className="flex flex-col gap-2">
-        <label className="flex h-9 w-full cursor-text items-center gap-1.5 rounded-full border border-border bg-surface py-0 pr-3 pl-3 shadow-sm transition-colors focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25">
-          <Search className="size-3.5 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by title, author, genre…"
-            className="min-w-0 flex-1 border-0 bg-transparent py-0 text-sm font-medium leading-none text-foreground outline-none placeholder:font-medium placeholder:leading-none placeholder:text-muted/80"
-            aria-label="Search novels"
-            autoComplete="off"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              aria-label="Clear search"
-              className="shrink-0 text-muted transition-colors hover:text-foreground"
-            >
-              <X className="size-3.5" strokeWidth={1.75} aria-hidden />
-            </button>
-          )}
-        </label>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <label className="flex h-9 w-full cursor-text items-center gap-1.5 rounded-full border border-border bg-surface py-0 pr-3 pl-3 shadow-sm transition-colors focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25 sm:min-w-0 sm:flex-1">
+            <Search
+              className="size-3.5 shrink-0 text-muted"
+              strokeWidth={1.75}
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by title, author, genre…"
+              className="min-w-0 flex-1 border-0 bg-transparent py-0 text-sm font-medium leading-none text-foreground outline-none placeholder:font-medium placeholder:leading-none placeholder:text-muted/80"
+              aria-label="Search novels"
+              autoComplete="off"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+                className="shrink-0 text-muted transition-colors hover:text-foreground"
+              >
+                <X className="size-3.5" strokeWidth={1.75} aria-hidden />
+              </button>
+            )}
+          </label>
+
+          <SortDropdown value={sort} onChange={setSort} />
+        </div>
 
         <button
           type="button"

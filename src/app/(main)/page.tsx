@@ -8,6 +8,7 @@ import {
   getFeaturedNovels,
   getNewlyAddedNovels,
   getRecentlyUpdatedNovels,
+  getUnderratedNovels,
 } from "@/lib/data";
 import { SITE } from "@/lib/constants";
 import { publicPageMetadata } from "@/lib/seo";
@@ -23,6 +24,10 @@ export default async function Home() {
     getFeaturedNovels(),
     getNewlyAddedNovels(),
     getRecentlyUpdatedNovels(),
+  ]);
+  const underrated = await getUnderratedNovels([
+    ...featured.map((novel) => novel.slug),
+    ...newlyAdded.map((novel) => novel.slug),
   ]);
 
   return (
@@ -82,6 +87,12 @@ export default async function Home() {
       <Section title="Newly added" href="/novels" linkLabel="View all">
         <NovelCarousel novels={newlyAdded} compact showChapterCount />
       </Section>
+
+      {underrated.length > 0 ? (
+        <Section title="Underrated" href="/novels" linkLabel="View all">
+          <NovelCarousel novels={underrated} compact showChapterCount />
+        </Section>
+      ) : null}
 
       <Section title="Recently updated">
         <PaginatedRecentlyUpdatedList novels={recentlyUpdated} pageSize={8} />

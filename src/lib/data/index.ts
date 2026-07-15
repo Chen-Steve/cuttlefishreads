@@ -35,7 +35,8 @@ type DbNovel = {
 const NOVEL_LIST_COLUMNS =
   "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, novelupdates_url, language, chapters(count)";
 
-const NEWLY_ADDED_LIMIT = 12;
+const NEWLY_ADDED_LIMIT = 10;
+const UNDERRATED_LIMIT = 10;
 
 type DbChapter = {
   id: string;
@@ -285,6 +286,28 @@ export async function getNewlyAddedNovels(): Promise<Novel[]> {
   }
 
   return ((data ?? []) as DbNovel[]).map(mapNovel);
+}
+
+function shuffleNovels(novels: Novel[]): Novel[] {
+  const items = [...novels];
+  for (let i = items.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const current = items[i]!;
+    items[i] = items[j]!;
+    items[j] = current;
+  }
+  return items;
+}
+
+/** Random novels excluding featured and newly-added picks. */
+export async function getUnderratedNovels(
+  excludeSlugs: Iterable<string>,
+  limit = UNDERRATED_LIMIT,
+): Promise<Novel[]> {
+  const excluded = new Set(excludeSlugs);
+  const novels = await getNovels();
+  const pool = novels.filter((novel) => !excluded.has(novel.slug));
+  return shuffleNovels(pool).slice(0, limit);
 }
 
 type DbRecentChapterRow = {
