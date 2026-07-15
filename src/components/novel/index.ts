@@ -7,6 +7,7 @@ export { RecentlyUpdatedList } from "./recently-updated-list";
 export { NovelsBrowser } from "./novels-browser";
 export { NovelCover } from "./novel-cover";
 export { NovelDescription } from "./novel-description";
+export { ScrollingTags } from "./scrolling-tags";
 export { ChapterList, ChapterOrderToggle } from "./chapter-list";
 export { BookmarkButton } from "./bookmark-button";
 export { BulkBuyChapters, BulkBuyInfo } from "./bulk-buy-chapters";

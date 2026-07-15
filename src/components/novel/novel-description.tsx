@@ -28,7 +28,7 @@ export function NovelDescription({ synopsis }: { synopsis: string }) {
   if (paragraphs.length === 0) return null;
 
   return (
-    <div className="mt-5">
+    <div className="mt-2 sm:mt-5">
       <div className="space-y-3 text-sm leading-relaxed text-foreground/90">
         {renderMarkdownParagraphs(paragraphs).map((children, index) => (
           <p key={index} className="whitespace-pre-wrap">

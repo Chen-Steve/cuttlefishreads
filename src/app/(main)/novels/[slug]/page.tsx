@@ -11,6 +11,7 @@ import {
   ChapterOrderToggle,
   NovelCover,
   NovelDescription,
+  ScrollingTags,
 } from "@/components/novel";
 import { getBulkBuyState } from "@/lib/bulk-buy";
 import { PageContainer } from "@/components/page-container";
@@ -134,17 +135,6 @@ export default async function NovelDetailPage({
     </div>
   );
 
-  const tagsDisplay =
-    novel.tags.length > 0 ? (
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        {novel.tags.map((tag) => (
-          <span key={tag} className="text-xs text-muted">
-            #{tag}
-          </span>
-        ))}
-      </div>
-    ) : null;
-
   const viewCountDisplay = (
     <p className="inline-flex items-center gap-1.5 text-xs text-muted sm:text-sm">
       <Eye className="size-3.5 shrink-0 sm:size-4" strokeWidth={1.75} aria-hidden />
@@ -174,21 +164,27 @@ export default async function NovelDetailPage({
   return (
     <PageContainer as="article" width="prose" className="pt-4 sm:pt-6 lg:pt-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
-        {/* Left column: cover + buttons (desktop) */}
-        <div className="flex items-start gap-4 sm:w-40 sm:shrink-0 sm:flex-col">
-          <NovelCover
-            title={novel.title}
-            slug={novel.slug}
-            coverUrl={novel.coverUrl}
-            genres={novel.genres}
-            className="w-28 shrink-0 sm:w-full"
-          />
-          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:hidden">
-            {authorLine}
-            {statusAndGenres}
-            {tagsDisplay}
-            {viewCountDisplay}
+        <h1 className="text-xl font-bold tracking-tight text-balance text-foreground sm:hidden">
+          {novel.title}
+        </h1>
+
+        {/* Left column: cover + tags + buttons (desktop) */}
+        <div className="flex flex-col gap-2 sm:w-40 sm:shrink-0 sm:gap-2">
+          <div className="flex items-start gap-4 sm:flex-col sm:gap-2">
+            <NovelCover
+              title={novel.title}
+              slug={novel.slug}
+              coverUrl={novel.coverUrl}
+              genres={novel.genres}
+              className="w-28 shrink-0 sm:w-full"
+            />
+            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:hidden">
+              {authorLine}
+              {statusAndGenres}
+              {viewCountDisplay}
+            </div>
           </div>
+          <ScrollingTags tags={novel.tags} />
           {/* Desktop buttons below cover */}
           <div className="mt-1 hidden w-full flex-col gap-3 sm:flex">
             {actionButtons}
@@ -196,15 +192,14 @@ export default async function NovelDetailPage({
         </div>
 
         {/* Right column: title, meta, synopsis, mobile buttons */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <h1 className="text-xl font-bold tracking-tight text-balance text-foreground sm:text-3xl">
+        <div className="-mt-2 flex min-w-0 flex-1 flex-col sm:mt-0">
+          <h1 className="hidden text-3xl font-bold tracking-tight text-balance text-foreground sm:block">
             {novel.title}
           </h1>
 
           <div className="mt-1 hidden flex-col gap-4 sm:flex">
             {authorLine}
             {statusAndGenres}
-            {tagsDisplay}
             {viewCountDisplay}
           </div>
 
