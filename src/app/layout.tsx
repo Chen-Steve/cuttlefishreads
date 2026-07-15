@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { GoogleAnalyticsPageViews } from "@/components/google-analytics-page-views";
+import { InlineScript } from "@/components/inline-script";
 import { Toaster } from "@/components/ui/sonner";
 import { nationalPark } from "@/lib/fonts";
 import { readerFontVariables } from "@/lib/reader-fonts";
@@ -64,7 +65,7 @@ export default function RootLayout({
       className={`${nationalPark.className} ${nationalPark.variable} ${readerFontVariables} h-full antialiased`}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <InlineScript html={themeInitScript} />
       </head>
       <Script
         async
