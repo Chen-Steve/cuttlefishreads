@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Trash2 } from "lucide-react";
+import { X } from "lucide-react";
+import { toast } from "sonner";
 
-import { removeBookmarks } from "@/app/(main)/novels/actions";
-import { NovelGrid } from "@/components/novel";
-import { Badge } from "@/components/ui/badge";
+import { removeBookmarks, toggleBookmark } from "@/app/(main)/novels/actions";
 import { genresExcludingCoverBadges, NovelCover } from "@/components/novel/novel-cover";
 import type { Novel } from "@/types";
 
@@ -16,228 +16,154 @@ const statusLabel: Record<Novel["status"], string> = {
   hiatus: "Hiatus",
 };
 
-function SelectableNovelCard({
+function LibraryRow({
   novel,
-  selected,
-  onToggle,
+  onRemove,
+  removing,
 }: {
   novel: Novel;
-  selected: boolean;
-  onToggle: () => void;
+  onRemove: (novel: Novel) => void;
+  removing: boolean;
 }) {
   const cardGenres = genresExcludingCoverBadges(novel.genres);
 
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-pressed={selected}
-      className={`group relative flex flex-col gap-3 rounded-xl p-2 text-left outline-offset-2 transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-accent ${
-        selected ? "bg-surface ring-2 ring-accent" : ""
-      }`}
-    >
-      <span
-        className={`absolute right-3 top-3 z-10 flex size-6 items-center justify-center rounded-md border transition-colors ${
-          selected
-            ? "border-accent bg-accent text-accent-foreground"
-            : "border-border bg-background/90 text-transparent group-hover:border-accent/50"
-        }`}
-        aria-hidden
+    <li className="group flex items-center gap-2.5 px-2.5 py-2 sm:gap-3 sm:px-3">
+      <Link
+        href={`/novels/${novel.slug}`}
+        className="flex min-w-0 flex-1 items-center gap-2.5 outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent sm:gap-3"
       >
-        <Check className="size-3.5" strokeWidth={2.5} />
-      </span>
-      <NovelCover
-        title={novel.title}
-        slug={novel.slug}
-        coverUrl={novel.coverUrl}
-        genres={novel.genres}
-        className="transition-transform duration-300 group-hover:-translate-y-0.5"
-      />
-      <div className="flex min-w-0 flex-col gap-1.5 px-1">
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
-          {novel.title}
-        </h3>
-        {cardGenres.length > 0 ? (
-          <div className="mt-1 -mx-1 min-w-0 overflow-x-auto px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            <div className="flex w-max min-w-full flex-nowrap items-center gap-1.5">
-              <Badge className="shrink-0 border-accent/30 text-accent">
-                {statusLabel[novel.status]}
-              </Badge>
-              {cardGenres.slice(0, 2).map((genre) => (
-                <Badge key={genre} className="shrink-0">
-                  {genre}
-                </Badge>
-              ))}
-            </div>
+        <NovelCover
+          title={novel.title}
+          slug={novel.slug}
+          coverUrl={novel.coverUrl}
+          genres={novel.genres}
+          className="w-10 shrink-0 sm:w-11"
+        />
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-sm font-medium text-foreground transition-colors group-hover:text-accent">
+            {novel.title}
+          </h3>
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted">
+            <span className="shrink-0">{statusLabel[novel.status]}</span>
+            {cardGenres[0] ? (
+              <>
+                <span aria-hidden className="text-border">
+                  ·
+                </span>
+                <span className="truncate">{cardGenres[0]}</span>
+              </>
+            ) : null}
           </div>
-        ) : (
-          <Badge className="w-fit border-accent/30 text-accent">
-            {statusLabel[novel.status]}
-          </Badge>
-        )}
-      </div>
-    </button>
+        </div>
+      </Link>
+      <button
+        type="button"
+        onClick={() => onRemove(novel)}
+        disabled={removing}
+        aria-label={`Remove ${novel.title} from library`}
+        className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-rose-500/10 hover:text-rose-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 dark:hover:text-rose-400"
+      >
+        <X className="size-4" strokeWidth={2} aria-hidden />
+      </button>
+    </li>
   );
 }
 
 export function LibraryGrid({ novels }: { novels: Novel[] }) {
   const router = useRouter();
-  const [managing, setManaging] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(() => new Set());
-  const [confirming, setConfirming] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [items, setItems] = useState(novels);
+  const [removingSlug, setRemovingSlug] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const orderIndex = useMemo(
+    () => new Map(novels.map((novel, index) => [novel.slug, index])),
+    [novels],
+  );
 
-  const allSlugs = useMemo(() => novels.map((novel) => novel.slug), [novels]);
-  const selectedCount = selected.size;
-  const allSelected = novels.length > 0 && selectedCount === novels.length;
+  useEffect(() => {
+    setItems(novels);
+  }, [novels]);
 
-  function toggleSlug(slug: string) {
-    setSelected((current) => {
-      const next = new Set(current);
-      if (next.has(slug)) next.delete(slug);
-      else next.add(slug);
-      return next;
-    });
+  function insertNovel(current: Novel[], novel: Novel): Novel[] {
+    const target = orderIndex.get(novel.slug) ?? current.length;
+    const next = [...current];
+    const insertAt = next.findIndex(
+      (item) => (orderIndex.get(item.slug) ?? Number.MAX_SAFE_INTEGER) > target,
+    );
+    next.splice(insertAt === -1 ? next.length : insertAt, 0, novel);
+    return next;
   }
 
-  function exitManaging() {
-    setManaging(false);
-    setSelected(new Set());
-    setConfirming(false);
-    setError(null);
-  }
+  function handleRemove(novel: Novel) {
+    const { slug, title } = novel;
+    setRemovingSlug(slug);
+    setItems((current) => current.filter((item) => item.slug !== slug));
 
-  function handleRemove() {
-    const slugs = [...selected];
     startTransition(async () => {
-      const result = await removeBookmarks(slugs);
+      const result = await removeBookmarks([slug]);
+      setRemovingSlug(null);
+
       if (result.error) {
-        setError(result.error);
+        setItems((current) => insertNovel(current, novel));
+        toast.error(result.error);
         return;
       }
-      exitManaging();
+
       router.refresh();
+      toast(`Removed "${title}"`, {
+        action: {
+          label: "Undo",
+          onClick: () => {
+            setItems((current) => insertNovel(current, novel));
+            startTransition(async () => {
+              const undo = await toggleBookmark(slug);
+              if (undo.error) {
+                setItems((current) => current.filter((item) => item.slug !== slug));
+                toast.error(undo.error);
+                return;
+              }
+              router.refresh();
+            });
+          },
+        },
+      });
     });
   }
 
   return (
     <div>
-      <header className="mb-6 flex items-center justify-between gap-4 sm:mb-7">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+      <header className="mb-3 flex items-baseline justify-between gap-3">
+        <h1 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
           My library
         </h1>
-        {!managing ? (
-          <button
-            type="button"
-            onClick={() => setManaging(true)}
-            className="inline-flex h-9 shrink-0 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-foreground transition-colors hover:border-accent/40"
-          >
-            Manage library
-          </button>
+        {items.length > 0 ? (
+          <span className="shrink-0 text-xs tabular-nums text-muted">
+            {items.length} novel{items.length === 1 ? "" : "s"}
+          </span>
         ) : null}
       </header>
 
-      {managing ? (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => (allSelected ? setSelected(new Set()) : setSelected(new Set(allSlugs)))}
-              className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-foreground transition-colors hover:border-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {allSelected ? "Deselect all" : "Select all"}
-            </button>
-            <span className="text-sm text-muted">
-              {selectedCount} selected
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setError(null);
-                setConfirming(true);
-              }}
-              disabled={selectedCount === 0 || pending}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-rose-200 dark:border-rose-500/30 bg-background px-3 text-sm font-semibold text-rose-600 dark:text-rose-400 transition-colors hover:bg-rose-50 dark:hover:bg-rose-500/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Trash2 className="size-3.5" strokeWidth={1.75} aria-hidden />
-              Remove selected
-            </button>
-            <button
-              type="button"
-              onClick={exitManaging}
-              disabled={pending}
-              className="inline-flex h-9 items-center rounded-lg border border-border px-3 text-sm font-medium text-foreground transition-colors hover:border-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {confirming ? (
-        <div
-          role="dialog"
-          aria-modal="false"
-          aria-labelledby="remove-bookmarks-title"
-          className="mb-4 rounded-xl border border-border bg-surface p-4"
-        >
-          <p
-            id="remove-bookmarks-title"
-            className="text-sm font-semibold text-foreground"
-          >
-            Remove {selectedCount === novels.length ? "all" : selectedCount}{" "}
-            bookmark{selectedCount === 1 ? "" : "s"}?
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-muted">
-            These novels will be removed from your library. You can bookmark them
-            again later.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={handleRemove}
-              disabled={pending}
-              className="inline-flex h-8 items-center rounded-lg bg-red-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
-            >
-              {pending ? "Removing…" : "Remove"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setConfirming(false);
-                setError(null);
-              }}
-              disabled={pending}
-              className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium text-foreground transition-colors hover:border-accent/40 disabled:opacity-50"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {error ? (
-        <p role="alert" className="mb-4 text-sm text-red-600 dark:text-red-400">
-          {error}
-        </p>
-      ) : null}
-
-      {managing ? (
-        <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-4 xl:grid-cols-5">
-          {novels.map((novel) => (
-            <SelectableNovelCard
+      {items.length > 0 ? (
+        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+          {items.map((novel) => (
+            <LibraryRow
               key={novel.id}
               novel={novel}
-              selected={selected.has(novel.slug)}
-              onToggle={() => toggleSlug(novel.slug)}
+              onRemove={handleRemove}
+              removing={pending && removingSlug === novel.slug}
             />
           ))}
-        </div>
+        </ul>
       ) : (
-        <NovelGrid novels={novels} hideAuthor />
+        <div className="rounded-xl border border-dashed border-border bg-surface px-4 py-8 text-center">
+          <p className="text-sm text-muted">Your library is empty.</p>
+          <Link
+            href="/novels"
+            className="mt-2 inline-flex text-sm font-medium text-accent transition-colors hover:text-accent-hover"
+          >
+            Browse novels
+          </Link>
+        </div>
       )}
     </div>
   );
