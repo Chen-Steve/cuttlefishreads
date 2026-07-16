@@ -142,7 +142,7 @@ export function ChapterForm({
 
   return (
     <form action={action} className="flex flex-col gap-4">
-      {isEdit && (
+      {isEdit ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-3">
             <Link
@@ -156,6 +156,19 @@ export function ChapterForm({
               Edit chapter {initial!.number}
             </h1>
           </div>
+          <button
+            type="submit"
+            disabled={pending}
+            className={submitButtonClass}
+          >
+            {submitLabel}
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+            Add chapter
+          </h1>
           <button
             type="submit"
             disabled={pending}
@@ -211,8 +224,6 @@ export function ChapterForm({
 
         {/* Sidebar: publishing options, sticky so they're always in reach */}
         <aside className={`${cardClass} lg:sticky lg:top-6`}>
-          <h2 className="text-sm font-semibold text-foreground">Publishing</h2>
-
           <div className="flex flex-col gap-1.5">
             <label htmlFor="chapter-number" className={labelClass}>
               Chapter #
@@ -371,13 +382,15 @@ export function ChapterForm({
             )}
           </fieldset>
 
-          <button
-            type="submit"
-            disabled={pending}
-            className={`${submitButtonClass} w-full`}
-          >
-            {submitLabel}
-          </button>
+          {isEdit ? (
+            <button
+              type="submit"
+              disabled={pending}
+              className={`${submitButtonClass} w-full`}
+            >
+              {submitLabel}
+            </button>
+          ) : null}
         </aside>
       </div>
     </form>
