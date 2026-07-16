@@ -27,13 +27,6 @@ export default async function SignupPage({
       }
       fields={[
         {
-          name: "username",
-          label: "Username",
-          type: "text",
-          autoComplete: "username",
-          placeholder: "Fellow Daoist",
-        },
-        {
           name: "email",
           label: "Email",
           type: "email",

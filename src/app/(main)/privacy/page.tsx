@@ -48,7 +48,8 @@ export default function PrivacyPage() {
           <ul>
             <li>
               <strong>Account information:</strong> When you register, we collect
-              your email address and a username you choose.
+              your email address and an automatically assigned username
+              (which you can change later in account settings).
             </li>
             <li>
               <strong>Profile data:</strong> Information you voluntarily provide

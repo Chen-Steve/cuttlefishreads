@@ -6,6 +6,11 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+-- Case-insensitive uniqueness (Alice / alice collide). Usernames are stored lowercase.
+create unique index if not exists profiles_username_lower_key
+  on public.profiles (lower(username))
+  where username is not null;
+
 -- -----------------------------------------------------------------------------
 -- coin_purchases
 -- Simple receipt table. One row per completed PayPal purchase.

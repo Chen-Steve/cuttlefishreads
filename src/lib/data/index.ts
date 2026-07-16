@@ -470,7 +470,7 @@ export async function getPublicProfile(
   const { data } = await supabase
     .from("profiles")
     .select("id, username, role")
-    .eq("username", username)
+    .eq("username", username.trim().toLowerCase())
     .maybeSingle();
 
   if (!data?.username) return null;
