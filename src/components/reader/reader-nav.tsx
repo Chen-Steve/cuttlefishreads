@@ -15,8 +15,8 @@ export function ReaderNav({
   showSettings = false,
 }: {
   slug: string;
-  previous?: Chapter;
-  next?: Chapter;
+  previous?: Pick<Chapter, "number">;
+  next?: Pick<Chapter, "number">;
   chapters: ChapterSummary[];
   currentChapter: number;
   menuPlacement?: "up" | "down";

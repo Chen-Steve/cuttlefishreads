@@ -540,6 +540,7 @@ export async function createChapter(
 
   revalidatePath("/admin");
   revalidatePath("/novels", "layout");
+  revalidatePath("/");
   redirect(`/admin/novels/${novelId}/chapters`);
 }
 

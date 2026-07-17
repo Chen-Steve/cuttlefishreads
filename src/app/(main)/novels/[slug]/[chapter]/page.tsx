@@ -10,7 +10,6 @@ import {
   TranslatorNote,
 } from "@/components/reader";
 import {
-  getAdjacentChapters,
   getChapter,
   getChapterSummaries,
   getNovel,
@@ -65,19 +64,25 @@ export default async function ChapterReaderPage({
   const { slug, chapter } = await params;
   const chapterNumber = Number(chapter);
 
-  const [novel, current, { previous, next }, chapters, userCoins, isLoggedIn] =
-    await Promise.all([
-      getNovel(slug),
-      getChapter(slug, chapterNumber),
-      getAdjacentChapters(slug, chapterNumber),
-      getChapterSummaries(slug),
-      getUserCoins(),
-      isUserAuthenticated(),
-    ]);
+  const [novel, current, chapters, userCoins, isLoggedIn] = await Promise.all([
+    getNovel(slug),
+    getChapter(slug, chapterNumber),
+    getChapterSummaries(slug),
+    getUserCoins(),
+    isUserAuthenticated(),
+  ]);
 
   if (!novel || !current || Number.isNaN(chapterNumber)) {
     notFound();
   }
+
+  const index = chapters.findIndex((c) => c.number === chapterNumber);
+  const previous =
+    index > 0 ? { number: chapters[index - 1]!.number } : undefined;
+  const next =
+    index >= 0 && index < chapters.length - 1
+      ? { number: chapters[index + 1]!.number }
+      : undefined;
 
   return (
     <PageContainer as="article" width="narrow" className="pt-4 sm:pt-6 lg:pt-6">

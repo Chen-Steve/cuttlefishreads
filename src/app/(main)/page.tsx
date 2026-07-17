@@ -7,6 +7,7 @@ import { PageContainer } from "@/components/page-container";
 import {
   getFeaturedNovels,
   getNewlyAddedNovels,
+  getNovels,
   getRecentlyUpdatedNovels,
   getUnderratedNovels,
 } from "@/lib/data";
@@ -20,15 +21,20 @@ export const metadata: Metadata = publicPageMetadata({
 });
 
 export default async function Home() {
-  const [featured, newlyAdded, recentlyUpdated] = await Promise.all([
-    getFeaturedNovels(),
+  const [catalog, newlyAdded, recentlyUpdated] = await Promise.all([
+    getNovels(),
     getNewlyAddedNovels(),
     getRecentlyUpdatedNovels(),
   ]);
-  const underrated = await getUnderratedNovels([
-    ...featured.map((novel) => novel.slug),
-    ...newlyAdded.map((novel) => novel.slug),
-  ]);
+  const featured = await getFeaturedNovels(catalog);
+  const underrated = await getUnderratedNovels(
+    [
+      ...featured.map((novel) => novel.slug),
+      ...newlyAdded.map((novel) => novel.slug),
+    ],
+    undefined,
+    catalog,
+  );
 
   return (
     <PageContainer className="pt-3 pb-6 sm:py-8 lg:py-10">

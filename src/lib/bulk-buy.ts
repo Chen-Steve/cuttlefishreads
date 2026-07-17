@@ -1,6 +1,10 @@
-import type { Chapter } from "@/types";
-
 export const BULK_BUY_MIN_ADVANCED_CHAPTERS = 10;
+
+export type BulkBuyChapter = {
+  isAdvanced: boolean;
+  locked: boolean;
+  coinCost: number;
+};
 
 export type BulkBuyState = {
   eligible: boolean;
@@ -8,7 +12,7 @@ export type BulkBuyState = {
   fullPrice: number;
 };
 
-export function getBulkBuyState(chapters: Chapter[]): BulkBuyState {
+export function getBulkBuyState(chapters: BulkBuyChapter[]): BulkBuyState {
   const advancedCount = chapters.filter((c) => c.isAdvanced).length;
   const purchasable = chapters.filter((c) => c.locked && c.coinCost > 0);
   const fullPrice = purchasable.reduce((sum, c) => sum + c.coinCost, 0);

@@ -17,7 +17,7 @@ import { getBulkBuyState } from "@/lib/bulk-buy";
 import { PageContainer } from "@/components/page-container";
 import { Badge } from "@/components/ui/badge";
 import {
-  getChapters,
+  getChapterListItems,
   getNovel,
   getUserCoins,
   isNovelBookmarked,
@@ -70,7 +70,7 @@ export default async function NovelDetailPage({
   const { slug } = await params;
   const [novel, chapters, bookmarked, isLoggedIn, userCoins] = await Promise.all([
     getNovel(slug),
-    getChapters(slug),
+    getChapterListItems(slug),
     isNovelBookmarked(slug),
     isUserAuthenticated(),
     getUserCoins(),

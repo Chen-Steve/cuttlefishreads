@@ -6,7 +6,7 @@ import { ArrowDownUp, ChevronRight, ShieldCheck } from "lucide-react";
 
 import { isScheduledUnlock } from "@/lib/unlock-countdown";
 import { cn } from "@/lib/utils";
-import type { Chapter } from "@/types";
+import type { ChapterListItem } from "@/types";
 import { ChapterLockBadge } from "./chapter-lock-badge";
 
 const CHAPTER_ORDER_STORAGE_KEY = "cf-chapter-order";
@@ -87,7 +87,7 @@ export function ChapterList({
   chapters,
 }: {
   slug: string;
-  chapters: Chapter[];
+  chapters: ChapterListItem[];
 }) {
   const newestFirst = useChapterOrderPreference();
 

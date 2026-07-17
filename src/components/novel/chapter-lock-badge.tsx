@@ -4,9 +4,9 @@ import { Cookie, Lock } from "lucide-react";
 
 import { UnlockCountdown } from "@/components/reader/unlock-countdown";
 import { isScheduledUnlock } from "@/lib/unlock-countdown";
-import type { Chapter } from "@/types";
+import type { ChapterListItem } from "@/types";
 
-export function ChapterLockBadge({ chapter }: { chapter: Chapter }) {
+export function ChapterLockBadge({ chapter }: { chapter: ChapterListItem }) {
   if (!chapter.locked) return null;
 
   if (chapter.unlockAt && isScheduledUnlock(chapter.unlockAt)) {

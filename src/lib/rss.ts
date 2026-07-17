@@ -75,12 +75,16 @@ export async function getFeedItems(
   limit = FEED_ITEM_LIMIT,
 ): Promise<FeedItem[]> {
   const admin = createAdminClient();
+  // Fetch a headroom above `limit` because paid/locked chapters are filtered out.
+  const fetchLimit = Math.max(limit * 4, 200);
   let query = admin
     .from("chapters")
     .select(
       "number, title, is_free, unlock_at, published_at, novels!inner(slug, title)",
     )
-    .eq("is_published", true);
+    .eq("is_published", true)
+    .order("published_at", { ascending: false })
+    .limit(fetchLimit);
 
   if (novelSlug) {
     query = query.eq("novels.slug", novelSlug);

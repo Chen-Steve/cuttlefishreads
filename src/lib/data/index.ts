@@ -4,6 +4,7 @@ import type { Genre, Language } from "@/lib/constants";
 import { getAllTimeViewsBySlug } from "@/lib/google-analytics";
 import type {
   Chapter,
+  ChapterListItem,
   ChapterSummary,
   Novel,
   NovelComment,
@@ -50,6 +51,8 @@ type DbChapter = {
   unlock_at: string | null;
   published_at: string;
 };
+
+type DbChapterMeta = Omit<DbChapter, "content">;
 
 function splitContent(text: string): string[] {
   return text
@@ -105,6 +108,19 @@ function mapChapter(
   unlockedNumbers: Set<number>,
   bypassLock: boolean,
 ): Chapter {
+  const listItem = mapChapterListItem(slug, row, unlockedNumbers, bypassLock);
+  return {
+    ...listItem,
+    content: splitContent(row.content),
+  };
+}
+
+function mapChapterListItem(
+  slug: string,
+  row: DbChapterMeta,
+  unlockedNumbers: Set<number>,
+  bypassLock: boolean,
+): ChapterListItem {
   const naturallyFree = isNaturallyFree(row);
   const purchased = unlockedNumbers.has(row.number);
   const locked = !naturallyFree && !purchased && !bypassLock;
@@ -115,7 +131,6 @@ function mapChapter(
     novelSlug: slug,
     number: row.number,
     title: row.title,
-    content: splitContent(row.content),
     translatorNote: row.translator_note?.trim() ? row.translator_note : null,
     useGlobalTranslatorNote: row.use_global_translator_note ?? true,
     publishedAt: formatDate(row.published_at),
@@ -185,6 +200,46 @@ async function fetchDbChapters(novelId: string): Promise<DbChapter[]> {
     return [];
   }
   return (data ?? []) as DbChapter[];
+}
+
+async function fetchDbChapterMetas(novelId: string): Promise<DbChapterMeta[]> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("chapters")
+    .select(
+      "id, number, title, translator_note, use_global_translator_note, is_free, coin_cost, unlock_at, published_at",
+    )
+    .eq("novel_id", novelId)
+    .eq("is_published", true)
+    .order("number", { ascending: true });
+
+  if (error) {
+    console.error("fetchDbChapterMetas:", error);
+    return [];
+  }
+  return (data ?? []) as DbChapterMeta[];
+}
+
+async function fetchDbChapter(
+  novelId: string,
+  chapterNumber: number,
+): Promise<DbChapter | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("chapters")
+    .select(
+      "id, number, title, content, translator_note, use_global_translator_note, is_free, coin_cost, unlock_at, published_at",
+    )
+    .eq("novel_id", novelId)
+    .eq("number", chapterNumber)
+    .eq("is_published", true)
+    .maybeSingle();
+
+  if (error) {
+    console.error("fetchDbChapter:", error);
+    return null;
+  }
+  return (data as DbChapter | null) ?? null;
 }
 
 async function fetchDbChapterSummaries(
@@ -261,13 +316,15 @@ export async function getNovel(slug: string): Promise<Novel | undefined> {
   return novel;
 }
 
-export async function getFeaturedNovels(): Promise<Novel[]> {
-  const novels = await getNovels();
-  if (novels.length === 0) return [];
+export async function getFeaturedNovels(
+  novels?: Novel[],
+): Promise<Novel[]> {
+  const catalog = novels ?? (await getNovels());
+  if (catalog.length === 0) return [];
 
-  const viewsBySlug = await getAllTimeViewsBySlug(novels.map((n) => n.slug));
+  const viewsBySlug = await getAllTimeViewsBySlug(catalog.map((n) => n.slug));
 
-  return [...novels]
+  return [...catalog]
     .sort((a, b) => (viewsBySlug[b.slug] ?? 0) - (viewsBySlug[a.slug] ?? 0))
     .slice(0, 5);
 }
@@ -303,45 +360,31 @@ function shuffleNovels(novels: Novel[]): Novel[] {
 export async function getUnderratedNovels(
   excludeSlugs: Iterable<string>,
   limit = UNDERRATED_LIMIT,
+  novels?: Novel[],
 ): Promise<Novel[]> {
   const excluded = new Set(excludeSlugs);
-  const novels = await getNovels();
-  const pool = novels.filter((novel) => !excluded.has(novel.slug));
+  const catalog = novels ?? (await getNovels());
+  const pool = catalog.filter((novel) => !excluded.has(novel.slug));
   return shuffleNovels(pool).slice(0, limit);
 }
 
-type DbRecentChapterRow = {
-  number: number;
-  title: string;
-  published_at: string;
+type DbRecentChapterRpcRow = {
+  novel_slug: string;
+  novel_title: string;
+  cover_url: string | null;
+  chapter_number: number;
+  chapter_title: string;
   is_free: boolean;
-  novels: { slug: string; title: string; cover_url: string | null };
+  published_at: string;
 };
-
-type DbRecentChapterQueryRow = Omit<DbRecentChapterRow, "novels"> & {
-  novels:
-    | { slug: string; title: string; cover_url: string | null }
-    | { slug: string; title: string; cover_url: string | null }[]
-    | null;
-};
-
-function resolveNovelRef(
-  novels: DbRecentChapterQueryRow["novels"],
-): { slug: string; title: string; cover_url: string | null } | null {
-  if (!novels) return null;
-  return Array.isArray(novels) ? (novels[0] ?? null) : novels;
-}
 
 const RECENT_CHAPTERS_PER_NOVEL = 3;
 
 export async function getRecentlyUpdatedNovels(): Promise<RecentlyUpdatedNovel[]> {
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("chapters")
-    .select(
-      "number, title, published_at, is_free, novels!inner(slug, title, cover_url)",
-    )
-    .eq("is_published", true);
+  const { data, error } = await admin.rpc("recently_updated_chapters", {
+    per_novel: RECENT_CHAPTERS_PER_NOVEL,
+  });
 
   if (error) {
     console.error("getRecentlyUpdatedNovels:", error);
@@ -362,24 +405,23 @@ export async function getRecentlyUpdatedNovels(): Promise<RecentlyUpdatedNovel[]
 
   const bySlug = new Map<string, NovelAccumulator>();
 
-  for (const row of (data ?? []) as DbRecentChapterQueryRow[]) {
-    const novel = resolveNovelRef(row.novels);
-    if (!novel) continue;
-
-    let entry = bySlug.get(novel.slug);
+  for (const row of (data ?? []) as DbRecentChapterRpcRow[]) {
+    let entry = bySlug.get(row.novel_slug);
     if (!entry) {
       entry = {
-        slug: novel.slug,
-        title: novel.title,
-        coverUrl: novel.cover_url ?? undefined,
+        slug: row.novel_slug,
+        title: row.novel_title,
+        coverUrl: row.cover_url ?? undefined,
         chapters: [],
       };
-      bySlug.set(novel.slug, entry);
+      bySlug.set(row.novel_slug, entry);
     }
 
+    if (entry.chapters.length >= RECENT_CHAPTERS_PER_NOVEL) continue;
+
     entry.chapters.push({
-      number: row.number,
-      title: row.title,
+      number: row.chapter_number,
+      title: row.chapter_title,
       isAdvanced: !row.is_free,
       publishedAt: row.published_at,
     });
@@ -387,24 +429,18 @@ export async function getRecentlyUpdatedNovels(): Promise<RecentlyUpdatedNovel[]
 
   return [...bySlug.values()]
     .map((entry): RecentlyUpdatedNovel | null => {
-      const sorted = entry.chapters.sort(
-        (a, b) =>
-          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
-      );
-      const latest = sorted[0];
+      const latest = entry.chapters[0];
       if (!latest) return null;
 
       return {
         slug: entry.slug,
         title: entry.title,
         coverUrl: entry.coverUrl,
-        recentChapters: sorted.slice(0, RECENT_CHAPTERS_PER_NOVEL).map(
-          ({ number, title, isAdvanced }) => ({
-            number,
-            title,
-            isAdvanced,
-          }),
-        ),
+        recentChapters: entry.chapters.map(({ number, title, isAdvanced }) => ({
+          number,
+          title,
+          isAdvanced,
+        })),
         updatedAt: latest.publishedAt,
         updatedAtLabel: formatRelativeDate(latest.publishedAt),
       };
@@ -537,6 +573,28 @@ export async function getChapters(slug: string): Promise<Chapter[]> {
   return rows.map((row) => mapChapter(slug, row, unlocked, bypassLock));
 }
 
+/** Chapter list/TOC metadata without body content. */
+export async function getChapterListItems(
+  slug: string,
+): Promise<ChapterListItem[]> {
+  const novel = await fetchNovelIdBySlug(slug);
+  if (!novel) return [];
+
+  const currentUser = await getCurrentUser();
+  const isPublisher =
+    novel.publisher_id !== null && currentUser?.id === novel.publisher_id;
+  const bypassLock = currentUser?.isAdmin === true || isPublisher;
+
+  const [rows, unlocked] = await Promise.all([
+    fetchDbChapterMetas(novel.id),
+    getUnlockedChapterNumbers(slug),
+  ]);
+
+  return rows.map((row) =>
+    mapChapterListItem(slug, row, unlocked, bypassLock),
+  );
+}
+
 export async function getChapterSummaries(
   slug: string,
 ): Promise<ChapterSummary[]> {
@@ -565,16 +623,38 @@ export async function getChapter(
   slug: string,
   chapterNumber: number,
 ): Promise<Chapter | undefined> {
-  const chapters = await getChapters(slug);
-  return chapters.find((c) => c.number === chapterNumber);
+  const novel = await fetchNovelIdBySlug(slug);
+  if (!novel) return undefined;
+
+  const currentUser = await getCurrentUser();
+  const isPublisher =
+    novel.publisher_id !== null && currentUser?.id === novel.publisher_id;
+  const bypassLock = currentUser?.isAdmin === true || isPublisher;
+
+  const [row, unlocked] = await Promise.all([
+    fetchDbChapter(novel.id, chapterNumber),
+    getUnlockedChapterNumbers(slug),
+  ]);
+  if (!row) return undefined;
+
+  return mapChapter(slug, row, unlocked, bypassLock);
 }
 
-export async function getAdjacentChapters(slug: string, chapterNumber: number) {
-  const list = await getChapters(slug);
+export async function getAdjacentChapters(
+  slug: string,
+  chapterNumber: number,
+): Promise<{
+  previous?: Pick<ChapterSummary, "number">;
+  next?: Pick<ChapterSummary, "number">;
+}> {
+  const list = await getChapterSummaries(slug);
   const index = list.findIndex((c) => c.number === chapterNumber);
   return {
-    previous: index > 0 ? list[index - 1] : undefined,
-    next: index >= 0 && index < list.length - 1 ? list[index + 1] : undefined,
+    previous: index > 0 ? { number: list[index - 1]!.number } : undefined,
+    next:
+      index >= 0 && index < list.length - 1
+        ? { number: list[index + 1]!.number }
+        : undefined,
   };
 }
 
@@ -927,7 +1007,7 @@ export type ReadableChapter = {
 export async function getReadableChapters(
   slug: string,
 ): Promise<ReadableChapter[]> {
-  const chapters = await getChapters(slug);
+  const chapters = await getChapterSummaries(slug);
   return chapters
     .filter((chapter) => !chapter.locked)
     .map((chapter) => ({
@@ -940,6 +1020,26 @@ export async function isChapterReadable(
   slug: string,
   chapterNumber: number,
 ): Promise<boolean> {
-  const chapter = await getChapter(slug, chapterNumber);
-  return Boolean(chapter && !chapter.locked);
+  const novel = await fetchNovelIdBySlug(slug);
+  if (!novel) return false;
+
+  const currentUser = await getCurrentUser();
+  const isPublisher =
+    novel.publisher_id !== null && currentUser?.id === novel.publisher_id;
+  if (currentUser?.isAdmin === true || isPublisher) return true;
+
+  const admin = createAdminClient();
+  const [{ data: row }, unlocked] = await Promise.all([
+    admin
+      .from("chapters")
+      .select("number, is_free, unlock_at")
+      .eq("novel_id", novel.id)
+      .eq("number", chapterNumber)
+      .eq("is_published", true)
+      .maybeSingle(),
+    getUnlockedChapterNumbers(slug),
+  ]);
+
+  if (!row) return false;
+  return isNaturallyFree(row) || unlocked.has(chapterNumber);
 }

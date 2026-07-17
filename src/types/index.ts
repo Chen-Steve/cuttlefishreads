@@ -66,6 +66,9 @@ export interface ChapterSummary {
   locked: boolean;
 }
 
+/** Chapter metadata for lists/TOC — no body content. */
+export type ChapterListItem = Omit<Chapter, "content">;
+
 export interface User {
   id: string;
   username: string;

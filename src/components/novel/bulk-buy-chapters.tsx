@@ -11,7 +11,7 @@ import {
   getBulkBuyState,
 } from "@/lib/bulk-buy";
 import { cookiesLabel } from "@/lib/utils";
-import type { Chapter } from "@/types";
+import type { ChapterListItem } from "@/types";
 
 export function BulkBuyChapters({
   novelSlug,
@@ -20,7 +20,7 @@ export function BulkBuyChapters({
   isLoggedIn,
 }: {
   novelSlug: string;
-  chapters: Chapter[];
+  chapters: ChapterListItem[];
   userCoins: number;
   isLoggedIn: boolean;
 }) {
