@@ -263,6 +263,97 @@ export async function createComment(
   };
 }
 
+export async function replyToComment(
+  parentId: string,
+  body: string,
+): Promise<CommentState> {
+  const supabase = createClient(await cookies());
+
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims) {
+    return { error: "Please sign in to reply." };
+  }
+
+  const bodyError = validateCommentBody(body);
+  if (bodyError) return { error: bodyError };
+
+  const { data: parent, error: parentError } = await supabase
+    .from("novel_comments")
+    .select("id, novel_id, novel_slug, chapter_number, parent_id")
+    .eq("id", parentId)
+    .maybeSingle();
+
+  if (parentError || !parent) {
+    return { error: "Comment not found." };
+  }
+
+  if (parent.parent_id != null) {
+    return { error: "You can only reply to a top-level comment." };
+  }
+
+  if (parent.chapter_number != null) {
+    const readable = await isChapterReadable(
+      parent.novel_slug,
+      parent.chapter_number,
+    );
+    if (!readable) {
+      return { error: "You can only reply on chapters you can read." };
+    }
+  }
+
+  const userId = auth.claims.sub as string;
+
+  const { data: inserted, error } = await supabase
+    .from("novel_comments")
+    .insert({
+      user_id: userId,
+      novel_id: parent.novel_id,
+      novel_slug: parent.novel_slug,
+      chapter_number: parent.chapter_number,
+      parent_id: parent.id,
+      body: body.trim(),
+    })
+    .select(
+      "id, novel_slug, chapter_number, parent_id, body, user_id, created_at, updated_at",
+    )
+    .single();
+
+  if (error || !inserted) {
+    return { error: error?.message ?? "Failed to post reply." };
+  }
+
+  const [{ data: profile }, { data: novel }] = await Promise.all([
+    supabase.from("profiles").select("username").eq("id", userId).maybeSingle(),
+    supabase
+      .from("novels")
+      .select("publisher_id")
+      .eq("slug", parent.novel_slug)
+      .maybeSingle(),
+  ]);
+
+  revalidateCommentPaths(parent.novel_slug, parent.chapter_number);
+  revalidatePath("/account");
+
+  return {
+    comment: {
+      id: inserted.id,
+      novelSlug: inserted.novel_slug,
+      chapterNumber: inserted.chapter_number,
+      parentId: inserted.parent_id,
+      body: inserted.body,
+      userId: inserted.user_id,
+      username: profile?.username ?? "Unknown",
+      likeCount: 0,
+      likedByCurrentUser: false,
+      isOwn: true,
+      isTranslatorReply: novel?.publisher_id === userId,
+      replies: [],
+      createdAt: inserted.created_at,
+      updatedAt: inserted.updated_at,
+    },
+  };
+}
+
 export async function updateComment(
   commentId: string,
   body: string,

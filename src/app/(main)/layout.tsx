@@ -14,16 +14,18 @@ export default async function MainLayout({
   const isAuthenticated = Boolean(data?.claims);
 
   let username: string | null = null;
+  let avatarUrl: string | null = null;
   let coins = 0;
   let isAdmin = false;
   let isMasterAdmin = false;
   if (data?.claims) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("username, coins")
+      .select("username, coins, avatar_url")
       .eq("id", data.claims.sub)
       .maybeSingle();
     username = profile?.username ?? null;
+    avatarUrl = profile?.avatar_url ?? null;
     coins = profile?.coins ?? 0;
 
     // Master admin check (env-based, always available).
@@ -57,6 +59,7 @@ export default async function MainLayout({
       <SiteHeader
         isAuthenticated={isAuthenticated}
         username={username}
+        avatarUrl={avatarUrl}
         coins={coins}
         isAdmin={isAdmin}
         isMasterAdmin={isMasterAdmin}

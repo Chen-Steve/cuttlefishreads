@@ -12,21 +12,19 @@ export const metadata: Metadata = {
 export default async function CreateNovelPage() {
   return (
     <PageContainer as="div" width="default">
-      <Link
-        href="/admin"
-        className="inline-flex h-9 items-center gap-1 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-      >
-        <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
-        Back to novels
-      </Link>
-
-      <h1 className="mt-4 text-xl font-semibold tracking-tight sm:text-2xl">
-        Create novel
-      </h1>
-
-      <div className="mt-8">
-        <NovelForm />
-      </div>
+      <NovelForm
+        header={
+          <>
+            <Link
+              href="/admin"
+              className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
+              Back to novels
+            </Link>
+          </>
+        }
+      />
     </PageContainer>
   );
 }

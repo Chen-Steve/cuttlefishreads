@@ -2,9 +2,13 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { Pencil, Trash2, User } from "lucide-react";
+import { Pencil, Reply, Trash2, User } from "lucide-react";
 
-import { deleteComment, updateComment } from "@/app/(main)/novels/actions";
+import {
+  deleteComment,
+  replyToComment,
+  updateComment,
+} from "@/app/(main)/novels/actions";
 import { Badge } from "@/components/ui/badge";
 import type { NovelComment } from "@/types";
 
@@ -27,6 +31,7 @@ export function CommentItem({
   chapterTitles,
   onDeleted,
   onUpdated,
+  onReplyAdded,
 }: {
   comment: NovelComment;
   isLoggedIn: boolean;
@@ -34,9 +39,12 @@ export function CommentItem({
   chapterTitles: Record<number, string>;
   onDeleted?: (id: string) => void;
   onUpdated?: (id: string, body: string) => void;
+  onReplyAdded?: (parentId: string, reply: NovelComment) => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [replying, setReplying] = useState(false);
   const [body, setBody] = useState(comment.body);
+  const [replyBody, setReplyBody] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -68,6 +76,22 @@ export function CommentItem({
       }
       setEditing(false);
       onUpdated?.(comment.id, body.trim());
+    });
+  }
+
+  function handleReply() {
+    setError(null);
+    startTransition(async () => {
+      const result = await replyToComment(comment.id, replyBody);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      if (result.comment) {
+        onReplyAdded?.(comment.id, result.comment);
+      }
+      setReplyBody("");
+      setReplying(false);
     });
   }
 
@@ -166,11 +190,30 @@ export function CommentItem({
               isLoggedIn={isLoggedIn}
             />
 
+            {isLoggedIn && !editing ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setReplying(true);
+                  setConfirmingDelete(false);
+                  setError(null);
+                }}
+                disabled={pending}
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-background hover:text-foreground disabled:opacity-50"
+              >
+                <Reply className="size-3.5" strokeWidth={1.75} aria-hidden />
+                Reply
+              </button>
+            ) : null}
+
             {comment.isOwn && !editing ? (
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => setEditing(true)}
+                  onClick={() => {
+                    setEditing(true);
+                    setReplying(false);
+                  }}
                   disabled={pending}
                   className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-background hover:text-foreground disabled:opacity-50"
                 >
@@ -179,7 +222,10 @@ export function CommentItem({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setConfirmingDelete(true)}
+                  onClick={() => {
+                    setConfirmingDelete(true);
+                    setReplying(false);
+                  }}
                   disabled={pending}
                   className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-background hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50"
                 >
@@ -189,6 +235,46 @@ export function CommentItem({
               </div>
             ) : null}
           </div>
+
+          {replying ? (
+            <div className="mt-3 space-y-2">
+              <label htmlFor={`reply-comment-${comment.id}`} className="sr-only">
+                Reply to comment
+              </label>
+              <textarea
+                id={`reply-comment-${comment.id}`}
+                value={replyBody}
+                onChange={(event) => setReplyBody(event.target.value)}
+                rows={3}
+                maxLength={2000}
+                disabled={pending}
+                placeholder="Write a reply…"
+                className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleReply}
+                  disabled={pending || !replyBody.trim()}
+                  className="inline-flex h-8 items-center rounded-lg bg-accent px-3 text-xs font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50"
+                >
+                  {pending ? "Posting…" : "Post reply"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReplying(false);
+                    setReplyBody("");
+                    setError(null);
+                  }}
+                  disabled={pending}
+                  className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium text-foreground transition-colors hover:border-accent/40 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           {confirmingDelete ? (
             <div

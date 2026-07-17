@@ -497,6 +497,9 @@ export type PublicProfile = {
   id: string;
   username: string;
   role: "user" | "translator";
+  avatarUrl: string | null;
+  kofiUrl: string | null;
+  patreonUrl: string | null;
 };
 
 export async function getPublicProfile(
@@ -505,7 +508,7 @@ export async function getPublicProfile(
   const supabase = createClient(await cookies());
   const { data } = await supabase
     .from("profiles")
-    .select("id, username, role")
+    .select("id, username, role, avatar_url, kofi_url, patreon_url")
     .eq("username", username.trim().toLowerCase())
     .maybeSingle();
 
@@ -514,6 +517,9 @@ export async function getPublicProfile(
     id: data.id,
     username: data.username,
     role: data.role === "translator" ? "translator" : "user",
+    avatarUrl: data.avatar_url?.trim() || null,
+    kofiUrl: data.kofi_url?.trim() || null,
+    patreonUrl: data.patreon_url?.trim() || null,
   };
 }
 
@@ -997,6 +1003,95 @@ export async function getNovelComments(
     comments: await assembleCommentTree(slug, pageRows, currentUserId),
     hasMore,
   };
+}
+
+export type AccountCommentReply = {
+  id: string;
+  username: string;
+  body: string;
+  createdAt: string;
+  isTranslatorReply: boolean;
+};
+
+export type AccountComment = {
+  id: string;
+  novelSlug: string;
+  novelTitle: string;
+  chapterNumber: number | null;
+  body: string;
+  createdAt: string;
+  replies: AccountCommentReply[];
+};
+
+export async function getUserComments(
+  userId: string,
+): Promise<AccountComment[]> {
+  const supabase = createClient(await cookies());
+
+  const { data, error } = await supabase
+    .from("novel_comments")
+    .select(COMMENT_COLUMNS)
+    .eq("user_id", userId)
+    .is("parent_id", null)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("getUserComments:", error);
+    return [];
+  }
+
+  const topLevelRows = (data ?? []) as DbCommentRow[];
+  if (topLevelRows.length === 0) return [];
+
+  const parentIds = topLevelRows.map((row) => row.id);
+  const replyRows = await fetchReplyRows(parentIds);
+
+  const slugs = [...new Set(topLevelRows.map((row) => row.novel_slug))];
+  const replyUserIds = [...new Set(replyRows.map((row) => row.user_id))];
+
+  const [{ data: novels }, usernames] = await Promise.all([
+    supabase.from("novels").select("slug, title, publisher_id").in("slug", slugs),
+    fetchProfileUsernames(replyUserIds),
+  ]);
+
+  const novelBySlug = new Map(
+    (novels ?? []).map((novel) => [
+      novel.slug as string,
+      {
+        title: (novel.title as string) ?? (novel.slug as string),
+        publisherId: (novel.publisher_id as string | null) ?? null,
+      },
+    ]),
+  );
+
+  const repliesByParent = new Map<string, AccountCommentReply[]>();
+  for (const row of replyRows) {
+    if (!row.parent_id) continue;
+    const list = repliesByParent.get(row.parent_id) ?? [];
+    const novel = novelBySlug.get(row.novel_slug);
+    list.push({
+      id: row.id,
+      username: usernames.get(row.user_id) ?? "Unknown",
+      body: row.body,
+      createdAt: row.created_at,
+      isTranslatorReply:
+        novel?.publisherId != null && row.user_id === novel.publisherId,
+    });
+    repliesByParent.set(row.parent_id, list);
+  }
+
+  return topLevelRows.map((row) => {
+    const novel = novelBySlug.get(row.novel_slug);
+    return {
+      id: row.id,
+      novelSlug: row.novel_slug,
+      novelTitle: novel?.title ?? row.novel_slug,
+      chapterNumber: row.chapter_number,
+      body: row.body,
+      createdAt: row.created_at,
+      replies: repliesByParent.get(row.id) ?? [],
+    };
+  });
 }
 
 export type ReadableChapter = {

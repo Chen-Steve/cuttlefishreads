@@ -163,11 +163,13 @@ function HeaderSearch({
 
 function AccountDropdown({
   username,
+  avatarUrl = null,
   coins = 0,
   isAdmin = false,
   isMasterAdmin = false,
 }: {
   username?: string | null;
+  avatarUrl?: string | null;
   coins?: number;
   isAdmin?: boolean;
   isMasterAdmin?: boolean;
@@ -203,7 +205,14 @@ function AccountDropdown({
         aria-label={username ? `Account menu for ${username}` : "Account menu"}
         className={navIconLinkClass}
       >
-        <User className="size-5 shrink-0 sm:size-4" strokeWidth={1.75} aria-hidden />
+        {avatarUrl ? (
+          <span className="relative size-5 shrink-0 overflow-hidden rounded-full sm:size-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={avatarUrl} alt="" className="size-full object-cover" />
+          </span>
+        ) : (
+          <User className="size-5 shrink-0 sm:size-4" strokeWidth={1.75} aria-hidden />
+        )}
         <span className="hidden max-w-32 truncate lg:inline">
           {username || "Account"}
         </span>
@@ -286,12 +295,14 @@ function AccountDropdown({
 export function SiteHeader({
   isAuthenticated = false,
   username = null,
+  avatarUrl = null,
   coins = 0,
   isAdmin = false,
   isMasterAdmin = false,
 }: {
   isAuthenticated?: boolean;
   username?: string | null;
+  avatarUrl?: string | null;
   coins?: number;
   isAdmin?: boolean;
   isMasterAdmin?: boolean;
@@ -392,6 +403,7 @@ export function SiteHeader({
           {isAuthenticated ? (
             <AccountDropdown
               username={username}
+              avatarUrl={avatarUrl}
               coins={coins}
               isAdmin={isAdmin}
               isMasterAdmin={isMasterAdmin}

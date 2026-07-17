@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { GENRES, LANGUAGES } from "@/lib/constants";
@@ -35,8 +35,10 @@ export type NovelFormValues = {
 
 export function NovelForm({
   novel,
+  header,
 }: {
   novel?: NovelFormValues;
+  header?: ReactNode;
 }) {
   const isEdit = Boolean(novel);
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -64,8 +66,39 @@ export function NovelForm({
 
   const displayCover = localCoverPreview ?? novel?.cover_url ?? null;
 
+  const submitButton = (
+    <button
+      type="submit"
+      disabled={pending}
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50",
+        header ? "h-10 px-4" : "h-11 px-5 sm:w-fit",
+      )}
+    >
+      {pending
+        ? isEdit
+          ? "Saving…"
+          : "Creating…"
+        : isEdit
+          ? "Save changes"
+          : "Create novel"}
+    </button>
+  );
+
   return (
-    <form action={action} className="flex flex-col gap-5">
+    <form
+      action={action}
+      className={cn("flex flex-col", header ? "gap-3" : "gap-5")}
+    >
+      {header ? (
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            {header}
+          </div>
+          {submitButton}
+        </div>
+      ) : null}
+
       {state.error && (
         <p
           role="alert"
@@ -147,35 +180,12 @@ export function NovelForm({
         </div>
 
         <div className="flex flex-col gap-5">
-          <div
-            className={cn(
-              panelClass,
-              isEdit
-                ? "flex items-center justify-between gap-4"
-                : undefined,
-            )}
-          >
-            <button
-              type="submit"
-              disabled={pending}
-              className={cn(
-                "inline-flex h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 sm:w-fit",
-                !isEdit && "w-full",
-              )}
-            >
-              {pending
-                ? isEdit
-                  ? "Saving…"
-                  : "Creating…"
-                : isEdit
-                  ? "Save changes"
-                  : "Create novel"}
-            </button>
-
-            {isEdit && novel && (
+          {isEdit && novel ? (
+            <div className={cn(panelClass, "flex items-center justify-between gap-4")}>
+              {submitButton}
               <DeleteNovelButton novelId={novel.id} title={novel.title} />
-            )}
-          </div>
+            </div>
+          ) : null}
 
           <div className={cn(panelClass, "flex flex-col gap-4")}>
             <fieldset className="flex flex-col gap-2">

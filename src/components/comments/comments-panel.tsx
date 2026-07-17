@@ -83,6 +83,15 @@ export function CommentsPanel({
                     ),
                   )
                 }
+                onReplyAdded={(parentId, reply) =>
+                  setComments((prev) =>
+                    prev.map((c) =>
+                      c.id === parentId
+                        ? { ...c, replies: [...c.replies, reply] }
+                        : c,
+                    ),
+                  )
+                }
               />
             </li>
           ))}

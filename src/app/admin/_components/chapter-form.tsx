@@ -147,7 +147,7 @@ export function ChapterForm({
           <div className="flex min-w-0 flex-wrap items-center gap-3">
             <Link
               href={`/admin/novels/${novelId}/chapters`}
-              className="inline-flex h-9 shrink-0 items-center gap-1 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="inline-flex h-11 shrink-0 items-center gap-1 rounded-xl border border-border bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
               Back to chapters

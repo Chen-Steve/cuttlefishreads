@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { User } from "lucide-react";
+import { Coffee, Heart, User } from "lucide-react";
 
 import { NovelGrid } from "@/components/novel";
 import { PageContainer } from "@/components/page-container";
@@ -74,8 +74,19 @@ export default async function PublicProfilePage({
       className="flex flex-col gap-6 pt-4 pb-8 sm:gap-7 sm:pt-5 sm:pb-10 lg:pt-6 lg:pb-12"
     >
       <header className="flex items-center gap-3 border-b border-border pb-4">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent/10">
-          <User className="size-5 text-accent" strokeWidth={1.75} aria-hidden />
+        <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-accent/10">
+          {profile.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={profile.avatarUrl}
+              alt=""
+              className="size-full object-cover"
+            />
+          ) : (
+            <div className="flex size-full items-center justify-center">
+              <User className="size-5 text-accent" strokeWidth={1.75} aria-hidden />
+            </div>
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -88,6 +99,34 @@ export default async function PublicProfilePage({
               </span>
             ) : null}
           </div>
+          {isTranslator && (profile.kofiUrl || profile.patreonUrl) ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {profile.kofiUrl ? (
+                <a
+                  href={profile.kofiUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-[#13C3FF] px-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                >
+                  <Coffee className="size-3.5" strokeWidth={2} aria-hidden />
+                  Ko-fi
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              ) : null}
+              {profile.patreonUrl ? (
+                <a
+                  href={profile.patreonUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-[#FF424D] px-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                >
+                  <Heart className="size-3.5" strokeWidth={2} aria-hidden />
+                  Patreon
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </header>
 
