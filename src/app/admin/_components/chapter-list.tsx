@@ -85,7 +85,7 @@ export function ChapterOrderToggle() {
       )}
     >
       <ArrowDownUp className="size-4" strokeWidth={1.75} aria-hidden />
-      {newestFirst ? "Newest first" : "Oldest first"}
+      {newestFirst ? "Newest" : "Oldest"}
     </button>
   );
 }

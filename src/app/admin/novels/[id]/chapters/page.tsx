@@ -77,8 +77,13 @@ export default async function ChaptersListPage({
               <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
               Back to novels
             </Link>
-            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-              {novel.title}
+            <h1
+              className="text-xl font-semibold tracking-tight sm:text-2xl"
+              title={novel.title}
+            >
+              {novel.title.length > 50
+                ? `${novel.title.slice(0, 50)}...`
+                : novel.title}
             </h1>
           </div>
         </div>
@@ -96,7 +101,7 @@ export default async function ChaptersListPage({
         </div>
       </div>
 
-      <div className="mt-8">
+      <div className="mt-3">
         <ChapterList novelId={id} chapters={rows} />
       </div>
     </PageContainer>
