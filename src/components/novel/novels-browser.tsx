@@ -42,9 +42,11 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
 function SortDropdown({
   value,
   onChange,
+  className,
 }: {
   value: SortOption;
   onChange: (value: SortOption) => void;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -70,14 +72,14 @@ function SortDropdown({
   }, [open]);
 
   return (
-    <div ref={ref} className="relative shrink-0">
+    <div ref={ref} className={cn("relative min-w-0 flex-1 sm:flex-none sm:shrink-0", className)}>
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Sort novels: ${selected.label}`}
-        className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium leading-none text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="inline-flex h-9 w-full items-center justify-start gap-1.5 rounded-xl px-3 text-sm font-medium leading-none text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:w-auto"
       >
         <ArrowUpDown className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
         <span className="max-w-40 truncate">{selected.label}</span>
@@ -94,7 +96,7 @@ function SortDropdown({
       {open ? (
         <div
           role="menu"
-          className="absolute top-full right-0 z-30 mt-1.5 min-w-48 overflow-hidden rounded-xl border border-border bg-surface shadow-md"
+          className="absolute top-full left-0 z-30 mt-1.5 w-full overflow-hidden rounded-xl border border-border bg-surface shadow-md sm:left-auto sm:right-0 sm:w-auto sm:min-w-48"
         >
           {SORT_OPTIONS.map((opt) => {
             const isSelected = opt.value === value;
@@ -269,31 +271,35 @@ export function NovelsBrowser({
             )}
           </label>
 
-          <SortDropdown value={sort} onChange={setSort} />
-        </div>
+          <div className="flex items-center gap-2 sm:contents">
+            <SortDropdown value={sort} onChange={setSort} />
 
-        <button
-          type="button"
-          onClick={() => setFiltersOpen((open) => !open)}
-          aria-expanded={filtersOpen}
-          className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-full border border-border bg-surface text-xs font-semibold text-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:hidden"
-        >
-          <SlidersHorizontal className="size-3.5" strokeWidth={1.75} aria-hidden />
-          {filtersOpen ? "Hide filters" : "Show filters"}
-          {activePillFilters > 0 ? (
-            <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold leading-none text-accent-foreground">
-              {activePillFilters}
-            </span>
-          ) : null}
-          <ChevronDown
-            className={cn(
-              "size-3.5 transition-transform",
-              filtersOpen && "rotate-180",
-            )}
-            strokeWidth={2}
-            aria-hidden
-          />
-        </button>
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((open) => !open)}
+              aria-expanded={filtersOpen}
+              className="inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:hidden"
+            >
+              <SlidersHorizontal className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden />
+              <span className="truncate">
+                {filtersOpen ? "Hide filters" : "Show filters"}
+              </span>
+              {activePillFilters > 0 ? (
+                <span className="shrink-0 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold leading-none text-accent-foreground">
+                  {activePillFilters}
+                </span>
+              ) : null}
+              <ChevronDown
+                className={cn(
+                  "size-3.5 shrink-0 transition-transform",
+                  filtersOpen && "rotate-180",
+                )}
+                strokeWidth={2}
+                aria-hidden
+              />
+            </button>
+          </div>
+        </div>
 
         <div
           className={cn(
