@@ -127,6 +127,17 @@ export default async function ChapterReaderPage({
 
       {!current.locked ? (
         <>
+          <div className="mt-6">
+            <ReaderNav
+              slug={slug}
+              previous={previous}
+              next={next}
+              chapters={chapters}
+              currentChapter={chapterNumber}
+              menuPlacement="up"
+            />
+          </div>
+
           <TranslatorNote
             name={novel.translator || novel.translatorUsername || "The translator"}
             username={novel.translatorUsername}
@@ -153,15 +164,6 @@ export default async function ChapterReaderPage({
           </section>
         </>
       ) : null}
-
-      <ReaderNav
-        slug={slug}
-        previous={previous}
-        next={next}
-        chapters={chapters}
-        currentChapter={chapterNumber}
-        menuPlacement="up"
-      />
     </PageContainer>
   );
 }

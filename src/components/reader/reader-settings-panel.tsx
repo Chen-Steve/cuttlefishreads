@@ -16,6 +16,7 @@ import {
   FONT_SIZE_RANGE,
   LINE_SPACING_RANGE,
   PARAGRAPH_SPACING_RANGE,
+  TEXT_COLOR_OPTIONS,
   clampToRange,
   type ReaderFontFamily,
 } from "@/lib/reader-settings";
@@ -45,6 +46,7 @@ export function ReaderSettingsPanel({
   const lineLabelId = useId();
   const paragraphLabelId = useId();
   const backgroundLabelId = useId();
+  const textColorLabelId = useId();
   const { settings, updateSettings, resetSettings } = useReaderSettings();
 
   useEffect(() => {
@@ -249,6 +251,58 @@ export function ReaderSettingsPanel({
                 })}
               </div>
             </div>
+
+            <div className="py-2">
+              <p
+                id={textColorLabelId}
+                className="mb-1.5 text-xs font-medium text-muted"
+              >
+                Text
+              </p>
+              <div
+                role="group"
+                aria-labelledby={textColorLabelId}
+                className="flex items-center justify-between gap-1"
+              >
+                {TEXT_COLOR_OPTIONS.map((option) => {
+                  const selected = settings.textColor === option.value;
+                  const checkColor =
+                    option.value === "default"
+                      ? "var(--background)"
+                      : option.value === "soft"
+                        ? "#3d3229"
+                        : "#fff";
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={selected}
+                      aria-label={`${option.label} text color`}
+                      title={option.label}
+                      onClick={() =>
+                        updateSettings({ textColor: option.value })
+                      }
+                      className={cn(
+                        "relative inline-flex size-7 shrink-0 items-center justify-center rounded-full border transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+                        selected
+                          ? "border-accent ring-2 ring-accent/40"
+                          : "border-border hover:border-accent/60",
+                      )}
+                      style={{ backgroundColor: option.swatch }}
+                    >
+                      {selected ? (
+                        <Check
+                          className="size-3.5"
+                          strokeWidth={2.5}
+                          aria-hidden
+                          style={{ color: checkColor }}
+                        />
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       ) : null}
@@ -338,25 +392,80 @@ function FontSelect({
   value: ReaderFontFamily;
   onChange: (value: ReaderFontFamily) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const selectedOption = FONT_FAMILY_OPTIONS.find((o) => o.value === value);
+  const displayLabel =
+    value === "default" ? "Default" : (selectedOption?.label ?? "Default");
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
   return (
-    <div className="relative">
-      <select
+    <div ref={ref} className="relative w-36">
+      <button
+        type="button"
         aria-labelledby={labelledBy}
-        value={value}
-        onChange={(e) => onChange(e.target.value as ReaderFontFamily)}
-        className="h-7 w-36 appearance-none rounded-lg border border-border bg-background pr-6 pl-2 text-xs text-foreground transition-colors hover:border-accent/60 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex h-7 w-full items-center justify-between gap-1 rounded-lg border border-border bg-background px-2 text-xs font-medium text-foreground transition-colors hover:border-accent/60 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
       >
-        {FONT_FAMILY_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.value === "default" ? "Default" : option.label}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        className="pointer-events-none absolute top-1/2 right-1.5 size-3 -translate-y-1/2 text-muted"
-        strokeWidth={2}
-        aria-hidden
-      />
+        <span className="truncate">{displayLabel}</span>
+        <ChevronDown
+          className={cn(
+            "size-3 shrink-0 transition-transform duration-150",
+            open && "rotate-180",
+          )}
+          strokeWidth={1.75}
+          aria-hidden
+        />
+      </button>
+
+      {open ? (
+        <div
+          role="listbox"
+          aria-labelledby={labelledBy}
+          className="absolute inset-x-0 top-full z-40 mt-1.5 max-h-48 overflow-y-auto overflow-x-hidden rounded-xl border border-border bg-surface shadow-md"
+        >
+          {FONT_FAMILY_OPTIONS.map((option) => {
+            const selected = option.value === value;
+            const label =
+              option.value === "default" ? "Default" : option.label;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
+              >
+                <span className="truncate">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }

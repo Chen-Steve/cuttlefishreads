@@ -20,6 +20,14 @@ export type ReaderBackground =
   | "dusk"
   | "night";
 
+export type ReaderTextColor =
+  | "default"
+  | "black"
+  | "brown"
+  | "forest"
+  | "navy"
+  | "soft";
+
 export type ReaderSettings = {
   /** Font size in px. */
   fontSize: number;
@@ -29,6 +37,7 @@ export type ReaderSettings = {
   /** Space between paragraphs in rem. */
   paragraphSpacing: number;
   background: ReaderBackground;
+  textColor: ReaderTextColor;
 };
 
 export const READER_SETTINGS_STORAGE_KEY = "cf-reader-settings";
@@ -47,6 +56,7 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   lineSpacing: 1.8,
   paragraphSpacing: 1.25,
   background: "default",
+  textColor: "default",
 };
 
 export const FONT_FAMILY_OPTIONS: {
@@ -89,6 +99,7 @@ export const BACKGROUND_OPTIONS: {
   label: string;
   swatch: string;
   background: string;
+  /** Paired text color used when textColor is "default". */
   color: string;
 }[] = [
   {
@@ -149,6 +160,51 @@ export const BACKGROUND_OPTIONS: {
   },
 ];
 
+export const TEXT_COLOR_OPTIONS: {
+  value: ReaderTextColor;
+  label: string;
+  swatch: string;
+  /** CSS color, or null for "default" (uses the background's paired color). */
+  color: string | null;
+}[] = [
+  {
+    value: "default",
+    label: "Default",
+    swatch: "var(--foreground)",
+    color: null,
+  },
+  {
+    value: "black",
+    label: "Black",
+    swatch: "#111111",
+    color: "#111111",
+  },
+  {
+    value: "brown",
+    label: "Brown",
+    swatch: "#7a3f1d",
+    color: "#7a3f1d",
+  },
+  {
+    value: "forest",
+    label: "Forest",
+    swatch: "#1a5c40",
+    color: "#1a5c40",
+  },
+  {
+    value: "navy",
+    label: "Navy",
+    swatch: "#1a3a6b",
+    color: "#1a3a6b",
+  },
+  {
+    value: "soft",
+    label: "Soft",
+    swatch: "#e0ddd6",
+    color: "#e0ddd6",
+  },
+];
+
 function fontFamilyCss(value: ReaderFontFamily): string {
   return (
     FONT_FAMILY_OPTIONS.find((o) => o.value === value)?.css ??
@@ -162,6 +218,15 @@ function backgroundOption(value: ReaderBackground) {
   );
 }
 
+function textColorCss(
+  textColor: ReaderTextColor,
+  background: ReaderBackground,
+): string {
+  const option = TEXT_COLOR_OPTIONS.find((o) => o.value === textColor);
+  if (option?.color) return option.color;
+  return backgroundOption(background).color;
+}
+
 export function readerContentStyle(settings: ReaderSettings): CSSProperties {
   const bg = backgroundOption(settings.background);
   return {
@@ -170,7 +235,7 @@ export function readerContentStyle(settings: ReaderSettings): CSSProperties {
     lineHeight: settings.lineSpacing,
     gap: `${settings.paragraphSpacing}rem`,
     backgroundColor: bg.background,
-    color: bg.color,
+    color: textColorCss(settings.textColor, settings.background),
   };
 }
 
@@ -230,5 +295,8 @@ export function parseReaderSettings(raw: string | null): ReaderSettings {
     background: BACKGROUND_OPTIONS.some((o) => o.value === v.background)
       ? (v.background as ReaderBackground)
       : DEFAULT_READER_SETTINGS.background,
+    textColor: TEXT_COLOR_OPTIONS.some((o) => o.value === v.textColor)
+      ? (v.textColor as ReaderTextColor)
+      : DEFAULT_READER_SETTINGS.textColor,
   };
 }
