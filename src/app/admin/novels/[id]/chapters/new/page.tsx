@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -60,22 +58,12 @@ export default async function AddChapterPage({
 
   return (
     <PageContainer as="div">
-      <Link
-        href={`/admin/novels/${id}/chapters`}
-        className="inline-flex h-11 items-center gap-1 rounded-xl border border-border bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-      >
-        <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
-        Back to chapters
-      </Link>
-
-      <div className="mt-4">
-        <ChapterForm
-          novelId={novel.id}
-          latestChapterUnlockAt={latestUnlockRow?.unlock_at ?? null}
-          defaultCoinCost={latestPaidRow?.coin_cost ?? null}
-          nextChapterNumber={(lastNumberRow?.number ?? 0) + 1}
-        />
-      </div>
+      <ChapterForm
+        novelId={novel.id}
+        latestChapterUnlockAt={latestUnlockRow?.unlock_at ?? null}
+        defaultCoinCost={latestPaidRow?.coin_cost ?? null}
+        nextChapterNumber={(lastNumberRow?.number ?? 0) + 1}
+      />
     </PageContainer>
   );
 }
