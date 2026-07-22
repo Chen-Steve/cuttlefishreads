@@ -8,6 +8,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { absoluteUrl } from "@/lib/seo";
 import { generateRandomUsername } from "@/lib/username";
+import { PASSWORD_RECOVERY_COOKIE } from "@/lib/password-recovery";
 
 export type AuthState = { error?: string; message?: string };
 
@@ -167,7 +168,14 @@ export async function confirmPasswordReset(
     return { error: "Passwords do not match." };
   }
 
-  const supabase = createClient(await cookies());
+  const cookieStore = await cookies();
+  if (cookieStore.get(PASSWORD_RECOVERY_COOKIE)?.value !== "1") {
+    return {
+      error: "Reset link expired or invalid. Request a new one and try again.",
+    };
+  }
+
+  const supabase = createClient(cookieStore);
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims) {
     return {
@@ -181,6 +189,7 @@ export async function confirmPasswordReset(
     return { error: error.message };
   }
 
+  cookieStore.delete(PASSWORD_RECOVERY_COOKIE);
   revalidatePath("/", "layout");
   redirect("/account");
 }

@@ -1,12 +1,26 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
 import { AuthForm } from "../_components/auth-form";
 import { confirmPasswordReset } from "../actions";
+import { PASSWORD_RECOVERY_COOKIE } from "@/lib/password-recovery";
+import { createClient } from "@/utils/supabase/server";
 
 export const metadata: Metadata = {
   title: "Reset Password",
 };
 
-export default function ResetPasswordPage() {
+export default async function ResetPasswordPage() {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const { data } = await supabase.auth.getClaims();
+  const hasRecovery = cookieStore.get(PASSWORD_RECOVERY_COOKIE)?.value === "1";
+
+  if (!data?.claims || !hasRecovery) {
+    redirect("/forgot-password");
+  }
+
   return (
     <AuthForm
       action={confirmPasswordReset}
