@@ -18,6 +18,6 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.redirect(
-    `${origin}/login?error=Google+sign-in+failed.+Please+try+again.`
+    `${origin}/login?error=${encodeURIComponent("Authentication failed. Please try again.")}`
   );
 }

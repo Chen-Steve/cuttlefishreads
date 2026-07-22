@@ -14,6 +14,7 @@ import {
 
 export type UsernameState = { error?: string; message?: string };
 export type AvatarState = { error?: string; message?: string };
+export type PasswordState = { error?: string; message?: string };
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 
@@ -161,6 +162,40 @@ export async function updateAvatar(
   }
 
   return { message: "Profile picture updated." };
+}
+
+export async function updatePassword(
+  _prevState: PasswordState,
+  formData: FormData
+): Promise<PasswordState> {
+  const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+  if (!password) {
+    return { error: "Enter a new password." };
+  }
+
+  if (password.length < 6) {
+    return { error: "Password must be at least 6 characters." };
+  }
+
+  if (password !== confirmPassword) {
+    return { error: "Passwords do not match." };
+  }
+
+  const supabase = createClient(await cookies());
+  const { data } = await supabase.auth.getClaims();
+  if (!data?.claims) {
+    return { error: "You must be logged in." };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { message: "Password updated." };
 }
 
 export async function removeAvatar(): Promise<AvatarState> {

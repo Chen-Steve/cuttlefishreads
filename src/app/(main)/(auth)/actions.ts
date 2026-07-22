@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
@@ -131,9 +131,11 @@ export async function requestPasswordReset(
   }
 
   const supabase = createClient(await cookies());
-  const origin = (await headers()).get("origin") ?? "";
+  const callbackUrl = new URL(absoluteUrl("/auth/callback"));
+  callbackUrl.searchParams.set("next", "/reset-password");
+
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/reset-password`,
+    redirectTo: callbackUrl.toString(),
   });
 
   if (error) {
@@ -144,6 +146,43 @@ export async function requestPasswordReset(
     message:
       "If an account exists for that email, a password reset link is on its way.",
   };
+}
+
+export async function confirmPasswordReset(
+  _prevState: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+  if (!password) {
+    return { error: "Enter a new password." };
+  }
+
+  if (password.length < 6) {
+    return { error: "Password must be at least 6 characters." };
+  }
+
+  if (password !== confirmPassword) {
+    return { error: "Passwords do not match." };
+  }
+
+  const supabase = createClient(await cookies());
+  const { data } = await supabase.auth.getClaims();
+  if (!data?.claims) {
+    return {
+      error: "Reset link expired or invalid. Request a new one and try again.",
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/account");
 }
 
 export async function signOut(): Promise<void> {

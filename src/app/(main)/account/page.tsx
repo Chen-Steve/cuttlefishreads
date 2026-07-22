@@ -10,6 +10,7 @@ import { getUserComments } from "@/lib/data";
 import { signOut } from "@/app/(main)/(auth)/actions";
 import { AccountComments } from "./_components/account-comments";
 import { AvatarForm } from "./_components/avatar-form";
+import { PasswordForm } from "./_components/password-form";
 import { UsernameForm } from "./_components/username-form";
 import {
   CUSTOM_PACKAGE_ID,
@@ -124,6 +125,13 @@ export default async function AccountPage() {
                 Email
               </span>
               <span className="truncate text-sm text-foreground">{email}</span>
+            </div>
+
+            <div className="space-y-1.5 border-t border-border/70 pt-2.5">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
+                Password
+              </p>
+              <PasswordForm />
             </div>
 
             <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2.5">
