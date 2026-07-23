@@ -162,6 +162,30 @@ function HeaderSearch({
   );
 }
 
+function AccountAvatar({
+  avatarUrl,
+  className,
+}: {
+  avatarUrl?: string | null;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent/10 text-accent",
+        className,
+      )}
+    >
+      {avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={avatarUrl} alt="" className="size-full object-cover" />
+      ) : (
+        <User className="size-[55%]" strokeWidth={1.75} aria-hidden />
+      )}
+    </span>
+  );
+}
+
 function AccountDropdown({
   username,
   avatarUrl = null,
@@ -204,21 +228,20 @@ function AccountDropdown({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={username ? `Account menu for ${username}` : "Account menu"}
-        className={navIconLinkClass}
+        className={cn(navIconLinkClass, "gap-1.5 pl-1.5 sm:pl-1.5")}
       >
-        {avatarUrl ? (
-          <span className="relative size-5 shrink-0 overflow-hidden rounded-full sm:size-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={avatarUrl} alt="" className="size-full object-cover" />
-          </span>
-        ) : (
-          <User className="size-5 shrink-0 sm:size-4" strokeWidth={1.75} aria-hidden />
-        )}
+        <AccountAvatar
+          avatarUrl={avatarUrl}
+          className="size-7 border border-border sm:size-6"
+        />
         <span className="hidden max-w-32 truncate lg:inline">
           {username || "Account"}
         </span>
         <ChevronDown
-          className={cn("size-4 shrink-0 transition-transform duration-150 sm:size-3.5", open && "rotate-180")}
+          className={cn(
+            "size-4 shrink-0 transition-transform duration-150 sm:size-3.5",
+            open && "rotate-180",
+          )}
           strokeWidth={1.75}
           aria-hidden
         />
@@ -227,14 +250,29 @@ function AccountDropdown({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-30 mt-1.5 min-w-40 overflow-hidden rounded-xl border border-border bg-surface shadow-md"
+          className="absolute top-full right-0 z-30 mt-1.5 min-w-48 overflow-hidden rounded-xl border border-border bg-surface shadow-md"
         >
-          <div className="flex items-center gap-2 border-b border-border px-3.5 py-2.5">
-            <Cookie className="size-4 shrink-0 text-amber-500" strokeWidth={1.75} aria-hidden />
-            <span className="text-sm font-semibold text-foreground">
-              {coins.toLocaleString()}
-            </span>
-            <span className="text-sm text-muted">cookies</span>
+          <div className="flex items-center gap-2.5 border-b border-border px-3.5 py-3">
+            <AccountAvatar
+              avatarUrl={avatarUrl}
+              className="size-9 border border-border"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-foreground">
+                {username || "Account"}
+              </p>
+              <p className="flex items-center gap-1 text-xs text-muted">
+                <Cookie
+                  className="size-3 shrink-0 text-amber-500"
+                  strokeWidth={1.75}
+                  aria-hidden
+                />
+                <span className="font-semibold tabular-nums text-foreground">
+                  {coins.toLocaleString()}
+                </span>
+                cookies
+              </p>
+            </div>
           </div>
 
           <Link
@@ -243,7 +281,7 @@ function AccountDropdown({
             onClick={() => setOpen(false)}
             className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
           >
-            <User className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
+            <Settings className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
             Account
           </Link>
 
@@ -254,7 +292,7 @@ function AccountDropdown({
               onClick={() => setOpen(false)}
               className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
             >
-              <Library className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
+              <User className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
               Public profile
             </Link>
           ) : null}

@@ -36,8 +36,10 @@ type DbNovel = {
 const NOVEL_LIST_COLUMNS =
   "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, novelupdates_url, language, chapters(count)";
 
-const NEWLY_ADDED_LIMIT = 10;
-const UNDERRATED_LIMIT = 10;
+const NEWLY_ADDED_LIMIT = 7;
+const UNDERRATED_LIMIT = 7;
+const COMPLETED_LIMIT = 7;
+const FEATURED_LIMIT = 7;
 
 type DbChapter = {
   id: string;
@@ -326,7 +328,7 @@ export async function getFeaturedNovels(
 
   return [...catalog]
     .sort((a, b) => (viewsBySlug[b.slug] ?? 0) - (viewsBySlug[a.slug] ?? 0))
-    .slice(0, 5);
+    .slice(0, FEATURED_LIMIT);
 }
 
 export async function getNewlyAddedNovels(): Promise<Novel[]> {
@@ -366,6 +368,20 @@ export async function getUnderratedNovels(
   const catalog = novels ?? (await getNovels());
   const pool = catalog.filter((novel) => !excluded.has(novel.slug));
   return shuffleNovels(pool).slice(0, limit);
+}
+
+export async function getCompletedNovels(
+  novels?: Novel[],
+  limit = COMPLETED_LIMIT,
+): Promise<Novel[]> {
+  const catalog = novels ?? (await getNovels());
+  return [...catalog]
+    .filter((novel) => novel.status === "completed")
+    .sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    )
+    .slice(0, limit);
 }
 
 type DbRecentChapterRpcRow = {

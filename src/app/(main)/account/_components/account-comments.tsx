@@ -110,15 +110,23 @@ function CommentRow({ comment }: { comment: AccountComment }) {
   );
 }
 
-export function AccountComments({ comments }: { comments: AccountComment[] }) {
+export function AccountComments({
+  comments,
+  hideHeading = false,
+}: {
+  comments: AccountComment[];
+  hideHeading?: boolean;
+}) {
   return (
     <section>
-      <div className="mb-2 flex items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold tracking-tight">Your Comments</h2>
-        <span className="text-[11px] tabular-nums text-muted">
-          {comments.length}
-        </span>
-      </div>
+      {hideHeading ? null : (
+        <div className="mb-2 flex items-baseline justify-between gap-2">
+          <h2 className="text-sm font-semibold tracking-tight">Your Comments</h2>
+          <span className="text-[11px] tabular-nums text-muted">
+            {comments.length}
+          </span>
+        </div>
+      )}
 
       {comments.length > 0 ? (
         <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">

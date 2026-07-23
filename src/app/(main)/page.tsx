@@ -2,9 +2,14 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, Library } from "lucide-react";
 import { DiscordIcon } from "@/components/discord-icon";
-import { NovelCarousel, PaginatedRecentlyUpdatedList } from "@/components/novel";
+import {
+  ContinueReadingSection,
+  NovelCarousel,
+  PaginatedRecentlyUpdatedList,
+} from "@/components/novel";
 import { PageContainer } from "@/components/page-container";
 import {
+  getCompletedNovels,
   getFeaturedNovels,
   getNewlyAddedNovels,
   getNovels,
@@ -27,14 +32,17 @@ export default async function Home() {
     getRecentlyUpdatedNovels(),
   ]);
   const featured = await getFeaturedNovels(catalog);
-  const underrated = await getUnderratedNovels(
-    [
-      ...featured.map((novel) => novel.slug),
-      ...newlyAdded.map((novel) => novel.slug),
-    ],
-    undefined,
-    catalog,
-  );
+  const [underrated, completed] = await Promise.all([
+    getUnderratedNovels(
+      [
+        ...featured.map((novel) => novel.slug),
+        ...newlyAdded.map((novel) => novel.slug),
+      ],
+      undefined,
+      catalog,
+    ),
+    getCompletedNovels(catalog),
+  ]);
 
   return (
     <PageContainer className="pt-3 pb-6 sm:py-8 lg:py-10">
@@ -81,28 +89,36 @@ export default async function Home() {
         </div>
       </section>
 
+      <ContinueReadingSection novels={catalog} className="mt-0 sm:mt-5" />
+
       <Section
         title="Featured"
         href="/novels"
         linkLabel="View all"
-        className="mt-0 sm:mt-8"
+        className="mt-4 sm:mt-5 peer-[:empty]/continue:mt-0"
       >
-        <NovelCarousel novels={featured} compact showChapterCount />
+        <NovelCarousel novels={featured} dense fillRow showChapterCount />
       </Section>
 
       <Section title="Newly added" href="/novels" linkLabel="View all">
-        <NovelCarousel novels={newlyAdded} compact showChapterCount />
+        <NovelCarousel novels={newlyAdded} dense fillRow showChapterCount />
       </Section>
 
       {underrated.length > 0 ? (
         <Section title="Underrated" href="/novels" linkLabel="View all">
-          <NovelCarousel novels={underrated} compact showChapterCount />
+          <NovelCarousel novels={underrated} dense fillRow showChapterCount />
         </Section>
       ) : null}
 
       <Section title="Recently updated">
         <PaginatedRecentlyUpdatedList novels={recentlyUpdated} pageSize={8} />
       </Section>
+
+      {completed.length > 0 ? (
+        <Section title="Completed" href="/novels" linkLabel="View all">
+          <NovelCarousel novels={completed} dense fillRow showChapterCount />
+        </Section>
+      ) : null}
     </PageContainer>
   );
 }
@@ -112,7 +128,7 @@ function Section({
   href,
   linkLabel,
   children,
-  className = "mt-6 sm:mt-8",
+  className = "mt-4 sm:mt-5",
 }: {
   title: string;
   href?: string;

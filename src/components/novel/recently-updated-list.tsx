@@ -3,6 +3,11 @@ import Link from "next/link";
 import { NovelCover } from "./novel-cover";
 import type { RecentlyUpdatedNovel } from "@/types";
 
+function truncateLabel(value: string, maxChars: number) {
+  if (value.length <= maxChars) return value;
+  return `${value.slice(0, maxChars).trimEnd()}…`;
+}
+
 export function RecentlyUpdatedList({
   novels,
 }: {
@@ -21,7 +26,7 @@ export function RecentlyUpdatedList({
       {novels.map((novel) => (
         <article
           key={novel.slug}
-          className="flex gap-4 rounded-xl border border-border bg-surface p-2.5 sm:p-3"
+          className="flex gap-3.5 rounded-xl border border-border bg-surface p-2.5 sm:gap-4 sm:p-3"
         >
           <Link
             href={`/novels/${novel.slug}`}
@@ -36,12 +41,12 @@ export function RecentlyUpdatedList({
             />
           </Link>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             <Link
               href={`/novels/${novel.slug}`}
               className="outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent"
             >
-              <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground transition-colors hover:text-accent sm:text-base">
+              <h3 className="line-clamp-1 text-sm font-semibold leading-snug text-foreground transition-colors hover:text-accent sm:text-base">
                 {novel.title}
               </h3>
             </Link>
@@ -54,7 +59,7 @@ export function RecentlyUpdatedList({
             </time>
 
             <ul className="flex flex-col gap-1">
-              {novel.recentChapters.map((chapter) => (
+              {novel.recentChapters.slice(0, 2).map((chapter) => (
                 <li key={chapter.number}>
                   <Link
                     href={`/novels/${novel.slug}/${chapter.number}`}
@@ -66,7 +71,7 @@ export function RecentlyUpdatedList({
                     {chapter.title ? (
                       <span className="text-muted group-hover/chapter:text-accent/80">
                         {" · "}
-                        {chapter.title}
+                        {truncateLabel(chapter.title, 28)}
                       </span>
                     ) : null}
                   </Link>

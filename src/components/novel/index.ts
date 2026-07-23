@@ -1,6 +1,7 @@
 export { NovelCard } from "./novel-card";
 export { NovelCarousel } from "./novel-carousel";
-export { NovelGrid } from "./novel-grid";
+export { ContinueReadingSection } from "./continue-reading-section";
+export { NovelGrid, DENSE_FILL_ROW_LIMIT } from "./novel-grid";
 export { PaginatedNovelGrid } from "./paginated-novel-grid";
 export { PaginatedRecentlyUpdatedList } from "./paginated-recently-updated-list";
 export { RecentlyUpdatedList } from "./recently-updated-list";

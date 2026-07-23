@@ -7,11 +7,16 @@ import { NovelGrid } from "./novel-grid";
 export function NovelCarousel({
   novels,
   compact = false,
+  dense = false,
+  fillRow = false,
   hideAuthor = false,
   showChapterCount = false,
 }: {
   novels: Novel[];
   compact?: boolean;
+  dense?: boolean;
+  /** On desktop, show only as many cards as fit one row. */
+  fillRow?: boolean;
   hideAuthor?: boolean;
   showChapterCount?: boolean;
 }) {
@@ -30,14 +35,34 @@ export function NovelCarousel({
         aria-label="Novels"
       >
         {novels.map((novel) => (
-          <div key={novel.id} className="w-[10.5rem] shrink-0 snap-start">
-            <NovelCard novel={novel} compact={compact} hideAuthor={hideAuthor} showChapterCount={showChapterCount} />
+          <div
+            key={novel.id}
+            className={
+              dense
+                ? "w-[7.5rem] shrink-0 snap-start"
+                : "w-[10.5rem] shrink-0 snap-start"
+            }
+          >
+            <NovelCard
+              novel={novel}
+              compact={compact || dense}
+              dense={dense}
+              hideAuthor={hideAuthor}
+              showChapterCount={showChapterCount}
+            />
           </div>
         ))}
       </div>
 
       <div className="hidden sm:block">
-        <NovelGrid novels={novels} compact={compact} hideAuthor={hideAuthor} showChapterCount={showChapterCount} />
+        <NovelGrid
+          novels={novels}
+          compact={compact}
+          dense={dense}
+          fillRow={fillRow}
+          hideAuthor={hideAuthor}
+          showChapterCount={showChapterCount}
+        />
       </div>
     </>
   );

@@ -19,14 +19,14 @@ export function NovelCard({
   novel: Novel;
   /** Title and genres only — hides author and status. */
   compact?: boolean;
-  /** Smaller cover grid cards — title only, tighter padding. */
+  /** Smaller cover grid cards — title + genres, tighter padding. */
   dense?: boolean;
   /** Hides the author/translator line while keeping status and genres. */
   hideAuthor?: boolean;
   showChapterCount?: boolean;
 }) {
   const cardGenres = genresExcludingCoverBadges(novel.genres);
-  const showMeta = !dense && (cardGenres.length > 0 || !compact);
+  const showMeta = cardGenres.length > 0 || (!dense && !compact);
 
   return (
     <Link

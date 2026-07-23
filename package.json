@@ -16,6 +16,7 @@
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-easy-crop": "^6.2.2",
     "sonner": "^2.0.7",
     "stripe": "^22.3.1"
   },

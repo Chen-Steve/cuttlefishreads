@@ -8,32 +8,14 @@ import { PageContainer } from "@/components/page-container";
 import { createClient } from "@/utils/supabase/server";
 import { getUserComments } from "@/lib/data";
 import { signOut } from "@/app/(main)/(auth)/actions";
-import { AccountComments } from "./_components/account-comments";
+import { AccountActivity } from "./_components/account-activity";
 import { AvatarForm } from "./_components/avatar-form";
 import { PasswordForm } from "./_components/password-form";
 import { UsernameForm } from "./_components/username-form";
-import {
-  CUSTOM_PACKAGE_ID,
-  getPackageById,
-  centsToAmountString,
-} from "@/lib/coin-packages";
 
 export const metadata: Metadata = {
   title: "Account",
 };
-
-function packageLabel(id: string): string {
-  if (id === CUSTOM_PACKAGE_ID) return "Custom amount";
-  return getPackageById(id)?.label ?? id;
-}
-
-function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 export default async function AccountPage() {
   const supabase = createClient(await cookies());
@@ -66,22 +48,21 @@ export default async function AccountPage() {
     ]);
 
   const uniqueSlugs = [...new Set((unlocks ?? []).map((u) => u.novel_slug))];
-  let novelTitles = new Map<string, string>();
+  const novelTitles: Record<string, string> = {};
   if (uniqueSlugs.length > 0) {
     const { data: novels } = await supabase
       .from("novels")
       .select("slug, title")
       .in("slug", uniqueSlugs);
-    novelTitles = new Map((novels ?? []).map((n) => [n.slug, n.title]));
+    for (const novel of novels ?? []) {
+      novelTitles[novel.slug] = novel.title;
+    }
   }
-
-  const purchaseRows = purchases ?? [];
-  const unlockRows = unlocks ?? [];
 
   return (
     <PageContainer
       as="section"
-      className="flex flex-col gap-5 py-6 sm:gap-6 sm:py-8 lg:py-10"
+      className="flex flex-col gap-2 !py-3 sm:gap-6 sm:!py-8 lg:!py-10"
     >
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-lg font-semibold tracking-tight sm:text-xl">
@@ -160,90 +141,12 @@ export default async function AccountPage() {
           </div>
         </section>
 
-        <div className="flex flex-col gap-5 sm:gap-6">
-          <section>
-            <div className="mb-2 flex items-baseline justify-between gap-2">
-              <h2 className="text-sm font-semibold tracking-tight">Purchases</h2>
-              <span className="text-[11px] tabular-nums text-muted">
-                {purchaseRows.length}
-              </span>
-            </div>
-
-            {purchaseRows.length > 0 ? (
-              <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
-                {purchaseRows.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-foreground">
-                        {packageLabel(p.package_id)}
-                      </p>
-                      <p className="text-[11px] text-muted">
-                        {formatDate(p.created_at)} · ${centsToAmountString(p.amount_cents)}
-                      </p>
-                    </div>
-                    <span className="shrink-0 text-xs font-semibold tabular-nums text-amber-600 dark:text-amber-400">
-                      +{p.coins.toLocaleString()}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="rounded-xl border border-dashed border-border px-3 py-4 text-center text-xs text-muted">
-                No purchases yet.{" "}
-                <Link
-                  href="/shop"
-                  className="font-medium text-accent transition-colors hover:text-accent-hover"
-                >
-                  Visit the shop
-                </Link>
-              </p>
-            )}
-          </section>
-
-          <section>
-            <div className="mb-2 flex items-baseline justify-between gap-2">
-              <h2 className="text-sm font-semibold tracking-tight">Unlocks</h2>
-              <span className="text-[11px] tabular-nums text-muted">
-                {unlockRows.length}
-              </span>
-            </div>
-
-            {unlockRows.length > 0 ? (
-              <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
-                {unlockRows.map((u) => (
-                  <li
-                    key={u.id}
-                    className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
-                  >
-                    <div className="min-w-0">
-                      <Link
-                        href={`/novels/${u.novel_slug}`}
-                        className="block truncate font-medium text-foreground transition-colors hover:text-accent"
-                      >
-                        {novelTitles.get(u.novel_slug) ?? u.novel_slug}
-                      </Link>
-                      <p className="text-[11px] text-muted">
-                        {formatDate(u.created_at)} · Ch. {u.chapter_number}
-                      </p>
-                    </div>
-                    <span className="shrink-0 text-xs font-semibold tabular-nums text-amber-600 dark:text-amber-400">
-                      −{u.coins_spent.toLocaleString()}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="rounded-xl border border-dashed border-border px-3 py-4 text-center text-xs text-muted">
-                No chapter unlocks yet.
-              </p>
-            )}
-          </section>
-
-          <AccountComments comments={comments} />
-        </div>
+        <AccountActivity
+          purchases={purchases ?? []}
+          unlocks={unlocks ?? []}
+          novelTitles={novelTitles}
+          comments={comments}
+        />
       </div>
     </PageContainer>
   );
