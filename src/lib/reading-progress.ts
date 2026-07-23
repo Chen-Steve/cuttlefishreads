@@ -102,3 +102,23 @@ export function recordReadingProgress(
     // private mode / blocked storage
   }
 }
+
+export function clearReadingProgress(slug: string): void {
+  const normalizedSlug = slug.trim();
+  if (!normalizedSlug) return;
+
+  try {
+    const current = readReadingProgress();
+    if (!(normalizedSlug in current)) return;
+    delete current[normalizedSlug];
+    localStorage.setItem(
+      READING_PROGRESS_STORAGE_KEY,
+      JSON.stringify(current),
+    );
+    window.dispatchEvent(
+      new CustomEvent("cf-reading-progress", { detail: current }),
+    );
+  } catch {
+    // private mode / blocked storage
+  }
+}
