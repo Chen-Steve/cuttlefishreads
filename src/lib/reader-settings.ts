@@ -38,6 +38,8 @@ export type ReaderSettings = {
   paragraphSpacing: number;
   background: ReaderBackground;
   textColor: ReaderTextColor;
+  /** Tap to show/hide reader chrome; hides the site header. */
+  immersive: boolean;
 };
 
 export const READER_SETTINGS_STORAGE_KEY = "cf-reader-settings";
@@ -57,6 +59,7 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   paragraphSpacing: 1.25,
   background: "default",
   textColor: "default",
+  immersive: false,
 };
 
 export const FONT_FAMILY_OPTIONS: {
@@ -298,5 +301,9 @@ export function parseReaderSettings(raw: string | null): ReaderSettings {
     textColor: TEXT_COLOR_OPTIONS.some((o) => o.value === v.textColor)
       ? (v.textColor as ReaderTextColor)
       : DEFAULT_READER_SETTINGS.textColor,
+    immersive:
+      typeof v.immersive === "boolean"
+        ? v.immersive
+        : DEFAULT_READER_SETTINGS.immersive,
   };
 }

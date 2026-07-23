@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Check, ChevronDown, Minus, Plus, RotateCcw, Type } from "lucide-react";
+import { Check, ChevronDown, Minus, Plus, RotateCcw, Settings } from "lucide-react";
 
 import { useReaderSettings } from "@/hooks/use-reader-settings";
 import {
@@ -21,6 +21,7 @@ import {
   type ReaderFontFamily,
 } from "@/lib/reader-settings";
 import { cn } from "@/lib/utils";
+import { readerChromeIconBtnClass } from "./reader-chrome";
 
 function getFocusable(container: HTMLElement) {
   return Array.from(
@@ -47,6 +48,7 @@ export function ReaderSettingsPanel({
   const paragraphLabelId = useId();
   const backgroundLabelId = useId();
   const textColorLabelId = useId();
+  const immersiveLabelId = useId();
   const { settings, updateSettings, resetSettings } = useReaderSettings();
 
   useEffect(() => {
@@ -110,7 +112,7 @@ export function ReaderSettingsPanel({
   }, [open]);
 
   return (
-    <div ref={ref} className="relative justify-self-center">
+    <div ref={ref} className="relative">
       <button
         ref={triggerRef}
         type="button"
@@ -120,9 +122,12 @@ export function ReaderSettingsPanel({
         aria-controls={open ? dialogId : undefined}
         aria-label="Reading settings"
         title="Reading settings"
-        className="inline-flex size-10 items-center justify-center rounded-xl border border-border bg-surface text-sm font-medium leading-none text-foreground transition-colors hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className={cn(
+          readerChromeIconBtnClass,
+          open && "bg-background text-foreground",
+        )}
       >
-        <Type className="size-4" strokeWidth={1.75} aria-hidden />
+        <Settings className="size-5" strokeWidth={1.75} aria-hidden />
       </button>
 
       {open ? (
@@ -134,8 +139,8 @@ export function ReaderSettingsPanel({
           aria-labelledby={titleId}
           tabIndex={-1}
           className={cn(
-            "absolute left-1/2 z-30 w-[min(17.5rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-border bg-surface p-2.5 shadow-md outline-none",
-            placement === "up" ? "bottom-full mb-1.5" : "top-full mt-1.5",
+            "absolute left-1/2 z-30 w-[min(17.5rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-border bg-surface p-2.5 shadow-lg outline-none",
+            placement === "up" ? "bottom-full mb-2" : "top-full mt-2",
           )}
         >
           <div className="mb-1 flex items-center justify-between gap-2 px-0.5">
@@ -157,6 +162,34 @@ export function ReaderSettingsPanel({
           </div>
 
           <div className="divide-y divide-border/60">
+            <SettingRow label="Immersive" labelId={immersiveLabelId}>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={settings.immersive}
+                aria-labelledby={immersiveLabelId}
+                onClick={() =>
+                  updateSettings({ immersive: !settings.immersive })
+                }
+                className={cn(
+                  "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+                  settings.immersive
+                    ? "border-accent bg-accent"
+                    : "border-border bg-background",
+                )}
+              >
+                <span
+                  aria-hidden
+                  className={cn(
+                    "inline-block size-3.5 rounded-full bg-surface shadow-sm transition-transform",
+                    settings.immersive
+                      ? "translate-x-[1.125rem] bg-accent-foreground"
+                      : "translate-x-0.5",
+                  )}
+                />
+              </button>
+            </SettingRow>
+
             <SettingRow label="Size" labelId={sizeLabelId}>
               <Stepper
                 labelledBy={sizeLabelId}

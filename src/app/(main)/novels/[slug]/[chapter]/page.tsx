@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CommentSection } from "@/components/comments";
 import { PageContainer } from "@/components/page-container";
 import {
   ChapterContent,
+  ChapterReaderHeader,
   ChapterUnlockGate,
+  ImmersiveChapterShell,
   ReaderNav,
   TranslatorNote,
 } from "@/components/reader";
@@ -87,47 +88,34 @@ export default async function ChapterReaderPage({
   return (
     <PageContainer as="article" width="narrow" className="pt-4 sm:pt-6 lg:pt-6">
       <span data-hide-main-footer hidden />
-      <header className="mb-4 text-center">
-        <Link
-          href={`/novels/${slug}`}
-          title={novel.title}
-          className="mx-auto block max-w-full truncate text-sm font-medium text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        >
-          {novel.title}
-        </Link>
-        <h1 className="text-xl font-bold tracking-tight text-balance text-foreground sm:text-2xl">
-          {current.title
-            ? `Chapter ${current.number}: ${current.title}`
-            : `Chapter ${current.number}`}
-        </h1>
-        <div className="mt-4">
-          <ReaderNav
+      <ImmersiveChapterShell
+        header={
+          <ChapterReaderHeader
             slug={slug}
+            novelTitle={novel.title}
+            chapterNumber={chapterNumber}
+            chapterTitle={current.title}
             previous={previous}
             next={next}
             chapters={chapters}
-            currentChapter={chapterNumber}
-            showSettings
           />
-        </div>
-      </header>
-
-      {current.locked ? (
-        <ChapterUnlockGate
-          novelSlug={slug}
-          chapterNumber={chapterNumber}
-          coinCost={current.coinCost}
-          unlockAt={current.unlockAt}
-          userCoins={userCoins}
-          isLoggedIn={isLoggedIn}
-        />
-      ) : (
-        <ChapterContent paragraphs={current.content} />
-      )}
-
-      {!current.locked ? (
-        <>
-          <div className="mt-6">
+        }
+        content={
+          current.locked ? (
+            <ChapterUnlockGate
+              novelSlug={slug}
+              chapterNumber={chapterNumber}
+              coinCost={current.coinCost}
+              unlockAt={current.unlockAt}
+              userCoins={userCoins}
+              isLoggedIn={isLoggedIn}
+            />
+          ) : (
+            <ChapterContent paragraphs={current.content} />
+          )
+        }
+        bottomNav={
+          !current.locked ? (
             <ReaderNav
               slug={slug}
               previous={previous}
@@ -136,34 +124,41 @@ export default async function ChapterReaderPage({
               currentChapter={chapterNumber}
               menuPlacement="up"
             />
-          </div>
+          ) : undefined
+        }
+        afterContent={
+          !current.locked ? (
+            <>
+              <TranslatorNote
+                name={
+                  novel.translator || novel.translatorUsername || "The translator"
+                }
+                username={novel.translatorUsername}
+                note={
+                  current.useGlobalTranslatorNote
+                    ? (novel.translatorGlobalNote ?? null)
+                    : current.translatorNote
+                }
+                kofiUrl={novel.translatorKofiUrl}
+                patreonUrl={novel.translatorPatreonUrl}
+              />
 
-          <TranslatorNote
-            name={novel.translator || novel.translatorUsername || "The translator"}
-            username={novel.translatorUsername}
-            note={
-              current.useGlobalTranslatorNote
-                ? (novel.translatorGlobalNote ?? null)
-                : current.translatorNote
-            }
-            kofiUrl={novel.translatorKofiUrl}
-            patreonUrl={novel.translatorPatreonUrl}
-          />
+              <hr className="my-6 border-border" />
 
-          <hr className="my-6 border-border" />
-
-          <section className="mb-10">
-            <h2 className="mb-4 text-lg font-semibold tracking-tight text-foreground">
-              Comments
-            </h2>
-            <CommentSection
-              mode="chapter"
-              novelSlug={slug}
-              chapterNumber={chapterNumber}
-            />
-          </section>
-        </>
-      ) : null}
+              <section className="mb-10">
+                <h2 className="mb-4 text-lg font-semibold tracking-tight text-foreground">
+                  Comments
+                </h2>
+                <CommentSection
+                  mode="chapter"
+                  novelSlug={slug}
+                  chapterNumber={chapterNumber}
+                />
+              </section>
+            </>
+          ) : undefined
+        }
+      />
     </PageContainer>
   );
 }

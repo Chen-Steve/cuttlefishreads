@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { BookOpen, ChevronDown, Cookie, LogIn, LogOut, Library, PenLine, Search, Settings, ShoppingBag, User } from "lucide-react";
 
 import { signOut } from "@/app/(main)/(auth)/actions";
+import { useImmersiveHidesSiteHeader } from "@/components/reader";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -308,6 +309,7 @@ export function SiteHeader({
   isMasterAdmin?: boolean;
 }) {
   const isDesktop = useIsDesktopNav();
+  const hideForImmersive = useImmersiveHidesSiteHeader();
 
   const navItems = isAuthenticated
     ? [novelsNavItem, libraryNavItem, shopNavItem]
@@ -320,6 +322,10 @@ export function SiteHeader({
       "min-w-0 flex-1 border-0 bg-transparent py-0 text-sm font-medium leading-none text-foreground outline-none placeholder:font-medium placeholder:leading-none placeholder:text-muted/80",
     iconClassName: "size-4 shrink-0 text-muted",
   };
+
+  if (hideForImmersive) {
+    return null;
+  }
 
   return (
     <header className="overflow-visible border-b border-border bg-background">

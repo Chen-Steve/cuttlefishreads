@@ -12,6 +12,7 @@ import { ChevronDown, List, Lock } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { ChapterSummary } from "@/types";
+import { readerChromeBtnClass } from "./reader-chrome";
 
 const TITLE_DISPLAY_MAX = 10;
 
@@ -109,9 +110,9 @@ export function ChapterContentsDropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label="Chapter contents"
-        className="inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-sm font-medium text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className={cn(readerChromeBtnClass, open && "bg-background text-foreground")}
       >
-        <List className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
+        <List className="size-5 shrink-0" strokeWidth={1.75} aria-hidden />
         <span className="hidden sm:inline">Contents</span>
         <ChevronDown
           className={cn(
@@ -131,12 +132,12 @@ export function ChapterContentsDropdown({
           aria-label="Chapters"
           style={mobilePanelStyle}
           className={cn(
-            "z-30 max-h-72 w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 overflow-y-auto rounded-xl border border-border bg-surface shadow-md",
+            "z-30 max-h-72 w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 overflow-y-auto rounded-2xl border border-border bg-surface shadow-lg",
             "fixed left-1/2",
             "sm:absolute sm:w-80",
             placement === "up"
-              ? "sm:top-auto sm:bottom-full sm:mb-1.5"
-              : "sm:top-full sm:bottom-auto sm:mt-1.5",
+              ? "sm:top-auto sm:bottom-full sm:mb-2"
+              : "sm:top-full sm:bottom-auto sm:mt-2",
           )}
         >
           {chapters.map((chapter) => {
