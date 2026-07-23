@@ -59,7 +59,7 @@ export function RecentlyUpdatedList({
             </time>
 
             <ul className="flex flex-col gap-1">
-              {novel.recentChapters.slice(0, 2).map((chapter) => (
+              {novel.recentChapters.slice(0, 3).map((chapter) => (
                 <li key={chapter.number}>
                   <Link
                     href={`/novels/${novel.slug}/${chapter.number}`}
