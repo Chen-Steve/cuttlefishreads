@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import Link from "next/link";
 
 import type { AccountComment } from "@/lib/data";
@@ -36,6 +36,8 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "comments", label: "Comments" },
 ];
 
+const TAB_STORAGE_KEY = "cf-account-activity-tab";
+
 function packageLabel(id: string): string {
   if (id === CUSTOM_PACKAGE_ID) return "Custom amount";
   return getPackageById(id)?.label ?? id;
@@ -47,6 +49,10 @@ function formatDate(value: string): string {
     month: "short",
     day: "numeric",
   });
+}
+
+function isTabId(value: string | null): value is TabId {
+  return value === "purchases" || value === "unlocks" || value === "comments";
 }
 
 export function AccountActivity({
@@ -62,6 +68,24 @@ export function AccountActivity({
 }) {
   const [tab, setTab] = useState<TabId>("purchases");
   const baseId = useId();
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(TAB_STORAGE_KEY);
+      if (isTabId(raw)) setTab(raw);
+    } catch {
+      // private mode / blocked storage
+    }
+  }, []);
+
+  function selectTab(next: TabId) {
+    setTab(next);
+    try {
+      localStorage.setItem(TAB_STORAGE_KEY, next);
+    } catch {
+      // private mode / blocked storage
+    }
+  }
 
   const counts: Record<TabId, number> = {
     purchases: purchases.length,
@@ -87,7 +111,7 @@ export function AccountActivity({
               aria-selected={selected}
               aria-controls={`${baseId}-${id}-panel`}
               tabIndex={selected ? 0 : -1}
-              onClick={() => setTab(id)}
+              onClick={() => selectTab(id)}
               className={cn(
                 "inline-flex items-center justify-center gap-1 rounded-lg px-2 py-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:gap-1.5 sm:text-sm",
                 selected

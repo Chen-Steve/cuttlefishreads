@@ -6,7 +6,7 @@ import { updatePassword, type PasswordState } from "../actions";
 export function PasswordForm() {
   const [state, formAction, pending] = useActionState<PasswordState, FormData>(
     updatePassword,
-    {}
+    {},
   );
   const formRef = useRef<HTMLFormElement>(null);
   const passwordId = useId();

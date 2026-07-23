@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, Library } from "lucide-react";
 import { DiscordIcon } from "@/components/discord-icon";
+import { HomeSection } from "@/components/home-section";
 import {
   ContinueReadingSection,
   NovelCarousel,
@@ -91,68 +92,53 @@ export default async function Home() {
 
       <ContinueReadingSection novels={catalog} className="mt-0 sm:mt-5" />
 
-      <Section
+      <HomeSection
         title="Featured"
+        storageKey="cf-home-section-featured"
         href="/novels"
         linkLabel="View all"
         className="mt-4 sm:mt-5 peer-[:empty]/continue:mt-0"
       >
         <NovelCarousel novels={featured} dense fillRow showChapterCount />
-      </Section>
+      </HomeSection>
 
-      <Section title="Newly added" href="/novels" linkLabel="View all">
+      <HomeSection
+        title="Newly added"
+        storageKey="cf-home-section-newly-added"
+        href="/novels"
+        linkLabel="View all"
+      >
         <NovelCarousel novels={newlyAdded} dense fillRow showChapterCount />
-      </Section>
+      </HomeSection>
 
       {underrated.length > 0 ? (
-        <Section title="Underrated" href="/novels" linkLabel="View all">
+        <HomeSection
+          title="Underrated"
+          storageKey="cf-home-section-underrated"
+          href="/novels"
+          linkLabel="View all"
+        >
           <NovelCarousel novels={underrated} dense fillRow showChapterCount />
-        </Section>
+        </HomeSection>
       ) : null}
 
-      <Section title="Recently updated">
+      <HomeSection
+        title="Recently updated"
+        storageKey="cf-home-section-recently-updated"
+      >
         <PaginatedRecentlyUpdatedList novels={recentlyUpdated} pageSize={8} />
-      </Section>
+      </HomeSection>
 
       {completed.length > 0 ? (
-        <Section title="Completed" href="/novels" linkLabel="View all">
+        <HomeSection
+          title="Completed"
+          storageKey="cf-home-section-completed"
+          href="/novels"
+          linkLabel="View all"
+        >
           <NovelCarousel novels={completed} dense fillRow showChapterCount />
-        </Section>
+        </HomeSection>
       ) : null}
     </PageContainer>
-  );
-}
-
-function Section({
-  title,
-  href,
-  linkLabel,
-  children,
-  className = "mt-4 sm:mt-5",
-}: {
-  title: string;
-  href?: string;
-  linkLabel?: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <section className={className}>
-      <div className="mb-3 flex items-baseline justify-between gap-4">
-        <h2 className="text-lg font-semibold leading-none tracking-tight text-foreground">
-          {title}
-        </h2>
-        {href && linkLabel ? (
-          <Link
-            href={href}
-            className="inline-flex shrink-0 items-center gap-1 text-sm font-medium leading-none text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            {linkLabel}
-            <ArrowRight className="size-3.5" strokeWidth={2} aria-hidden />
-          </Link>
-        ) : null}
-      </div>
-      {children}
-    </section>
   );
 }

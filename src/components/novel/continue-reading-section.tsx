@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 
 import type { Novel } from "@/types";
+import { useStoredOpen } from "@/hooks/use-stored-open";
 import {
   CONTINUE_READING_LIMIT,
   listReadingProgress,
@@ -86,6 +87,8 @@ export function ContinueReadingSection({
   className?: string;
 }) {
   const [items, setItems] = useState<ContinueItem[] | null>(null);
+  const { open, toggle } = useStoredOpen("cf-home-section-continue", true);
+  const panelId = useId();
 
   useEffect(() => {
     function sync() {
@@ -109,9 +112,25 @@ export function ContinueReadingSection({
   return (
     <section className={cn("peer/continue", className)}>
       <div className="mb-3 flex items-baseline justify-between gap-4">
-        <h2 className="text-lg font-semibold leading-none tracking-tight text-foreground">
-          Continue reading
-        </h2>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={toggle}
+          className="inline-flex min-w-0 items-center gap-1.5 rounded-md text-left outline-offset-2 transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-accent"
+        >
+          <h2 className="text-lg font-semibold leading-none tracking-tight text-foreground">
+            Continue reading
+          </h2>
+          <ChevronDown
+            className={cn(
+              "size-4 shrink-0 text-muted transition-transform",
+              open && "rotate-180",
+            )}
+            strokeWidth={2}
+            aria-hidden
+          />
+        </button>
         <Link
           href="/library"
           className="inline-flex shrink-0 items-center gap-1 text-sm font-medium leading-none text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
@@ -121,13 +140,18 @@ export function ContinueReadingSection({
         </Link>
       </div>
 
-      <div className="relative overflow-hidden rounded-xl border border-border bg-surface">
-        <ul className="relative divide-y divide-border">
-          {items.map((item) => (
-            <ContinueCard key={item.novel.id} item={item} />
-          ))}
-        </ul>
-      </div>
+      {open ? (
+        <div
+          id={panelId}
+          className="relative overflow-hidden rounded-xl border border-border bg-surface"
+        >
+          <ul className="relative divide-y divide-border">
+            {items.map((item) => (
+              <ContinueCard key={item.novel.id} item={item} />
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   );
 }
