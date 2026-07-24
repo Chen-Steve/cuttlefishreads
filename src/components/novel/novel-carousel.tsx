@@ -1,6 +1,7 @@
 "use client";
 
 import type { Novel } from "@/types";
+import type { CatalogBase } from "@/lib/catalog-paths";
 import { NovelCard } from "./novel-card";
 import { NovelGrid } from "./novel-grid";
 
@@ -11,6 +12,8 @@ export function NovelCarousel({
   fillRow = false,
   hideAuthor = false,
   showChapterCount = false,
+  catalogBase = "novels",
+  emptyLabel = "No novels found.",
 }: {
   novels: Novel[];
   compact?: boolean;
@@ -19,11 +22,13 @@ export function NovelCarousel({
   fillRow?: boolean;
   hideAuthor?: boolean;
   showChapterCount?: boolean;
+  catalogBase?: CatalogBase;
+  emptyLabel?: string;
 }) {
   if (novels.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-border bg-surface px-4 py-12 text-center text-sm text-muted">
-        No novels found.
+        {emptyLabel}
       </p>
     );
   }
@@ -49,6 +54,7 @@ export function NovelCarousel({
               dense={dense}
               hideAuthor={hideAuthor}
               showChapterCount={showChapterCount}
+              catalogBase={catalogBase}
             />
           </div>
         ))}
@@ -62,6 +68,7 @@ export function NovelCarousel({
           fillRow={fillRow}
           hideAuthor={hideAuthor}
           showChapterCount={showChapterCount}
+          catalogBase={catalogBase}
         />
       </div>
     </>

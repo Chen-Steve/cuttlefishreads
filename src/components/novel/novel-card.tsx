@@ -1,6 +1,11 @@
 import Link from "next/link";
 import type { Novel } from "@/types";
 import { Badge } from "@/components/ui/badge";
+import {
+  type CatalogBase,
+  novelHref,
+  novelPublicHref,
+} from "@/lib/catalog-paths";
 import { genresExcludingCoverBadges, NovelCover } from "./novel-cover";
 
 const statusLabel: Record<Novel["status"], string> = {
@@ -15,6 +20,7 @@ export function NovelCard({
   dense = false,
   hideAuthor = false,
   showChapterCount = false,
+  catalogBase,
 }: {
   novel: Novel;
   /** Title and genres only — hides author and status. */
@@ -24,13 +30,18 @@ export function NovelCard({
   /** Hides the author/translator line while keeping status and genres. */
   hideAuthor?: boolean;
   showChapterCount?: boolean;
+  /** Override automatic publication-aware routing. */
+  catalogBase?: CatalogBase;
 }) {
   const cardGenres = genresExcludingCoverBadges(novel.genres);
   const showMeta = cardGenres.length > 0 || (!dense && !compact);
+  const href = catalogBase
+    ? novelHref(novel.slug, catalogBase)
+    : novelPublicHref(novel);
 
   return (
     <Link
-      href={`/novels/${novel.slug}`}
+      href={href}
       className={`group flex flex-col rounded-xl outline-offset-2 transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-accent ${
         dense ? "gap-1.5 p-0.5" : compact ? "gap-2 p-1" : "gap-3 p-2"
       }`}

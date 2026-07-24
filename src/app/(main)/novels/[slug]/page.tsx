@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { BookOpen, Eye } from "lucide-react";
 import { CommentSection } from "@/components/comments";
 import {
@@ -15,15 +15,19 @@ import {
 } from "@/components/novel";
 import { getBulkBuyState } from "@/lib/bulk-buy";
 import { PageContainer } from "@/components/page-container";
+import { StarRating } from "@/components/reviews";
 import { Badge } from "@/components/ui/badge";
 import {
   getChapterListItems,
   getNovel,
+  getNovelRatingSummary,
   getUserCoins,
   isNovelBookmarked,
   isUserAuthenticated,
 } from "@/lib/data";
 import { getNovelPageViews } from "@/lib/google-analytics";
+import { originalsPublicUrl } from "@/lib/hosts";
+import { isOriginalNovel } from "@/lib/originals-data";
 import { novelDescription } from "@/lib/seo";
 
 const statusLabel = {
@@ -43,6 +47,15 @@ export async function generateMetadata({
       robots: {
         index: false,
         follow: false,
+      },
+    };
+  }
+  if (isOriginalNovel(novel)) {
+    return {
+      title: `${novel.title} - Original Series`,
+      description: novelDescription(novel),
+      alternates: {
+        canonical: originalsPublicUrl(`/series/${novel.slug}`),
       },
     };
   }
@@ -79,8 +92,14 @@ export default async function NovelDetailPage({
   if (!novel) {
     notFound();
   }
+  if (isOriginalNovel(novel)) {
+    permanentRedirect(originalsPublicUrl(`/series/${novel.slug}`));
+  }
 
-  const viewCount = await getNovelPageViews(slug);
+  const [viewCount, rating] = await Promise.all([
+    getNovelPageViews(slug),
+    getNovelRatingSummary(slug),
+  ]);
 
   const firstChapter = chapters[0];
   const bulkBuy = getBulkBuyState(chapters);
@@ -136,9 +155,17 @@ export default async function NovelDetailPage({
   );
 
   const viewCountDisplay = (
-    <p className="inline-flex items-center gap-1.5 text-xs text-muted sm:text-sm">
-      <Eye className="size-3.5 shrink-0 sm:size-4" strokeWidth={1.75} aria-hidden />
-      {viewCount.toLocaleString()} views
+    <p className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted sm:text-sm">
+      <span className="inline-flex items-center gap-1.5">
+        <Eye className="size-3.5 shrink-0 sm:size-4" strokeWidth={1.75} aria-hidden />
+        {viewCount.toLocaleString()} views
+      </span>
+      {rating.count > 0 ? (
+        <span className="inline-flex items-center gap-1.5">
+          <StarRating value={rating.average} starClassName="size-3.5" />
+          {rating.average.toFixed(1)} ({rating.count})
+        </span>
+      ) : null}
     </p>
   );
 

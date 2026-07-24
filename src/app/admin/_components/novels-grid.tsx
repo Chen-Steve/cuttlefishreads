@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { BookOpen, ChevronDown, Pencil, Search, User } from "lucide-react";
 
 import { NovelCover } from "@/components/novel/novel-cover";
 import { cn } from "@/lib/utils";
+import { WORKSPACE_BASE, workspaceKindFromPathname } from "@/lib/workspace";
 
 export type NovelRow = {
   id: string;
@@ -147,6 +149,8 @@ export function NovelsGrid({
   novels: NovelRow[];
   translatorOptions?: TranslatorOption[];
 }) {
+  const pathname = usePathname();
+  const base = WORKSPACE_BASE[workspaceKindFromPathname(pathname)];
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [translatorFilter, setTranslatorFilter] = useState("all");
@@ -238,14 +242,14 @@ export function NovelsGrid({
 
               <div className="flex flex-col gap-2">
                 <Link
-                  href={`/admin/novels/${novel.id}/chapters`}
+                  href={`${base}/novels/${novel.id}/chapters`}
                   className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:border-accent/30 hover:bg-accent/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                   <BookOpen className="size-3.5" strokeWidth={1.75} aria-hidden />
                   Chapters
                 </Link>
                 <Link
-                  href={`/admin/novels/${novel.id}/edit`}
+                  href={`${base}/novels/${novel.id}/edit`}
                   className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:border-accent/30 hover:bg-accent/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                   <Pencil className="size-3.5" strokeWidth={1.75} aria-hidden />

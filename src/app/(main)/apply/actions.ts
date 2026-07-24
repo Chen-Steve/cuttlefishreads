@@ -24,7 +24,9 @@ export async function submitTranslatorApplication(
   const message = String(formData.get("message") ?? "").trim();
 
   if (!discord) return { error: "Enter your Discord username so we can reach you." };
-  if (!message) return { error: "Add a short message about what you'd like to translate." };
+  if (!message) {
+    return { error: "Add a short message about what you'd like to translate." };
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -41,7 +43,6 @@ export async function submitTranslatorApplication(
   });
 
   if (error) {
-    // Unique violation on user_id — they already applied.
     if (error.code === "23505") {
       return { error: "You have already submitted an application." };
     }

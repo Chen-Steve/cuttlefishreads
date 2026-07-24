@@ -1,4 +1,4 @@
-import type { Genre, Language } from "@/lib/constants";
+import type { Genre, Language, PublicationType } from "@/lib/constants";
 
 export interface Novel {
   id: string;
@@ -8,6 +8,8 @@ export interface Novel {
   originalAuthor?: string;
   translator?: string;
   language: Language;
+  /** original | translation */
+  publicationType: PublicationType;
   translatorUsername?: string;
   translatorGlobalNote?: string;
   translatorKofiUrl?: string;
@@ -19,6 +21,7 @@ export interface Novel {
   tags: string[];
   status: "ongoing" | "completed" | "hiatus";
   chapterCount: number;
+  createdAt: string;
   updatedAt: string;
   publisherId?: string;
 }
@@ -82,6 +85,8 @@ export interface NovelComment {
   chapterNumber: number | null;
   parentId: string | null;
   body: string;
+  /** Optional 0–5 star rating on a top-level comment. */
+  rating: number | null;
   userId: string;
   username: string;
   likeCount: number;
@@ -92,6 +97,12 @@ export interface NovelComment {
   replies: NovelComment[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface NovelRatingSummary {
+  /** Mean rating from comments that include a rating; 0 when none. */
+  average: number;
+  count: number;
 }
 
 export type { Genre, Language };

@@ -47,9 +47,11 @@ function buildPageRange(
 export function PaginatedRecentlyUpdatedList({
   novels,
   pageSize = 8,
+  catalogBase = "novels",
 }: {
   novels: RecentlyUpdatedNovel[];
   pageSize?: number;
+  catalogBase?: import("@/lib/catalog-paths").CatalogBase;
 }) {
   const [page, setPage] = useState(0);
   const totalPages = Math.max(1, Math.ceil(novels.length / pageSize));
@@ -60,7 +62,7 @@ export function PaginatedRecentlyUpdatedList({
 
   return (
     <div>
-      <RecentlyUpdatedList novels={pageNovels} />
+      <RecentlyUpdatedList novels={pageNovels} catalogBase={catalogBase} />
 
       {totalPages > 1 ? (
         <nav

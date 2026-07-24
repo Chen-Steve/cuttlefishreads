@@ -25,7 +25,7 @@ export async function replyToComment(
   body: string,
 ): Promise<ReplyState> {
   const access = await getAdminAccess();
-  if (!access?.hasWorkspace) {
+  if (!access) {
     return { error: "You are not authorized to reply." };
   }
 
@@ -86,6 +86,7 @@ export async function replyToComment(
     revalidatePath(`/novels/${parent.novel_slug}/${parent.chapter_number}`);
   }
   revalidatePath("/admin/comments");
+  revalidatePath("/originals/workspace/comments");
 
   return {
     reply: {
@@ -94,6 +95,7 @@ export async function replyToComment(
       chapterNumber: inserted.chapter_number,
       parentId: inserted.parent_id,
       body: inserted.body,
+      rating: null,
       userId: inserted.user_id,
       username: access.username ?? "You",
       likeCount: 0,

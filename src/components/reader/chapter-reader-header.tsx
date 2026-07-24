@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { type CatalogBase, novelHref } from "@/lib/catalog-paths";
 import { ReaderNav } from "./reader-nav";
 import type { Chapter, ChapterSummary } from "@/types";
 
@@ -11,6 +12,7 @@ export function ChapterReaderHeader({
   previous,
   next,
   chapters,
+  catalogBase = "novels",
 }: {
   slug: string;
   novelTitle: string;
@@ -19,12 +21,13 @@ export function ChapterReaderHeader({
   previous?: Pick<Chapter, "number">;
   next?: Pick<Chapter, "number">;
   chapters: ChapterSummary[];
+  catalogBase?: CatalogBase;
 }) {
   return (
     <div className="flex flex-col items-center gap-2.5">
       <div className="flex w-full max-w-lg flex-col items-center gap-1.5 text-center">
         <Link
-          href={`/novels/${slug}`}
+          href={novelHref(slug, catalogBase)}
           title={novelTitle}
           className="max-w-full truncate text-[11px] font-medium tracking-[0.14em] text-muted uppercase transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
@@ -44,6 +47,7 @@ export function ChapterReaderHeader({
         chapters={chapters}
         currentChapter={chapterNumber}
         showSettings
+        catalogBase={catalogBase}
       />
     </div>
   );

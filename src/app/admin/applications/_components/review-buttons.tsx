@@ -5,7 +5,11 @@ import { Check, X } from "lucide-react";
 
 import { approveApplication, rejectApplication } from "../actions";
 
-export function ReviewButtons({ applicationId }: { applicationId: string }) {
+export function ReviewButtons({
+  applicationId,
+}: {
+  applicationId: string;
+}) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 

@@ -18,6 +18,7 @@ import {
   getUnderratedNovels,
 } from "@/lib/data";
 import { SITE } from "@/lib/constants";
+import { isOriginalNovel } from "@/lib/originals-data";
 import { publicPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = publicPageMetadata({
@@ -27,12 +28,19 @@ export const metadata: Metadata = publicPageMetadata({
 });
 
 export default async function Home() {
-  const [catalog, newlyAdded, recentlyUpdated] = await Promise.all([
+  const [allNovels, allRecentlyUpdated] = await Promise.all([
     getNovels(),
-    getNewlyAddedNovels(),
     getRecentlyUpdatedNovels(),
   ]);
-  const featured = await getFeaturedNovels(catalog);
+  const catalog = allNovels.filter((novel) => !isOriginalNovel(novel));
+  const translationSlugs = new Set(catalog.map((novel) => novel.slug));
+  const recentlyUpdated = allRecentlyUpdated.filter(
+    (novel) => translationSlugs.has(novel.slug),
+  );
+  const [featured, newlyAdded] = await Promise.all([
+    getFeaturedNovels(catalog),
+    getNewlyAddedNovels(catalog),
+  ]);
   const [underrated, completed] = await Promise.all([
     getUnderratedNovels(
       [
@@ -97,7 +105,7 @@ export default async function Home() {
         storageKey="cf-home-section-featured"
         href="/novels"
         linkLabel="View all"
-        className="mt-4 sm:mt-5 peer-[:empty]/continue:mt-0"
+        className="mt-6 sm:mt-8"
       >
         <NovelCarousel novels={featured} dense fillRow showChapterCount />
       </HomeSection>

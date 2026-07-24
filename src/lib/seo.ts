@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { Novel } from "@/types";
 import { SITE } from "@/lib/constants";
+import { originalsPublicUrl } from "@/lib/hosts";
 
 const publicSiteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -49,6 +50,24 @@ export function publicPageMetadata({
     description,
     alternates: {
       canonical,
+    },
+  };
+}
+
+export function originalsPageMetadata({
+  title,
+  description = SITE.seoDescription,
+  path,
+}: {
+  title: string;
+  description?: string;
+  path: string;
+}): Metadata {
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: originalsPublicUrl(canonicalPath(path)),
     },
   };
 }

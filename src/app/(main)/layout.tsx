@@ -3,6 +3,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { createClient } from "@/utils/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
+import { hasProfileRole, parseProfileRoles } from "@/lib/roles";
 
 export default async function MainLayout({
   children,
@@ -16,36 +17,25 @@ export default async function MainLayout({
   let username: string | null = null;
   let avatarUrl: string | null = null;
   let coins = 0;
-  let isAdmin = false;
+  let isTranslator = false;
   let isMasterAdmin = false;
   if (data?.claims) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("username, coins, avatar_url")
+      .select("username, coins, avatar_url, role, roles")
       .eq("id", data.claims.sub)
       .maybeSingle();
     username = profile?.username ?? null;
     avatarUrl = profile?.avatar_url ?? null;
     coins = profile?.coins ?? 0;
 
-    // Master admin check (env-based, always available).
     isMasterAdmin = isAdminEmail(data.claims.email as string | undefined);
-    isAdmin = isMasterAdmin;
 
-    // Translator role check — only possible after translators.sql has been run.
-    // Fail silently so a missing column never breaks the header for everyone.
-    if (!isAdmin) {
-      try {
-        const { data: roleRow } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", data.claims.sub)
-          .maybeSingle();
-        if (roleRow?.role === "translator") isAdmin = true;
-      } catch {
-        // column not yet added — ignore
-      }
-    }
+    const roles = parseProfileRoles({
+      roles: profile?.roles as string[] | null | undefined,
+      role: profile?.role as string | null | undefined,
+    });
+    isTranslator = hasProfileRole(roles, "translator");
   }
 
   return (
@@ -61,7 +51,7 @@ export default async function MainLayout({
         username={username}
         avatarUrl={avatarUrl}
         coins={coins}
-        isAdmin={isAdmin}
+        isTranslator={isTranslator}
         isMasterAdmin={isMasterAdmin}
       />
       <div className="contents [&:has([data-hide-main-footer])_footer]:hidden">

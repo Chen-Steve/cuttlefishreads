@@ -2,12 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { BookOpen, ChevronDown, Cookie, LogIn, LogOut, Library, PenLine, Search, Settings, ShoppingBag, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { BookOpen, LogIn, Library, PenLine, Search, ShoppingBag } from "lucide-react";
 
-import { signOut } from "@/app/(main)/(auth)/actions";
+import { AccountDropdown } from "@/components/account-dropdown";
 import { useImmersiveHidesSiteHeader } from "@/components/reader";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { originalsPublicUrl } from "@/lib/hosts";
 import { cn } from "@/lib/utils";
 
 type SearchMatch = {
@@ -17,13 +18,18 @@ type SearchMatch = {
 };
 
 const novelsNavItem = { href: "/novels", label: "Novels", icon: BookOpen } as const;
+const originalsNavItem = {
+  href: originalsPublicUrl(),
+  label: "Originals",
+  icon: PenLine,
+} as const;
 const libraryNavItem = { href: "/library", label: "Library", icon: Library } as const;
 const shopNavItem = { href: "/shop", label: "Shop", icon: ShoppingBag } as const;
 const loginNavItem = { href: "/login", label: "Login / Sign Up", icon: LogIn } as const;
 const authenticatedMobileNavItems = [libraryNavItem, shopNavItem] as const;
 
 function getNavItemClassName(href: string, isAuthenticated: boolean) {
-  if (href === "/novels") {
+  if (href === "/novels" || href === originalsNavItem.href) {
     return cn(navIconLinkBaseClass, "hidden sm:inline-flex");
   }
   if (isAuthenticated && (href === "/library" || href === "/shop")) {
@@ -162,196 +168,27 @@ function HeaderSearch({
   );
 }
 
-function AccountAvatar({
-  avatarUrl,
-  className,
-}: {
-  avatarUrl?: string | null;
-  className?: string;
-}) {
-  return (
-    <span
-      className={cn(
-        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent/10 text-accent",
-        className,
-      )}
-    >
-      {avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={avatarUrl} alt="" className="size-full object-cover" />
-      ) : (
-        <User className="size-[55%]" strokeWidth={1.75} aria-hidden />
-      )}
-    </span>
-  );
-}
-
-function AccountDropdown({
-  username,
-  avatarUrl = null,
-  coins = 0,
-  isAdmin = false,
-  isMasterAdmin = false,
-}: {
-  username?: string | null;
-  avatarUrl?: string | null;
-  coins?: number;
-  isAdmin?: boolean;
-  isMasterAdmin?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", onClickOutside);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", onClickOutside);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={username ? `Account menu for ${username}` : "Account menu"}
-        className={cn(navIconLinkClass, "gap-1.5 pl-1.5 sm:pl-1.5")}
-      >
-        <AccountAvatar
-          avatarUrl={avatarUrl}
-          className="size-7 border border-border sm:size-6"
-        />
-        <span className="hidden max-w-32 truncate lg:inline">
-          {username || "Account"}
-        </span>
-        <ChevronDown
-          className={cn(
-            "size-4 shrink-0 transition-transform duration-150 sm:size-3.5",
-            open && "rotate-180",
-          )}
-          strokeWidth={1.75}
-          aria-hidden
-        />
-      </button>
-
-      {open && (
-        <div
-          role="menu"
-          className="absolute top-full right-0 z-30 mt-1.5 min-w-48 overflow-hidden rounded-xl border border-border bg-surface shadow-md"
-        >
-          <div className="flex items-center gap-2.5 border-b border-border px-3.5 py-3">
-            <AccountAvatar
-              avatarUrl={avatarUrl}
-              className="size-9 border border-border"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-foreground">
-                {username || "Account"}
-              </p>
-              <p className="flex items-center gap-1 text-xs text-muted">
-                <Cookie
-                  className="size-3 shrink-0 text-amber-500"
-                  strokeWidth={1.75}
-                  aria-hidden
-                />
-                <span className="font-semibold tabular-nums text-foreground">
-                  {coins.toLocaleString()}
-                </span>
-                cookies
-              </p>
-            </div>
-          </div>
-
-          <Link
-            href="/account"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
-          >
-            <Settings className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
-            Account
-          </Link>
-
-          {username ? (
-            <Link
-              href={`/u/${username}`}
-              role="menuitem"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
-            >
-              <User className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
-              Public profile
-            </Link>
-          ) : null}
-
-          {isAdmin && (
-            <Link
-              href="/admin"
-              role="menuitem"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
-            >
-              {isMasterAdmin ? (
-                <Settings className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
-              ) : (
-                <PenLine className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
-              )}
-              {isMasterAdmin ? "Admin" : "Workspace"}
-            </Link>
-          )}
-
-          <div className="mx-2 border-t border-border" />
-
-          <form action={signOut}>
-            <button
-              type="submit"
-              role="menuitem"
-              className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
-            >
-              <LogOut className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
-              Sign out
-            </button>
-          </form>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function SiteHeader({
   isAuthenticated = false,
   username = null,
   avatarUrl = null,
   coins = 0,
-  isAdmin = false,
+  isTranslator = false,
   isMasterAdmin = false,
 }: {
   isAuthenticated?: boolean;
   username?: string | null;
   avatarUrl?: string | null;
   coins?: number;
-  isAdmin?: boolean;
+  isTranslator?: boolean;
   isMasterAdmin?: boolean;
 }) {
   const isDesktop = useIsDesktopNav();
   const hideForImmersive = useImmersiveHidesSiteHeader();
 
   const navItems = isAuthenticated
-    ? [novelsNavItem, libraryNavItem, shopNavItem]
-    : [novelsNavItem, loginNavItem];
+    ? [novelsNavItem, originalsNavItem, libraryNavItem, shopNavItem]
+    : [novelsNavItem, originalsNavItem, loginNavItem];
 
   const desktopSearchClassNames = {
     labelClassName:
@@ -428,19 +265,23 @@ export function SiteHeader({
               ))
             : null}
 
-          {navItems.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              aria-label={label}
-              className={getNavItemClassName(href, isAuthenticated)}
-            >
-              <span className={navIconWrapperClass}>
-                <Icon className="size-5 sm:size-4" strokeWidth={1.75} aria-hidden />
-              </span>
-              <span className="hidden lg:inline">{label}</span>
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            const { href, label, icon: Icon } = item;
+            const className = getNavItemClassName(href, isAuthenticated);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-label={label}
+                className={className}
+              >
+                <span className={navIconWrapperClass}>
+                  <Icon className="size-5 sm:size-4" strokeWidth={1.75} aria-hidden />
+                </span>
+                <span className="hidden lg:inline">{label}</span>
+              </Link>
+            );
+          })}
 
           <ThemeToggle />
 
@@ -449,8 +290,8 @@ export function SiteHeader({
               username={username}
               avatarUrl={avatarUrl}
               coins={coins}
-              isAdmin={isAdmin}
               isMasterAdmin={isMasterAdmin}
+              showTranslatorWorkspace={isMasterAdmin || isTranslator}
             />
           ) : null}
         </nav>

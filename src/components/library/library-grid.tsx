@@ -17,6 +17,10 @@ import {
   recordReadingProgress,
   type ReadingProgressEntry,
 } from "@/lib/reading-progress";
+import {
+  chapterPublicHref,
+  novelPublicHref,
+} from "@/lib/catalog-paths";
 import { cn } from "@/lib/utils";
 import type { Novel } from "@/types";
 
@@ -318,7 +322,7 @@ export function LibraryGrid({
               <LibraryRow
                 key={novel.id}
                 novel={novel}
-                href={`/novels/${novel.slug}`}
+                href={novelPublicHref(novel)}
                 meta={bookmarkMeta(novel)}
                 onRemove={() => handleRemoveBookmark(novel)}
                 removing={pending && removingSlug === novel.slug}
@@ -351,7 +355,7 @@ export function LibraryGrid({
               <LibraryRow
                 key={item.novel.id}
                 novel={item.novel}
-                href={`/novels/${item.novel.slug}/${item.chapterNumber}`}
+                href={chapterPublicHref(item.novel, item.chapterNumber)}
                 meta={`Ch. ${item.chapterNumber}`}
                 onRemove={() => handleRemoveViewed(item)}
                 removing={removingSlug === item.novel.slug}

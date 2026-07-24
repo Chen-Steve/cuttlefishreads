@@ -2,7 +2,10 @@
 
 import { useActionState } from "react";
 
-import { submitTranslatorApplication, type ApplyState } from "./actions";
+import {
+  submitTranslatorApplication,
+  type ApplyState,
+} from "./actions";
 
 const inputClass =
   "h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25";
@@ -17,7 +20,7 @@ export function ApplyForm({
   username: string;
   email: string;
 }) {
-  const [state, action, pending] = useActionState<ApplyState, FormData>(
+  const [state, formAction, pending] = useActionState<ApplyState, FormData>(
     submitTranslatorApplication,
     {},
   );
@@ -35,7 +38,7 @@ export function ApplyForm({
   }
 
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form action={formAction} className="flex flex-col gap-4">
       {state.error && (
         <p
           role="alert"

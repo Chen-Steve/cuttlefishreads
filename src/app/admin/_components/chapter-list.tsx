@@ -2,9 +2,11 @@
 
 import { useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ArrowDownUp, Pencil } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { WORKSPACE_BASE, workspaceKindFromPathname } from "@/lib/workspace";
 import { ChapterRowActions } from "./chapter-admin-actions";
 
 const CHAPTER_ORDER_STORAGE_KEY = "cf-admin-chapter-order";
@@ -107,6 +109,8 @@ export function ChapterList({
   novelId: string;
   chapters: AdminChapterRow[];
 }) {
+  const pathname = usePathname();
+  const base = WORKSPACE_BASE[workspaceKindFromPathname(pathname)];
   const newestFirst = useSyncExternalStore(
     subscribeChapterOrder,
     readChapterOrderPreference,
@@ -167,7 +171,7 @@ export function ChapterList({
 
             <div className="flex shrink-0 items-center gap-2">
               <Link
-                href={`/admin/novels/${novelId}/chapters/${chapter.id}/edit`}
+                href={`${base}/novels/${novelId}/chapters/${chapter.id}/edit`}
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
                 <Pencil className="size-3.5" strokeWidth={1.75} aria-hidden />

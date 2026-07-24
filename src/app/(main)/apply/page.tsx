@@ -3,6 +3,8 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 
 import { PageContainer } from "@/components/page-container";
+import { originalsPublicUrl } from "@/lib/hosts";
+import { hasProfileRole, parseProfileRoles } from "@/lib/roles";
 import { createClient } from "@/utils/supabase/server";
 import { ApplyForm } from "./apply-form";
 
@@ -15,7 +17,10 @@ type ApplicationRow = {
   created_at: string;
 };
 
-const STATUS_COPY: Record<ApplicationRow["status"], { title: string; body: string; tone: string }> = {
+const STATUS_COPY: Record<
+  ApplicationRow["status"],
+  { title: string; body: string; tone: string }
+> = {
   pending: {
     title: "Application under review",
     body: "Your application is in the queue. We'll reach out on Discord if it's approved.",
@@ -45,8 +50,18 @@ export default async function ApplyPage() {
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted">
           Want to bring novels to Cuttlefish Reads? Approved translators get
-          their own workspace to upload and manage novels, plus a stats
+          their own workspace to upload and manage translations, plus a stats
           dashboard.
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-muted">
+          Writing original fiction? Anyone can start on{" "}
+          <Link
+            href={originalsPublicUrl("/workspace")}
+            className="font-medium text-accent underline underline-offset-2 hover:text-accent-hover"
+          >
+            Cuttlefish Originals
+          </Link>
+          — no application needed.
         </p>
 
         <div className="mt-8 rounded-2xl border border-border bg-surface p-5 sm:p-6">
@@ -80,13 +95,23 @@ export default async function ApplyPage() {
   const email = (data.claims.email as string | undefined) ?? "";
 
   const [{ data: profile }, { data: application }] = await Promise.all([
-    supabase.from("profiles").select("username, role").eq("id", userId).maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("username, role, roles")
+      .eq("id", userId)
+      .maybeSingle(),
     supabase
       .from("translator_applications")
       .select("status, created_at")
       .eq("user_id", userId)
       .maybeSingle<ApplicationRow>(),
   ]);
+
+  const roles = parseProfileRoles({
+    roles: profile?.roles as string[] | null | undefined,
+    role: profile?.role as string | null | undefined,
+  });
+  const isTranslator = hasProfileRole(roles, "translator");
 
   return (
     <PageContainer as="section" width="narrow">
@@ -95,24 +120,26 @@ export default async function ApplyPage() {
       </h1>
       <p className="mt-2 text-sm leading-relaxed text-muted">
         Want to bring novels to Cuttlefish Reads? Tell us a little about yourself.
-        Approved translators get their own workspace to upload and manage novels,
-        plus a dashboard to track views, bookmarks, and purchases.
+        Approved translators get their own workspace to upload and manage
+        translations, plus a dashboard to track views, bookmarks, and purchases.
       </p>
 
       {application ? (
-        <div className={`mt-8 rounded-xl border px-5 py-5 text-sm ${STATUS_COPY[application.status].tone}`}>
+        <div
+          className={`mt-8 rounded-xl border px-5 py-5 text-sm ${STATUS_COPY[application.status].tone}`}
+        >
           <p className="font-semibold">{STATUS_COPY[application.status].title}</p>
           <p className="mt-1 opacity-90">{STATUS_COPY[application.status].body}</p>
-          {application.status === "approved" && (
+          {application.status === "approved" ? (
             <Link
               href="/admin"
               className="mt-3 inline-flex h-10 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
             >
               Go to workspace
             </Link>
-          )}
+          ) : null}
         </div>
-      ) : profile?.role === "translator" ? (
+      ) : isTranslator ? (
         <div className="mt-8 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-5 text-sm text-emerald-700 dark:text-emerald-400">
           <p className="font-semibold">You&apos;re already a translator.</p>
           <Link

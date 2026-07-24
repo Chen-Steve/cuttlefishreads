@@ -1,16 +1,52 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
+import {
+  isOriginalsDomain,
+  mainOriginFromRequestHost,
+  normalizeHost,
+} from "@/lib/hosts";
 import { absoluteUrl } from "@/lib/seo";
 import { generateRandomUsername } from "@/lib/username";
 import { PASSWORD_RECOVERY_COOKIE } from "@/lib/password-recovery";
 
 export type AuthState = { error?: string; message?: string };
+
+/** Prefer the current request host so Originals login stays on originals. */
+async function requestOrigin(): Promise<string> {
+  const headerList = await headers();
+  const host = headerList.get("host");
+  if (!host) return absoluteUrl("/").replace(/\/$/, "");
+  const forwarded = headerList.get("x-forwarded-proto");
+  const proto =
+    forwarded ??
+    (host.includes("localhost") || host.startsWith("127.") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
+/**
+ * Next.js may optimize same-origin Server Action redirects into an internal
+ * RSC fetch. Host-based rewrites can then resolve "/" as the main route tree.
+ * Bounce Originals redirects through the main host so the browser performs a
+ * full navigation; proxy.ts immediately canonicalizes it back to Originals.
+ */
+async function redirectAfterAuth(path: string): Promise<never> {
+  const headerList = await headers();
+  const hostHeader = headerList.get("host");
+
+  if (isOriginalsDomain(normalizeHost(hostHeader))) {
+    const url = new URL(mainOriginFromRequestHost(hostHeader));
+    url.pathname = path === "/" ? "/originals" : `/originals${path}`;
+    redirect(url.toString());
+  }
+
+  redirect(path);
+}
 
 export async function login(
   _prevState: AuthState,
@@ -34,7 +70,7 @@ export async function login(
   }
 
   revalidatePath("/", "layout");
-  redirect(safeRedirect);
+  return redirectAfterAuth(safeRedirect);
 }
 
 export async function signup(
@@ -80,7 +116,7 @@ export async function signup(
   }
 
   revalidatePath("/", "layout");
-  redirect(safeRedirect);
+  return redirectAfterAuth(safeRedirect);
 }
 
 /** Create/update profiles.username, retrying on rare unique collisions. */
@@ -132,7 +168,8 @@ export async function requestPasswordReset(
   }
 
   const supabase = createClient(await cookies());
-  const callbackUrl = new URL(absoluteUrl("/auth/callback"));
+  const origin = await requestOrigin();
+  const callbackUrl = new URL(`${origin}/auth/callback`);
   callbackUrl.searchParams.set("next", "/reset-password");
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -191,18 +228,46 @@ export async function confirmPasswordReset(
 
   cookieStore.delete(PASSWORD_RECOVERY_COOKIE);
   revalidatePath("/", "layout");
-  redirect("/account");
+  return redirectAfterAuth("/account");
 }
 
-export async function signOut(): Promise<void> {
+export async function signOut(formData?: FormData): Promise<void> {
   const supabase = createClient(await cookies());
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
-  redirect("/login");
+
+  const raw = formData
+    ? String(formData.get("redirectTo") ?? "").trim()
+    : "";
+
+  if (raw.startsWith("/") && !raw.startsWith("//")) {
+    return redirectAfterAuth(raw);
+  }
+
+  if (raw.startsWith("http://") || raw.startsWith("https://")) {
+    try {
+      const url = new URL(raw);
+      const host = url.hostname.toLowerCase();
+      const allowed =
+        host === "localhost" ||
+        host === "127.0.0.1" ||
+        host.endsWith(".localhost") ||
+        host === "cuttlefishreads.com" ||
+        host.endsWith(".cuttlefishreads.com");
+      if (allowed && url.pathname === "/login") {
+        redirect(raw);
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  return redirectAfterAuth("/login");
 }
 
 export async function signInWithGoogle(redirectTo?: string): Promise<void> {
-  const callbackUrl = new URL(absoluteUrl("/auth/callback"));
+  const origin = await requestOrigin();
+  const callbackUrl = new URL(`${origin}/auth/callback`);
   if (redirectTo?.startsWith("/")) {
     callbackUrl.searchParams.set("next", redirectTo);
   }

@@ -62,11 +62,17 @@ export default async function PublicProfilePage({
     notFound();
   }
 
-  const isTranslator = profile.role === "translator";
+  const isTranslator = profile.isTranslator;
   const [createdNovels, bookmarkedNovels] = await Promise.all([
-    isTranslator ? getUserCreatedNovels(profile.id) : Promise.resolve([]),
+    getUserCreatedNovels(profile.id),
     getUserBookmarkedNovels(profile.id),
   ]);
+  const translations = createdNovels.filter(
+    (novel) => novel.publicationType !== "original",
+  );
+  const translationBookmarks = bookmarkedNovels.filter(
+    (novel) => novel.publicationType !== "original",
+  );
 
   return (
     <PageContainer
@@ -130,14 +136,14 @@ export default async function PublicProfilePage({
         </div>
       </header>
 
-      {isTranslator ? (
+      {isTranslator || translations.length > 0 ? (
         <ProfileSection
           title="Translations"
-          count={createdNovels.length}
-          novels={createdNovels}
+          count={translations.length}
+          novels={translations}
           empty={
             <p className="text-sm text-muted">
-              {profile.username} hasn&apos;t published any translations yet.
+              {`${profile.username} hasn't published any translations yet.`}
             </p>
           }
         />
@@ -145,8 +151,8 @@ export default async function PublicProfilePage({
 
       <ProfileSection
         title="Bookmarks"
-        count={bookmarkedNovels.length}
-        novels={bookmarkedNovels}
+        count={translationBookmarks.length}
+        novels={translationBookmarks}
         empty={
           <>
             <p className="text-sm text-muted">

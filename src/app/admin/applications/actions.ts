@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createAdminClient } from "@/utils/supabase/admin";
-import { getAdminAccess } from "@/lib/access";
+import { getAdminAccess, grantProfileRole } from "@/lib/access";
 
 export type ReviewState = { error?: string };
 
@@ -29,20 +29,13 @@ export async function approveApplication(
 
   if (!application) return { error: "Application not found." };
 
-  // Grant the translator role first so an approved status is never out of sync
-  // with the actual permission. Upsert so approval still works when the user
-  // has no profiles row yet (update alone would silently no-op).
-  const { error: roleError } = await admin.from("profiles").upsert(
-    {
-      id: application.user_id,
-      role: "translator",
-      username: application.username || null,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "id" },
+  // Grant translator without clearing other profile fields.
+  const granted = await grantProfileRole(
+    application.user_id,
+    "translator",
+    application.username || null,
   );
-
-  if (roleError) return { error: roleError.message };
+  if (granted.error) return { error: granted.error };
 
   const { error } = await admin
     .from("translator_applications")
@@ -81,3 +74,4 @@ export async function rejectApplication(
   revalidatePath("/admin/applications");
   return {};
 }
+

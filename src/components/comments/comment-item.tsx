@@ -9,6 +9,7 @@ import {
   replyToComment,
   updateComment,
 } from "@/app/(main)/novels/actions";
+import { StarRating } from "@/components/reviews";
 import { Badge } from "@/components/ui/badge";
 import type { NovelComment } from "@/types";
 
@@ -118,6 +119,9 @@ export function CommentItem({
             </time>
             {isEdited ? (
               <span className="text-xs text-muted">(edited)</span>
+            ) : null}
+            {comment.rating != null ? (
+              <StarRating value={comment.rating} starClassName="size-3.5" />
             ) : null}
           </div>
 

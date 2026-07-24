@@ -2,6 +2,11 @@ import Link from "next/link";
 
 import { NovelCover } from "./novel-cover";
 import type { RecentlyUpdatedNovel } from "@/types";
+import {
+  type CatalogBase,
+  chapterHref,
+  novelHref,
+} from "@/lib/catalog-paths";
 
 function truncateLabel(value: string, maxChars: number) {
   if (value.length <= maxChars) return value;
@@ -10,8 +15,10 @@ function truncateLabel(value: string, maxChars: number) {
 
 export function RecentlyUpdatedList({
   novels,
+  catalogBase = "novels",
 }: {
   novels: RecentlyUpdatedNovel[];
+  catalogBase?: CatalogBase;
 }) {
   if (novels.length === 0) {
     return (
@@ -29,7 +36,7 @@ export function RecentlyUpdatedList({
           className="flex gap-3.5 rounded-xl border border-border bg-surface p-2.5 sm:gap-4 sm:p-3"
         >
           <Link
-            href={`/novels/${novel.slug}`}
+            href={novelHref(novel.slug, catalogBase)}
             aria-label={novel.title}
             className="group/cover shrink-0 outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent"
           >
@@ -43,7 +50,7 @@ export function RecentlyUpdatedList({
 
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             <Link
-              href={`/novels/${novel.slug}`}
+              href={novelHref(novel.slug, catalogBase)}
               className="outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent"
             >
               <h3 className="line-clamp-1 text-sm font-semibold leading-snug text-foreground transition-colors hover:text-accent sm:text-base">
@@ -62,7 +69,7 @@ export function RecentlyUpdatedList({
               {novel.recentChapters.slice(0, 3).map((chapter) => (
                 <li key={chapter.number}>
                   <Link
-                    href={`/novels/${novel.slug}/${chapter.number}`}
+                    href={chapterHref(novel.slug, chapter.number, catalogBase)}
                     className="group/chapter block truncate text-xs text-muted outline-offset-2 transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-accent sm:text-sm"
                   >
                     <span className="font-medium text-foreground/80 group-hover/chapter:text-accent">

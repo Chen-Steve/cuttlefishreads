@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,6 +11,7 @@ import {
   formatSuggestedUnlockPreview,
   getSuggestedUnlockAt,
 } from "@/lib/suggested-unlock-at";
+import { WORKSPACE_BASE, workspaceKindFromPathname } from "@/lib/workspace";
 import { createChapter, updateChapter, type AdminState } from "../actions";
 
 const inputClass =
@@ -42,6 +44,7 @@ export function ChapterForm({
   latestChapterUnlockAt = null,
   defaultCoinCost = null,
   nextChapterNumber = null,
+  isOriginal = false,
 }: {
   novelId: string;
   initial?: ChapterFormInitial;
@@ -50,8 +53,12 @@ export function ChapterForm({
   defaultCoinCost?: number | null;
   /** Next chapter number for new chapters, shown instead of "Auto". */
   nextChapterNumber?: number | null;
+  /** Original works: chapters are always free, so paid options are hidden. */
+  isOriginal?: boolean;
 }) {
   const isEdit = Boolean(initial);
+  const pathname = usePathname();
+  const base = WORKSPACE_BASE[workspaceKindFromPathname(pathname)];
 
   const boundAction = isEdit
     ? updateChapter.bind(null, initial!.chapterId)
@@ -146,7 +153,7 @@ export function ChapterForm({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-3">
             <Link
-              href={`/admin/novels/${novelId}/chapters`}
+              href={`${base}/novels/${novelId}/chapters`}
               className="inline-flex h-11 shrink-0 items-center gap-1 rounded-xl border border-border bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
@@ -168,7 +175,7 @@ export function ChapterForm({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-3">
             <Link
-              href={`/admin/novels/${novelId}/chapters`}
+              href={`${base}/novels/${novelId}/chapters`}
               className="inline-flex h-11 shrink-0 items-center gap-1 rounded-xl border border-border bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
@@ -253,35 +260,37 @@ export function ChapterForm({
             )}
           </div>
 
-          <fieldset className="flex flex-col gap-2">
-            <legend className={labelClass}>Access</legend>
-            <div className="flex flex-wrap gap-2">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2 text-sm font-medium text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:checked]:text-accent">
-                <input
-                  type="radio"
-                  name="access"
-                  value="free"
-                  checked={access === "free"}
-                  onChange={() => setAccess("free")}
-                  className="size-3.5 accent-accent"
-                />
-                Free
-              </label>
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2 text-sm font-medium text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:checked]:text-accent">
-                <input
-                  type="radio"
-                  name="access"
-                  value="paid"
-                  checked={access === "paid"}
-                  onChange={() => setAccess("paid")}
-                  className="size-3.5 accent-accent"
-                />
-                Paid (unlock with cookies)
-              </label>
-            </div>
-          </fieldset>
+          {!isOriginal ? (
+            <fieldset className="flex flex-col gap-2">
+              <legend className={labelClass}>Access</legend>
+              <div className="flex flex-wrap gap-2">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2 text-sm font-medium text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:checked]:text-accent">
+                  <input
+                    type="radio"
+                    name="access"
+                    value="free"
+                    checked={access === "free"}
+                    onChange={() => setAccess("free")}
+                    className="size-3.5 accent-accent"
+                  />
+                  Free
+                </label>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2 text-sm font-medium text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:checked]:text-accent">
+                  <input
+                    type="radio"
+                    name="access"
+                    value="paid"
+                    checked={access === "paid"}
+                    onChange={() => setAccess("paid")}
+                    className="size-3.5 accent-accent"
+                  />
+                  Paid (unlock with cookies)
+                </label>
+              </div>
+            </fieldset>
+          ) : null}
 
-          {access === "paid" && (
+          {!isOriginal && access === "paid" && (
             <>
               <input type="hidden" name="unlockAt" value={unlockAtIso} />
               <div className="flex flex-col gap-1.5">
@@ -343,7 +352,7 @@ export function ChapterForm({
 
           <fieldset className="flex flex-col gap-2">
             <legend className={labelClass}>
-              Translator&apos;s note
+              {isOriginal ? "Author's note" : "Translator's note"}
               <span className="ml-1 font-normal opacity-60">(optional)</span>
             </legend>
             <div className="flex flex-col gap-2">

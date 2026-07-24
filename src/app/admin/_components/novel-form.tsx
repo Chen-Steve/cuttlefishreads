@@ -3,7 +3,15 @@
 import { useActionState, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { GENRES, LANGUAGES } from "@/lib/constants";
+import {
+  COPYRIGHT_TYPES,
+  COPYRIGHT_TYPE_LABELS,
+  GENRES,
+  LANGUAGES,
+  MAX_ORIGINAL_TAGS,
+  type CopyrightType,
+  type PublicationType,
+} from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { createNovel, updateNovel, type AdminState } from "../actions";
 import { DeleteNovelButton } from "./delete-novel-button";
@@ -19,6 +27,17 @@ const inputClass =
 const labelClass = "text-xs font-medium text-muted";
 const panelClass = "rounded-2xl border border-border bg-surface p-5 sm:p-6";
 
+function countTags(raw: string): number {
+  return Array.from(
+    new Set(
+      raw
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+    ),
+  ).length;
+}
+
 export type NovelFormValues = {
   id: string;
   title: string;
@@ -31,17 +50,31 @@ export type NovelFormValues = {
   status: string;
   language: string;
   novelupdates_url: string | null;
+  publication_type: string;
+  ownership_confirmed_at: string | null;
+  copyright_type: string | null;
 };
 
 export function NovelForm({
   novel,
   header,
+  publicationType,
 }: {
   novel?: NovelFormValues;
   header?: ReactNode;
+  /** Fixed by the workspace: translations in /admin, originals in /originals/workspace. */
+  publicationType: PublicationType;
 }) {
   const isEdit = Boolean(novel);
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const isOriginal = publicationType === "original";
+  const [mainGenre, setMainGenre] = useState(
+    () => (isOriginal ? (novel?.genres[0] ?? "") : ""),
+  );
+  const [tagsValue, setTagsValue] = useState(
+    () => novel?.tags.join(", ") ?? "",
+  );
+  const tagCount = countTags(tagsValue);
   const localCoverPreview = useMemo(
     () => (coverFile ? URL.createObjectURL(coverFile) : null),
     [coverFile],
@@ -189,23 +222,99 @@ export function NovelForm({
 
           <div className={cn(panelClass, "flex flex-col gap-4")}>
             <fieldset className="flex flex-col gap-2">
-              <legend className={labelClass}>Genres</legend>
+              <legend className={labelClass}>Work type</legend>
+              <input type="hidden" name="publicationType" value={publicationType} />
+              <span className="text-xs text-muted">
+                {isOriginal
+                  ? "This will be published on Cuttlefish Originals."
+                  : "This will be published as a translation on Cuttlefish Reads."}
+              </span>
+            </fieldset>
+
+            {isOriginal ? (
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="novel-copyright" className={labelClass}>
+                  Copyright
+                </label>
+                <select
+                  id="novel-copyright"
+                  name="copyrightType"
+                  required
+                  defaultValue={
+                    (COPYRIGHT_TYPES as readonly string[]).includes(
+                      novel?.copyright_type ?? "",
+                    )
+                      ? (novel!.copyright_type as CopyrightType)
+                      : ""
+                  }
+                  className={inputClass}
+                >
+                  <option value="" disabled>
+                    Select a copyright type…
+                  </option>
+                  {COPYRIGHT_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {COPYRIGHT_TYPE_LABELS[type]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+
+            {isOriginal ? (
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="novel-main-genre" className={labelClass}>
+                  Main genre
+                </label>
+                <select
+                  id="novel-main-genre"
+                  name="mainGenre"
+                  required
+                  value={mainGenre}
+                  onChange={(event) => setMainGenre(event.target.value)}
+                  className={inputClass}
+                >
+                  <option value="" disabled>
+                    Best describes your story…
+                  </option>
+                  {GENRES.map((genre) => (
+                    <option key={genre} value={genre}>
+                      {genre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+
+            <fieldset className="flex flex-col gap-2">
+              <legend className={labelClass}>
+                {isOriginal ? "Additional genres" : "Genres"}{" "}
+                {isOriginal ? (
+                  <span className="font-normal opacity-60">(optional)</span>
+                ) : null}
+              </legend>
               <div className="flex flex-wrap gap-1.5">
-                {GENRES.map((genre) => (
-                  <label
-                    key={genre}
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:checked]:text-accent"
-                  >
-                    <input
-                      type="checkbox"
-                      name="genres"
-                      value={genre}
-                      defaultChecked={novel?.genres.includes(genre)}
-                      className="size-3.5 accent-accent"
-                    />
-                    {genre}
-                  </label>
-                ))}
+                {GENRES.map((genre) => {
+                  if (isOriginal && genre === mainGenre) return null;
+                  return (
+                    <label
+                      key={genre}
+                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:checked]:text-accent"
+                    >
+                      <input
+                        type="checkbox"
+                        name="genres"
+                        value={genre}
+                        defaultChecked={
+                          novel?.genres.includes(genre) &&
+                          !(isOriginal && genre === novel.genres[0])
+                        }
+                        className="size-3.5 accent-accent"
+                      />
+                      {genre}
+                    </label>
+                  );
+                })}
               </div>
             </fieldset>
 
@@ -227,53 +336,93 @@ export function NovelForm({
                   ))}
                 </select>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="novel-language" className={labelClass}>
-                  Original language
-                </label>
-                <select
-                  id="novel-language"
-                  name="language"
-                  defaultValue={novel?.language ?? "Chinese"}
-                  className={inputClass}
-                >
-                  {LANGUAGES.map((lang) => (
-                    <option key={lang} value={lang}>
-                      {lang}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {!isOriginal ? (
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="novel-language" className={labelClass}>
+                    Original language
+                  </label>
+                  <select
+                    id="novel-language"
+                    name="language"
+                    defaultValue={novel?.language ?? "Chinese"}
+                    className={inputClass}
+                  >
+                    {LANGUAGES.map((lang) => (
+                      <option key={lang} value={lang}>
+                        {lang}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <input type="hidden" name="language" value="English" />
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor="novel-tags" className={labelClass}>
                 Tags{" "}
-                <span className="font-normal opacity-60">(comma-separated)</span>
+                <span className="font-normal opacity-60">
+                  {isOriginal
+                    ? `(comma-separated, max ${MAX_ORIGINAL_TAGS})`
+                    : "(comma-separated)"}
+                </span>
               </label>
-              <input
-                id="novel-tags"
-                name="tags"
-                defaultValue={novel?.tags.join(", ") ?? ""}
-                placeholder="cultivation, slow burn, strong lead"
-                className={inputClass}
-              />
+              {isOriginal ? (
+                <input
+                  id="novel-tags"
+                  name="tags"
+                  value={tagsValue}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    if (countTags(next) <= MAX_ORIGINAL_TAGS) {
+                      setTagsValue(next);
+                    }
+                  }}
+                  placeholder="cultivation, slow burn, strong lead"
+                  className={inputClass}
+                  aria-describedby="novel-tags-count"
+                />
+              ) : (
+                <input
+                  id="novel-tags"
+                  name="tags"
+                  defaultValue={novel?.tags.join(", ") ?? ""}
+                  placeholder="cultivation, slow burn, strong lead"
+                  className={inputClass}
+                />
+              )}
+              {isOriginal ? (
+                <span
+                  id="novel-tags-count"
+                  className={cn(
+                    "text-[0.7rem] leading-tight",
+                    tagCount >= MAX_ORIGINAL_TAGS
+                      ? "text-red-600 dark:text-red-400"
+                      : "text-muted",
+                  )}
+                >
+                  {tagCount} / {MAX_ORIGINAL_TAGS} tags
+                </span>
+              ) : null}
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="novel-novelupdates-url" className={labelClass}>
-                NovelUpdates link{" "}
-                <span className="font-normal opacity-60">(optional)</span>
-              </label>
-              <input
-                id="novel-novelupdates-url"
-                name="novelupdatesUrl"
-                type="url"
-                defaultValue={novel?.novelupdates_url ?? ""}
-                placeholder="https://www.novelupdates.com/series/..."
-                className={inputClass}
-              />
-            </div>
+            {!isOriginal ? (
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="novel-novelupdates-url" className={labelClass}>
+                  NovelUpdates link{" "}
+                  <span className="font-normal opacity-60">(optional)</span>
+                </label>
+                <input
+                  id="novel-novelupdates-url"
+                  name="novelupdatesUrl"
+                  type="url"
+                  defaultValue={novel?.novelupdates_url ?? ""}
+                  placeholder="https://www.novelupdates.com/series/..."
+                  className={inputClass}
+                />
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { ArrowRight, ChevronDown } from "lucide-react";
 
 import type { Novel } from "@/types";
 import { useStoredOpen } from "@/hooks/use-stored-open";
+import { chapterPublicHref } from "@/lib/catalog-paths";
 import {
   CONTINUE_READING_LIMIT,
   listReadingProgress,
@@ -46,7 +47,7 @@ function ContinueCard({ item }: { item: ContinueItem }) {
   return (
     <li>
       <Link
-        href={`/novels/${novel.slug}/${chapterNumber}`}
+        href={chapterPublicHref(novel, chapterNumber)}
         className="group relative isolate flex items-center justify-between overflow-hidden px-2.5 py-2 outline-offset-[-2px] transition-colors hover:bg-background/60 focus-visible:outline-2 focus-visible:outline-accent"
       >
         {novel.coverUrl ? (

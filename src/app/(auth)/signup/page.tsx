@@ -22,8 +22,11 @@ export default async function SignupPage({
       title="Create your account"
       subtitle={
         safeRedirect === "/apply"
-          ? "Create a free account and you'll be taken straight to the translator application."
-          : "Start your shelf and follow the stories you love."
+          ? "Please create an account to apply as a translator. After signup you'll continue to the application."
+          : safeRedirect === "/workspace" ||
+              safeRedirect === "/apply"
+            ? "Please create an account to start writing. After signup you'll land in your author workspace."
+            : "Start your shelf and follow the stories you love."
       }
       fields={[
         {

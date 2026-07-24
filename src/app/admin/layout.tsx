@@ -22,9 +22,11 @@ export default async function AdminLayout({
   const access = await getAdminAccess();
 
   if (!access) redirect("/login");
-  // Logged-in readers without translator access get sent to /apply instead of
-  // a 404 — the application page explains their status.
-  if (!access.hasWorkspace) redirect("/apply");
+  // /admin is the translator workspace only. Originals writers use
+  // /originals/workspace (open to any signed-in account).
+  if (!access.isMasterAdmin && !access.isTranslator) {
+    redirect("/apply");
+  }
 
   return (
     <>
@@ -35,7 +37,10 @@ export default async function AdminLayout({
         Skip to main content
       </a>
       <main className="flex-1">
-        <AdminNav isMasterAdmin={access.isMasterAdmin} />
+        <AdminNav
+          isMasterAdmin={access.isMasterAdmin}
+          canSwitchWorkspace={access.isMasterAdmin || access.isTranslator}
+        />
         <div id="workspace-content" tabIndex={-1}>
           {children}
         </div>

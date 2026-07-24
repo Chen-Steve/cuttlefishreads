@@ -187,10 +187,19 @@ export async function removeBookmarks(
 
 export type CommentState = { error?: string; comment?: NovelComment };
 
+function parseOptionalRating(rating?: number | null): number | null | { error: string } {
+  if (rating == null) return null;
+  if (!Number.isInteger(rating) || rating < 0 || rating > 5) {
+    return { error: "Rating must be between 0 and 5 stars." };
+  }
+  return rating;
+}
+
 export async function createComment(
   novelSlug: string,
   body: string,
   chapterNumber?: number | null,
+  rating?: number | null,
 ): Promise<CommentState> {
   const supabase = createClient(await cookies());
 
@@ -201,6 +210,14 @@ export async function createComment(
 
   const bodyError = validateCommentBody(body);
   if (bodyError) return { error: bodyError };
+
+  const parsedRating = parseOptionalRating(rating);
+  if (parsedRating && typeof parsedRating === "object" && "error" in parsedRating) {
+    return { error: parsedRating.error };
+  }
+  // Ratings only apply to general novel comments (not chapter-scoped).
+  const ratingValue =
+    chapterNumber == null ? (parsedRating as number | null) : null;
 
   if (chapterNumber != null) {
     const readable = await isChapterReadable(novelSlug, chapterNumber);
@@ -227,8 +244,11 @@ export async function createComment(
       novel_slug: novelSlug,
       chapter_number: chapterNumber ?? null,
       body: body.trim(),
+      rating: ratingValue,
     })
-    .select("id, novel_slug, chapter_number, body, user_id, created_at, updated_at")
+    .select(
+      "id, novel_slug, chapter_number, body, rating, user_id, created_at, updated_at",
+    )
     .single();
 
   if (error || !inserted) {
@@ -250,6 +270,7 @@ export async function createComment(
       chapterNumber: inserted.chapter_number,
       parentId: null,
       body: inserted.body,
+      rating: inserted.rating ?? null,
       userId: inserted.user_id,
       username: profile?.username ?? "Unknown",
       likeCount: 0,
@@ -341,6 +362,7 @@ export async function replyToComment(
       chapterNumber: inserted.chapter_number,
       parentId: inserted.parent_id,
       body: inserted.body,
+      rating: null,
       userId: inserted.user_id,
       username: profile?.username ?? "Unknown",
       likeCount: 0,

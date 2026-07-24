@@ -7,7 +7,7 @@ import { Cookie, ExternalLink } from "lucide-react";
 import { PageContainer } from "@/components/page-container";
 import { createClient } from "@/utils/supabase/server";
 import { getUserComments } from "@/lib/data";
-import { signOut } from "@/app/(main)/(auth)/actions";
+import { signOut } from "@/app/(auth)/actions";
 import { AccountActivity } from "./_components/account-activity";
 import { AccountSection } from "./_components/account-section";
 import { AvatarForm } from "./_components/avatar-form";

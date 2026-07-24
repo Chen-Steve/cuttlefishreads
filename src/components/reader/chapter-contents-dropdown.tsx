@@ -12,6 +12,7 @@ import { ChevronDown, List, Lock } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { ChapterSummary } from "@/types";
+import { chapterHref } from "@/lib/catalog-paths";
 import { readerChromeBtnClass } from "./reader-chrome";
 
 const TITLE_DISPLAY_MAX = 10;
@@ -30,11 +31,13 @@ export function ChapterContentsDropdown({
   chapters,
   currentChapter,
   placement = "down",
+  catalogBase = "novels",
 }: {
   slug: string;
   chapters: ChapterSummary[];
   currentChapter: number;
   placement?: "up" | "down";
+  catalogBase?: import("@/lib/catalog-paths").CatalogBase;
 }) {
   const [open, setOpen] = useState(false);
   const [mobilePanelStyle, setMobilePanelStyle] = useState<
@@ -150,7 +153,7 @@ export function ChapterContentsDropdown({
               <Link
                 key={chapter.number}
                 ref={isCurrent ? currentRef : undefined}
-                href={`/novels/${slug}/${chapter.number}`}
+                href={chapterHref(slug, chapter.number, catalogBase)}
                 role="option"
                 aria-selected={isCurrent}
                 title={fullLabel}

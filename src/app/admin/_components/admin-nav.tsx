@@ -6,20 +6,33 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Home } from "lucide-react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  mainPublicOrigin,
+  originalsPublicUrl,
+} from "@/lib/hosts";
 import { cn } from "@/lib/utils";
+import {
+  WORKSPACE_BASE,
+  WORKSPACE_LABELS,
+  workspaceKindFromPathname,
+  type WorkspaceKind,
+} from "@/lib/workspace";
 
 type NavLink = { href: string; label: string };
 
-const baseLinks: NavLink[] = [
-  { href: "/admin", label: "My Novels" },
-  { href: "/admin/dashboard", label: "Dashboard" },
-  { href: "/admin/comments", label: "Comments" },
-  { href: "/admin/settings", label: "Settings" },
-];
-
-const masterLinks: NavLink[] = [
-  { href: "/admin/applications", label: "Applications" },
-];
+const WORKSPACE_SWITCH: Record<
+  WorkspaceKind,
+  { href: string; label: string }
+> = {
+  translations: {
+    href: originalsPublicUrl(WORKSPACE_BASE.originals),
+    label: "Originals workspace",
+  },
+  originals: {
+    href: `${mainPublicOrigin()}${WORKSPACE_BASE.translations}`,
+    label: "Translator workspace",
+  },
+};
 
 function ScrollArrow({
   direction,
@@ -54,9 +67,31 @@ function ScrollArrow({
   );
 }
 
-export function AdminNav({ isMasterAdmin }: { isMasterAdmin: boolean }) {
+export function AdminNav({
+  isMasterAdmin,
+  canSwitchWorkspace = false,
+}: {
+  isMasterAdmin: boolean;
+  /** Translators (and master admins) can jump between the two workspaces. */
+  canSwitchWorkspace?: boolean;
+}) {
   const pathname = usePathname();
-  const links = isMasterAdmin ? [...baseLinks, ...masterLinks] : baseLinks;
+  const kind = workspaceKindFromPathname(pathname);
+  const base = WORKSPACE_BASE[kind];
+  const switchTo = canSwitchWorkspace ? WORKSPACE_SWITCH[kind] : null;
+
+  const baseLinks: NavLink[] = [
+    { href: base, label: WORKSPACE_LABELS[kind].novels },
+    { href: `${base}/dashboard`, label: "Dashboard" },
+    { href: `${base}/comments`, label: "Comments" },
+    { href: `${base}/settings`, label: "Settings" },
+  ];
+  // Application review lives in the translator workspace only.
+  const links =
+    isMasterAdmin && kind === "translations"
+      ? [...baseLinks, { href: "/admin/applications", label: "Applications" }]
+      : baseLinks;
+  const homeHref = "/";
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -123,7 +158,7 @@ export function AdminNav({ isMasterAdmin }: { isMasterAdmin: boolean }) {
             className="flex items-center gap-1 overflow-x-hidden touch-pan-y pl-7 pr-7 sm:overflow-x-visible sm:px-0"
           >
             <Link
-              href="/"
+              href={homeHref}
               className="mr-1 inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground sm:mr-2 sm:px-2.5"
             >
               <Home className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
@@ -134,8 +169,8 @@ export function AdminNav({ isMasterAdmin }: { isMasterAdmin: boolean }) {
 
             {links.map((link) => {
               const active =
-                link.href === "/admin"
-                  ? pathname === "/admin"
+                link.href === base
+                  ? pathname === base
                   : pathname.startsWith(link.href);
               return (
                 <Link
@@ -156,7 +191,18 @@ export function AdminNav({ isMasterAdmin }: { isMasterAdmin: boolean }) {
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center pl-2">
+        <div className="flex shrink-0 items-center gap-1 pl-2">
+          {switchTo ? (
+            <Link
+              href={switchTo.href}
+              className="rounded-lg px-2 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-background hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:px-2.5"
+            >
+              <span className="sm:hidden">
+                {kind === "translations" ? "Originals" : "Translations"}
+              </span>
+              <span className="hidden sm:inline">{switchTo.label}</span>
+            </Link>
+          ) : null}
           <ThemeToggle />
         </div>
       </div>

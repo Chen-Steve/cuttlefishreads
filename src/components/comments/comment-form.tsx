@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronDown, LogIn, MessageSquare } from "lucide-react";
+import { ChevronDown, LogIn, MessageSquare, Star } from "lucide-react";
 
 import { createComment } from "@/app/(main)/novels/actions";
 import { cn } from "@/lib/utils";
@@ -27,11 +27,13 @@ export function CommentForm({
   onCommentCreated?: (comment: NovelComment) => void;
 }) {
   const [body, setBody] = useState("");
+  const [rating, setRating] = useState<number | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<string>("");
   const [chapterMenuOpen, setChapterMenuOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const chapterMenuRef = useRef<HTMLDivElement>(null);
+  const canRate = mode === "novel" && !selectedChapter;
 
   useEffect(() => {
     if (!chapterMenuOpen) return;
@@ -66,12 +68,18 @@ export function CommentForm({
           : null;
 
     startTransition(async () => {
-      const result = await createComment(novelSlug, body, chapter);
+      const result = await createComment(
+        novelSlug,
+        body,
+        chapter,
+        canRate ? rating : null,
+      );
       if (result.error) {
         setError(result.error);
         return;
       }
       setBody("");
+      setRating(null);
       setSelectedChapter("");
       if (result.comment) {
         onCommentCreated?.(result.comment);
@@ -99,6 +107,40 @@ export function CommentForm({
         disabled={!isLoggedIn || pending}
         className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
       />
+
+      {isLoggedIn && canRate ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted">Rating (optional)</span>
+          <div
+            className="flex items-center gap-0.5"
+            role="radiogroup"
+            aria-label="Optional rating"
+          >
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                role="radio"
+                aria-checked={rating === star}
+                aria-label={`${star} star${star === 1 ? "" : "s"}`}
+                disabled={pending}
+                onClick={() => setRating((current) => (current === star ? null : star))}
+                className="rounded p-0.5 transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+              >
+                <Star
+                  className={
+                    rating != null && star <= rating
+                      ? "size-4 fill-amber-500 text-amber-500"
+                      : "size-4 text-border"
+                  }
+                  strokeWidth={1.75}
+                  aria-hidden
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -150,6 +192,7 @@ export function CommentForm({
                         role="menuitem"
                         onClick={() => {
                           setSelectedChapter(String(chapter.number));
+                          setRating(null);
                           setChapterMenuOpen(false);
                         }}
                         className="flex w-full items-center px-2.5 py-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-background"

@@ -1,6 +1,11 @@
 import { cookies } from "next/headers";
 
-import type { Genre, Language } from "@/lib/constants";
+import type { Genre, Language, PublicationType } from "@/lib/constants";
+import {
+  hasProfileRole,
+  parseProfileRoles,
+  type ProfileRole,
+} from "@/lib/roles";
 import { getAllTimeViewsBySlug } from "@/lib/google-analytics";
 import type {
   Chapter,
@@ -8,6 +13,7 @@ import type {
   ChapterSummary,
   Novel,
   NovelComment,
+  NovelRatingSummary,
   RecentlyUpdatedNovel,
 } from "@/types";
 import { createClient } from "@/utils/supabase/server";
@@ -30,11 +36,13 @@ type DbNovel = {
   publisher_id: string | null;
   novelupdates_url: string | null;
   language: string;
+  publication_type: string | null;
+  created_at: string;
   chapters: { count: number }[];
 };
 
 const NOVEL_LIST_COLUMNS =
-  "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, updated_at, publisher_id, novelupdates_url, language, chapters(count)";
+  "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, created_at, updated_at, publisher_id, novelupdates_url, language, publication_type, chapters(count)";
 
 const NEWLY_ADDED_LIMIT = 7;
 const UNDERRATED_LIMIT = 7;
@@ -97,10 +105,13 @@ function mapNovel(row: DbNovel): Novel {
     tags: row.tags ?? [],
     status: row.status as Novel["status"],
     chapterCount: row.chapters?.[0]?.count ?? 0,
+    createdAt: row.created_at,
     updatedAt: row.updated_at,
     publisherId: row.publisher_id ?? undefined,
     novelupdatesUrl: row.novelupdates_url ?? undefined,
     language: (row.language as Language) ?? "Chinese",
+    publicationType:
+      (row.publication_type as PublicationType) ?? "translation",
   };
 }
 
@@ -331,20 +342,16 @@ export async function getFeaturedNovels(
     .slice(0, FEATURED_LIMIT);
 }
 
-export async function getNewlyAddedNovels(): Promise<Novel[]> {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("novels")
-    .select(NOVEL_LIST_COLUMNS)
-    .order("created_at", { ascending: false })
-    .limit(NEWLY_ADDED_LIMIT);
-
-  if (error) {
-    console.error("getNewlyAddedNovels:", error);
-    return [];
-  }
-
-  return ((data ?? []) as DbNovel[]).map(mapNovel);
+export async function getNewlyAddedNovels(
+  novels?: Novel[],
+): Promise<Novel[]> {
+  const catalog = novels ?? (await getNovels());
+  return [...catalog]
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )
+    .slice(0, NEWLY_ADDED_LIMIT);
 }
 
 function shuffleNovels(novels: Novel[]): Novel[] {
@@ -512,7 +519,10 @@ export async function getLibraryNovels(): Promise<Novel[]> {
 export type PublicProfile = {
   id: string;
   username: string;
+  /** @deprecated Prefer `roles` — kept for older UI checks. */
   role: "user" | "translator";
+  roles: ProfileRole[];
+  isTranslator: boolean;
   avatarUrl: string | null;
   kofiUrl: string | null;
   patreonUrl: string | null;
@@ -524,15 +534,22 @@ export async function getPublicProfile(
   const supabase = createClient(await cookies());
   const { data } = await supabase
     .from("profiles")
-    .select("id, username, role, avatar_url, kofi_url, patreon_url")
+    .select("id, username, role, roles, avatar_url, kofi_url, patreon_url")
     .eq("username", username.trim().toLowerCase())
     .maybeSingle();
 
   if (!data?.username) return null;
+  const roles = parseProfileRoles({
+    roles: data.roles as string[] | null | undefined,
+    role: data.role as string | null | undefined,
+  });
+  const isTranslator = hasProfileRole(roles, "translator");
   return {
     id: data.id,
     username: data.username,
-    role: data.role === "translator" ? "translator" : "user",
+    role: isTranslator ? "translator" : "user",
+    roles,
+    isTranslator,
     avatarUrl: data.avatar_url?.trim() || null,
     kofiUrl: data.kofi_url?.trim() || null,
     patreonUrl: data.patreon_url?.trim() || null,
@@ -721,12 +738,16 @@ function titleMatchScore(title: string, query: string): number {
 
 export async function getClosestNovelTitleMatch(
   query: string,
+  options?: { publicationType?: PublicationType },
 ): Promise<NovelTitleMatch | null> {
   const q = query.trim().toLowerCase();
   if (!q) return null;
 
   const novels = await getNovels();
-  const [match] = novels
+  const candidates = options?.publicationType
+    ? novels.filter((n) => n.publicationType === options.publicationType)
+    : novels;
+  const [match] = candidates
     .map((novel) => ({
       novel,
       score: titleMatchScore(novel.title, q),
@@ -768,20 +789,26 @@ type DbCommentRow = {
   chapter_number: number | null;
   parent_id: string | null;
   body: string;
+  rating: number | null;
   user_id: string;
   created_at: string;
   updated_at: string;
 };
 
 const COMMENT_COLUMNS =
-  "id, novel_slug, chapter_number, parent_id, body, user_id, created_at, updated_at";
+  "id, novel_slug, chapter_number, parent_id, body, rating, user_id, created_at, updated_at";
 
 type DbLikeRow = {
   comment_id: string;
   user_id: string;
 };
 
-type CurrentUser = { id: string; isAdmin: boolean; role: "user" | "translator" };
+type CurrentUser = {
+  id: string;
+  isAdmin: boolean;
+  roles: ProfileRole[];
+  role: "user" | "translator";
+};
 
 async function getCurrentUser(): Promise<CurrentUser | null> {
   const supabase = createClient(await cookies());
@@ -791,14 +818,20 @@ async function getCurrentUser(): Promise<CurrentUser | null> {
   const id = auth.claims.sub as string;
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, roles")
     .eq("id", id)
     .maybeSingle();
+
+  const roles = parseProfileRoles({
+    roles: profile?.roles as string[] | null | undefined,
+    role: profile?.role as string | null | undefined,
+  });
 
   return {
     id,
     isAdmin: isAdminEmail(auth.claims.email as string | undefined),
-    role: profile?.role === "translator" ? "translator" : "user",
+    roles,
+    role: hasProfileRole(roles, "translator") ? "translator" : "user",
   };
 }
 
@@ -857,6 +890,7 @@ function mapCommentRows(
     chapterNumber: row.chapter_number,
     parentId: row.parent_id,
     body: row.body,
+    rating: row.rating ?? null,
     userId: row.user_id,
     username: usernames.get(row.user_id) ?? "Unknown",
     likeCount: likeCountByComment.get(row.id) ?? 0,
@@ -1125,6 +1159,30 @@ export async function getReadableChapters(
       number: chapter.number,
       title: chapter.title,
     }));
+}
+
+// -----------------------------------------------------------------------------
+// Ratings from comments (optional stars on top-level comments)
+// -----------------------------------------------------------------------------
+
+export async function getNovelRatingSummary(
+  slug: string,
+): Promise<NovelRatingSummary> {
+  const supabase = createClient(await cookies());
+  const { data, error } = await supabase
+    .from("novel_comments")
+    .select("rating")
+    .eq("novel_slug", slug)
+    .is("parent_id", null)
+    .not("rating", "is", null);
+
+  if (error || !data || data.length === 0) {
+    if (error) console.error("getNovelRatingSummary:", error);
+    return { average: 0, count: 0 };
+  }
+
+  const sum = data.reduce((total, row) => total + (row.rating as number), 0);
+  return { average: sum / data.length, count: data.length };
 }
 
 export async function isChapterReadable(

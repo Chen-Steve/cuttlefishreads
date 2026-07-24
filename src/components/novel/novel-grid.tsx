@@ -1,5 +1,6 @@
 import type { Novel } from "@/types";
 import { cn } from "@/lib/utils";
+import type { CatalogBase } from "@/lib/catalog-paths";
 import { NovelCard } from "./novel-card";
 
 /** Max cards shown in a dense fill-row grid (matches xl:grid-cols-7). */
@@ -14,6 +15,7 @@ export function NovelGrid({
   tightMobile = false,
   tightGap = false,
   showChapterCount = false,
+  catalogBase,
 }: {
   novels: Novel[];
   compact?: boolean;
@@ -27,6 +29,7 @@ export function NovelGrid({
   /** Tighter grid gaps without compact card styling. */
   tightGap?: boolean;
   showChapterCount?: boolean;
+  catalogBase?: CatalogBase;
 }) {
   if (novels.length === 0) {
     return (
@@ -64,6 +67,7 @@ export function NovelGrid({
           dense={dense}
           hideAuthor={hideAuthor}
           showChapterCount={showChapterCount}
+          catalogBase={catalogBase}
         />
       ))}
     </div>
