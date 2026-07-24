@@ -6,7 +6,6 @@ import { CommentSection } from "@/components/comments";
 import {
   BookmarkButton,
   BulkBuyChapters,
-  BulkBuyInfo,
   ChapterList,
   ChapterOrderToggle,
   NovelCover,
@@ -274,11 +273,6 @@ export default async function NovelDetailPage({
           ) : null}
         </div>
         <ChapterList slug={novel.slug} chapters={chapters} />
-        {!bulkBuy.eligible ? (
-          <div className="mt-4">
-            <BulkBuyInfo />
-          </div>
-        ) : null}
       </section>
 
       <section className="mt-10">

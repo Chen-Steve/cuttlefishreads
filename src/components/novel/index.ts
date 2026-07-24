@@ -12,4 +12,4 @@ export { ScrollingTags } from "./scrolling-tags";
 export { AdultContentWarning } from "./adult-content-warning";
 export { ChapterList, ChapterOrderToggle } from "./chapter-list";
 export { BookmarkButton } from "./bookmark-button";
-export { BulkBuyChapters, BulkBuyInfo } from "./bulk-buy-chapters";
+export { BulkBuyChapters } from "./bulk-buy-chapters";

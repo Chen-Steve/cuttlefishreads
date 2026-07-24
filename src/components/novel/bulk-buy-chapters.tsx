@@ -6,10 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Cookie, ShoppingBag, X } from "lucide-react";
 
 import { bulkUnlockChapters } from "@/app/(main)/novels/actions";
-import {
-  BULK_BUY_MIN_ADVANCED_CHAPTERS,
-  getBulkBuyState,
-} from "@/lib/bulk-buy";
+import { getBulkBuyState } from "@/lib/bulk-buy";
 import { cookiesLabel } from "@/lib/utils";
 import type { ChapterListItem } from "@/types";
 
@@ -143,17 +140,6 @@ export function BulkBuyChapters({
           </div>
         </div>
       ) : null}
-    </div>
-  );
-}
-
-export function BulkBuyInfo() {
-  return (
-    <div className="rounded-xl border border-border/60 bg-background px-4 py-3">
-      <p className="text-xs leading-relaxed text-muted">
-        Bulk buy becomes available with at least{" "}
-        {BULK_BUY_MIN_ADVANCED_CHAPTERS} advanced chapters.
-      </p>
     </div>
   );
 }
