@@ -77,8 +77,7 @@ export async function WorkspaceDashboardPage({
   const novelIds = rows.map((n) => n.id);
   const slugs = rows.map((n) => n.slug);
 
-  // Views: all-time totals always come from getAllTimeViewsBySlug (same as
-  // public novel pages). Chart reports are only fetched for daily/monthly modes.
+  // Translator workspace uses GA for view totals; charts use GA daily/monthly.
   const emptyAnalytics: GoogleAnalyticsDashboard = {
     configured: isGoogleAnalyticsConfigured(),
     error: false,
@@ -204,7 +203,7 @@ export async function WorkspaceDashboardPage({
   return (
     <PageContainer as="div">
       <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-        Dashboard
+        Stats
       </h1>
       <p className="mt-0.5 text-sm text-muted">
         {showEarnings

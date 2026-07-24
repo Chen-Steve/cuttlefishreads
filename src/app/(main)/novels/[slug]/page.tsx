@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { BookOpen, Eye } from "lucide-react";
+import { BookOpen, Coffee, Eye, Heart } from "lucide-react";
 import { CommentSection } from "@/components/comments";
 import {
   BookmarkButton,
@@ -187,6 +187,36 @@ export default async function NovelDetailPage({
     </>
   );
 
+  const supportLinks =
+    novel.translatorKofiUrl || novel.translatorPatreonUrl ? (
+      <div className="flex flex-wrap justify-center gap-1.5 sm:justify-start">
+        {novel.translatorKofiUrl ? (
+          <a
+            href={novel.translatorKofiUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-[#13C3FF] px-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            <Coffee className="size-3.5" strokeWidth={2} aria-hidden />
+            Ko-fi
+            <span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        ) : null}
+        {novel.translatorPatreonUrl ? (
+          <a
+            href={novel.translatorPatreonUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-[#FF424D] px-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            <Heart className="size-3.5" strokeWidth={2} aria-hidden />
+            Patreon
+            <span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        ) : null}
+      </div>
+    ) : null;
+
   return (
     <PageContainer as="article" width="prose" className="pt-4 sm:pt-6 lg:pt-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
@@ -214,6 +244,7 @@ export default async function NovelDetailPage({
           {/* Desktop buttons below cover */}
           <div className="mt-1 hidden w-full flex-col gap-3 sm:flex">
             {actionButtons}
+            {supportLinks}
           </div>
         </div>
 
@@ -234,6 +265,7 @@ export default async function NovelDetailPage({
           {/* Mobile buttons */}
           <div className="mt-6 flex flex-col gap-3 sm:hidden">
             {actionButtons}
+            {supportLinks}
           </div>
         </div>
       </div>

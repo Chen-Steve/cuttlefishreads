@@ -8,8 +8,8 @@ import { isLocalDevHost, normalizeHost } from "@/lib/hosts";
  *
  * Prod: Domain=.cuttlefishreads.com
  * Local: host-only cookies (browsers reject Domain=.localhost as a public
- *   suffix), so creator *.localhost pages render logged-out — they are
- *   public vanity pages, which is fine.
+ *   suffix). Creator vanity *.localhost visits are redirected to the
+ *   originals host so the session still applies.
  * Preview / unknown hosts: no Domain (host-only cookies)
  */
 export function authCookieDomainForHost(

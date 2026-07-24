@@ -1,6 +1,6 @@
 "use client";
 
-import type { Novel } from "@/types";
+import type { Novel, NovelRatingSummary } from "@/types";
 import type { CatalogBase } from "@/lib/catalog-paths";
 import { NovelCard } from "./novel-card";
 import { NovelGrid } from "./novel-grid";
@@ -12,6 +12,8 @@ export function NovelCarousel({
   fillRow = false,
   hideAuthor = false,
   showChapterCount = false,
+  showRatingMeta = false,
+  ratingsBySlug,
   catalogBase = "novels",
   emptyLabel = "No novels found.",
 }: {
@@ -22,6 +24,8 @@ export function NovelCarousel({
   fillRow?: boolean;
   hideAuthor?: boolean;
   showChapterCount?: boolean;
+  showRatingMeta?: boolean;
+  ratingsBySlug?: Record<string, NovelRatingSummary>;
   catalogBase?: CatalogBase;
   emptyLabel?: string;
 }) {
@@ -54,6 +58,8 @@ export function NovelCarousel({
               dense={dense}
               hideAuthor={hideAuthor}
               showChapterCount={showChapterCount}
+              showRatingMeta={showRatingMeta}
+              rating={ratingsBySlug?.[novel.slug]}
               catalogBase={catalogBase}
             />
           </div>
@@ -68,6 +74,8 @@ export function NovelCarousel({
           fillRow={fillRow}
           hideAuthor={hideAuthor}
           showChapterCount={showChapterCount}
+          showRatingMeta={showRatingMeta}
+          ratingsBySlug={ratingsBySlug}
           catalogBase={catalogBase}
         />
       </div>

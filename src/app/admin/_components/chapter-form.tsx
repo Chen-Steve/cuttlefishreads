@@ -343,8 +343,6 @@ export function ChapterForm({
                     : latestChapterUnlockAt
                       ? `Next day sets ${suggestedUnlockLabel} — one day after the latest scheduled chapter.`
                       : `Next day sets ${suggestedUnlockLabel}.`}{" "}
-                  A paid chapter becomes free for everyone once this date
-                  passes.
                 </span>
               </div>
             </>

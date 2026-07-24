@@ -7,6 +7,7 @@ import {
   ChapterReaderHeader,
   ImmersiveChapterShell,
   ReaderNav,
+  ReadingEngagementTracker,
   ReadingProgressTracker,
   TranslatorNote,
 } from "@/components/reader";
@@ -14,6 +15,7 @@ import {
   getChapter,
   getChapterSummaries,
   getNovel,
+  isUserAuthenticated,
 } from "@/lib/data";
 import { creatorPublicOrigin, originalsPublicUrl } from "@/lib/hosts";
 import { isOriginalNovel } from "@/lib/originals-data";
@@ -59,10 +61,11 @@ export default async function OriginalsChapterPage({
   const { slug, chapter } = await params;
   const chapterNumber = Number(chapter);
 
-  const [novel, current, chapters] = await Promise.all([
+  const [novel, current, chapters, isLoggedIn] = await Promise.all([
     getNovel(slug),
     getChapter(slug, chapterNumber),
     getChapterSummaries(slug),
+    isUserAuthenticated(),
   ]);
 
   if (!novel || !current || Number.isNaN(chapterNumber) || !isOriginalNovel(novel)) {
@@ -88,6 +91,11 @@ export default async function OriginalsChapterPage({
   return (
     <PageContainer as="article" width="narrow" className="pt-4 sm:pt-6 lg:pt-6">
       <ReadingProgressTracker slug={slug} chapterNumber={chapterNumber} />
+      <ReadingEngagementTracker
+        slug={slug}
+        chapterNumber={chapterNumber}
+        isLoggedIn={isLoggedIn}
+      />
       <ImmersiveChapterShell
         header={
           <ChapterReaderHeader

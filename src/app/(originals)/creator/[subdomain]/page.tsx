@@ -8,6 +8,7 @@ import { getPublicProfile } from "@/lib/data";
 import {
   creatorPublicOrigin,
   getSiteSurface,
+  isLocalDevHost,
   originalsPublicUrl,
   resolveRequestHost,
 } from "@/lib/hosts";
@@ -43,12 +44,14 @@ export default async function CreatorPage({
   const isVanitySubdomain = getSiteSurface(host).surface === "creator";
   const isAuthor = originalSeries.length > 0;
 
-  if (!isVanitySubdomain) {
-    permanentRedirect(
-      isAuthor
-        ? creatorPublicOrigin(profile.username)
-        : originalsPublicUrl(`/profiles/${profile.username}`),
-    );
+  // Prod: canonicalize /creator/username → username.cuttlefishreads.com.
+  // Local: keep /creator/username on originals host so auth cookies still apply.
+  if (!isVanitySubdomain && isAuthor && !isLocalDevHost(host)) {
+    permanentRedirect(creatorPublicOrigin(profile.username));
+  }
+
+  if (!isVanitySubdomain && !isAuthor) {
+    permanentRedirect(originalsPublicUrl(`/profiles/${profile.username}`));
   }
 
   if (!isAuthor) notFound();

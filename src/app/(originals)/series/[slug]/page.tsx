@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BookOpen, Eye } from "lucide-react";
+import { BookOpen, Bookmark, Coffee, Eye, Heart, Users } from "lucide-react";
 import { CommentSection } from "@/components/comments";
 import {
   BookmarkButton,
@@ -18,11 +18,11 @@ import { chapterHref } from "@/lib/catalog-paths";
 import {
   getChapterListItems,
   getNovel,
+  getNovelEngagementStats,
   getNovelRatingSummary,
   isNovelBookmarked,
   isUserAuthenticated,
 } from "@/lib/data";
-import { getNovelPageViews } from "@/lib/google-analytics";
 import { creatorPublicOrigin, originalsPublicUrl } from "@/lib/hosts";
 import { isOriginalNovel } from "@/lib/originals-data";
 import { novelDescription } from "@/lib/seo";
@@ -70,8 +70,8 @@ export default async function OriginalsSeriesPage({
 
   if (!novel || !isOriginalNovel(novel)) notFound();
 
-  const [viewCount, rating] = await Promise.all([
-    getNovelPageViews(slug),
+  const [engagement, rating] = await Promise.all([
+    getNovelEngagementStats(slug),
     getNovelRatingSummary(slug),
   ]);
   const firstChapter = chapters[0];
@@ -83,6 +83,24 @@ export default async function OriginalsSeriesPage({
         {rating.average.toFixed(1)} ({rating.count})
       </span>
     ) : null;
+
+  const metricsDisplay = (
+    <p className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted sm:text-sm">
+      <span className="inline-flex items-center gap-1.5">
+        <Users className="size-3.5 shrink-0 sm:size-4" strokeWidth={1.75} aria-hidden />
+        {engagement.readers.toLocaleString()} readers
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <Eye className="size-3.5 shrink-0 sm:size-4" strokeWidth={1.75} aria-hidden />
+        {engagement.views.toLocaleString()} views
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <Bookmark className="size-3.5 shrink-0 sm:size-4" strokeWidth={1.75} aria-hidden />
+        {engagement.libraryAdds.toLocaleString()} bookmarks
+      </span>
+      {ratingDisplay}
+    </p>
+  );
 
   const authorLine = (
     <p className="text-sm text-muted">
@@ -116,15 +134,17 @@ export default async function OriginalsSeriesPage({
 
   const supportLinks =
     novel.translatorKofiUrl || novel.translatorPatreonUrl ? (
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap justify-center gap-1.5 sm:justify-start">
         {novel.translatorKofiUrl ? (
           <a
             href={novel.translatorKofiUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-9 items-center rounded-lg border border-border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:border-accent hover:text-accent"
+            className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-[#13C3FF] px-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
-            Support on Ko-fi
+            <Coffee className="size-3.5" strokeWidth={2} aria-hidden />
+            Ko-fi
+            <span className="sr-only"> (opens in a new tab)</span>
           </a>
         ) : null}
         {novel.translatorPatreonUrl ? (
@@ -132,9 +152,11 @@ export default async function OriginalsSeriesPage({
             href={novel.translatorPatreonUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-9 items-center rounded-lg border border-border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:border-accent hover:text-accent"
+            className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-[#FF424D] px-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
-            Support on Patreon
+            <Heart className="size-3.5" strokeWidth={2} aria-hidden />
+            Patreon
+            <span className="sr-only"> (opens in a new tab)</span>
           </a>
         ) : null}
       </div>
@@ -178,13 +200,7 @@ export default async function OriginalsSeriesPage({
             <div className="flex min-w-0 flex-1 flex-col gap-2 sm:hidden">
               {authorLine}
               {statusAndGenres}
-              <p className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-                <span className="inline-flex items-center gap-1.5">
-                  <Eye className="size-3.5" strokeWidth={1.75} aria-hidden />
-                  {viewCount.toLocaleString()} views
-                </span>
-                {ratingDisplay}
-              </p>
+              {metricsDisplay}
             </div>
           </div>
           <ScrollingTags tags={novel.tags} />
@@ -201,13 +217,7 @@ export default async function OriginalsSeriesPage({
           <div className="mt-1 hidden flex-col gap-4 sm:flex">
             {authorLine}
             {statusAndGenres}
-            <p className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
-              <span className="inline-flex items-center gap-1.5">
-                <Eye className="size-4" strokeWidth={1.75} aria-hidden />
-                {viewCount.toLocaleString()} views
-              </span>
-              {ratingDisplay}
-            </p>
+            {metricsDisplay}
           </div>
           {novel.synopsis ? <NovelDescription synopsis={novel.synopsis} /> : null}
           <div className="mt-6 flex flex-col gap-3 sm:hidden">

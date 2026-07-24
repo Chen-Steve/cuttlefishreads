@@ -158,10 +158,10 @@ export function OriginalsHeader({
             tabIndex={searchExpanded ? -1 : undefined}
             onClick={showComingSoonToast}
             aria-label="Forum"
-            className="inline-flex size-10 items-center justify-center rounded-xl text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:size-9 sm:w-auto sm:gap-1.5 sm:px-3"
+            className="inline-flex size-10 items-center justify-center rounded-xl text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:h-9 sm:w-auto sm:px-2.5"
           >
             <MessagesSquare
-              className="size-5 sm:size-4"
+              className="size-5 sm:hidden"
               strokeWidth={1.75}
               aria-hidden
             />
@@ -172,9 +172,9 @@ export function OriginalsHeader({
             <Link
               href={loginHref}
               tabIndex={searchExpanded ? -1 : undefined}
-              className="inline-flex size-10 items-center justify-center rounded-xl text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:size-9 sm:w-auto sm:gap-1.5 sm:px-3"
+              className="inline-flex size-10 items-center justify-center rounded-xl text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:h-9 sm:w-auto sm:px-2.5"
             >
-              <LogIn className="size-5 sm:size-4" strokeWidth={1.75} aria-hidden />
+              <LogIn className="size-5 sm:hidden" strokeWidth={1.75} aria-hidden />
               <span className="hidden text-sm font-medium sm:inline">Log in</span>
             </Link>
           ) : null}
@@ -188,6 +188,7 @@ export function OriginalsHeader({
               showThemeToggle
               writeHref={originalsPublicUrl("/workspace")}
               writeLabel={ORIGINALS.writeCta}
+              libraryHref={originalsPublicUrl("/library")}
               publicProfileHref={
                 username
                   ? hasCreatorSubdomain

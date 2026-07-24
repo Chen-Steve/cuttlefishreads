@@ -82,7 +82,9 @@ export function AdminNav({
 
   const baseLinks: NavLink[] = [
     { href: base, label: WORKSPACE_LABELS[kind].novels },
-    { href: `${base}/dashboard`, label: "Dashboard" },
+    ...(kind === "translations"
+      ? [{ href: `${base}/dashboard`, label: "Stats" }]
+      : []),
     { href: `${base}/comments`, label: "Comments" },
     { href: `${base}/settings`, label: "Settings" },
   ];

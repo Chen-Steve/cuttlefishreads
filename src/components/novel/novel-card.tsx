@@ -1,6 +1,7 @@
 import Link from "next/link";
-import type { Novel } from "@/types";
+import type { Novel, NovelRatingSummary } from "@/types";
 import { Badge } from "@/components/ui/badge";
+import { StarRating } from "@/components/reviews";
 import {
   type CatalogBase,
   novelHref,
@@ -20,6 +21,9 @@ export function NovelCard({
   dense = false,
   hideAuthor = false,
   showChapterCount = false,
+  /** Cover + title + rating + by username (no status/genres). */
+  showRatingMeta = false,
+  rating,
   catalogBase,
 }: {
   novel: Novel;
@@ -30,14 +34,21 @@ export function NovelCard({
   /** Hides the author/translator line while keeping status and genres. */
   hideAuthor?: boolean;
   showChapterCount?: boolean;
+  showRatingMeta?: boolean;
+  rating?: NovelRatingSummary;
   /** Override automatic publication-aware routing. */
   catalogBase?: CatalogBase;
 }) {
   const cardGenres = genresExcludingCoverBadges(novel.genres);
-  const showMeta = cardGenres.length > 0 || (!dense && !compact);
+  const showMeta =
+    !showRatingMeta && (cardGenres.length > 0 || (!dense && !compact));
   const href = catalogBase
     ? novelHref(novel.slug, catalogBase)
     : novelPublicHref(novel);
+  const byline =
+    novel.translatorUsername?.trim() ||
+    novel.translator?.trim() ||
+    novel.author;
 
   return (
     <Link
@@ -50,8 +61,10 @@ export function NovelCard({
         title={novel.title}
         slug={novel.slug}
         coverUrl={novel.coverUrl}
-        chapterCount={showChapterCount ? novel.chapterCount : undefined}
-        genres={novel.genres}
+        chapterCount={
+          showChapterCount && !showRatingMeta ? novel.chapterCount : undefined
+        }
+        genres={showRatingMeta ? [] : novel.genres}
         className="transition-transform duration-300 group-hover:-translate-y-0.5"
       />
       <div
@@ -66,27 +79,49 @@ export function NovelCard({
         >
           {novel.title}
         </h3>
-        {!compact && !hideAuthor ? (
-          <p className="text-xs text-muted">{novel.author}</p>
-        ) : null}
-        {showMeta ? (
-          <div
-            className={`${compact ? "mt-0.5" : "mt-1"} -mx-1 min-w-0 overflow-x-auto px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden`}
-          >
-            <div className="flex w-max min-w-full flex-nowrap items-center gap-1.5">
-              {!compact ? (
-                <Badge className="shrink-0 border-accent/30 text-accent">
-                  {statusLabel[novel.status]}
-                </Badge>
-              ) : null}
-              {cardGenres.slice(0, 2).map((genre) => (
-                <Badge key={genre} className="shrink-0">
-                  {genre}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        ) : null}
+
+        {showRatingMeta ? (
+          <>
+            {rating && rating.count > 0 ? (
+              <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+                <StarRating
+                  value={rating.average}
+                  starClassName="size-3"
+                />
+                <span className="tabular-nums font-medium text-foreground/80">
+                  {rating.average.toFixed(1)}
+                </span>
+              </span>
+            ) : (
+              <span className="text-[11px] text-muted">No ratings</span>
+            )}
+            <p className="truncate text-[11px] text-muted">by {byline}</p>
+          </>
+        ) : (
+          <>
+            {!compact && !hideAuthor ? (
+              <p className="text-xs text-muted">{novel.author}</p>
+            ) : null}
+            {showMeta ? (
+              <div
+                className={`${compact ? "mt-0.5" : "mt-1"} -mx-1 min-w-0 overflow-x-auto px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden`}
+              >
+                <div className="flex w-max min-w-full flex-nowrap items-center gap-1.5">
+                  {!compact ? (
+                    <Badge className="shrink-0 border-accent/30 text-accent">
+                      {statusLabel[novel.status]}
+                    </Badge>
+                  ) : null}
+                  {cardGenres.slice(0, 2).map((genre) => (
+                    <Badge key={genre} className="shrink-0">
+                      {genre}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
     </Link>
   );

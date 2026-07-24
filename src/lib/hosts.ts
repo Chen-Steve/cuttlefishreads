@@ -115,19 +115,17 @@ export function getSiteSurface(host: string): {
   return { surface: "main", creatorSubdomain: null };
 }
 
-function localPort(port?: string): string {
-  return port || "3000";
-}
-
-/** Public origin for a creator's subdomain (prod or local). */
-export function creatorPublicOrigin(username: string, port?: string): string {
+/** Public URL for a creator page (vanity subdomain in prod; originals path locally). */
+export function creatorPublicOrigin(username: string): string {
   const sub = username.trim().toLowerCase();
+  // Browsers cannot share auth cookies across *.localhost (public suffix), so
+  // local creator links stay on the originals host where the session lives.
   if (
     process.env.NODE_ENV === "development" ||
     process.env.NEXT_PUBLIC_SITE_URL?.includes("localhost") ||
     process.env.NEXT_PUBLIC_SITE_URL?.includes("127.0.0.1")
   ) {
-    return `http://${sub}.localhost:${localPort(port)}`;
+    return originalsPublicUrl(`/creator/${sub}`);
   }
   return `https://${sub}.cuttlefishreads.com`;
 }

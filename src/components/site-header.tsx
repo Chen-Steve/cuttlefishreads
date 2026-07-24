@@ -3,12 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { BookOpen, LogIn, Library, PenLine, Search, ShoppingBag } from "lucide-react";
+import { BookOpen, LogIn, Library, Search, ShoppingBag } from "lucide-react";
 
 import { AccountDropdown } from "@/components/account-dropdown";
 import { useImmersiveHidesSiteHeader } from "@/components/reader";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { originalsPublicUrl } from "@/lib/hosts";
 import { cn } from "@/lib/utils";
 
 type SearchMatch = {
@@ -18,18 +17,13 @@ type SearchMatch = {
 };
 
 const novelsNavItem = { href: "/novels", label: "Novels", icon: BookOpen } as const;
-const originalsNavItem = {
-  href: originalsPublicUrl(),
-  label: "Originals",
-  icon: PenLine,
-} as const;
 const libraryNavItem = { href: "/library", label: "Library", icon: Library } as const;
 const shopNavItem = { href: "/shop", label: "Shop", icon: ShoppingBag } as const;
 const loginNavItem = { href: "/login", label: "Login / Sign Up", icon: LogIn } as const;
 const authenticatedMobileNavItems = [libraryNavItem, shopNavItem] as const;
 
 function getNavItemClassName(href: string, isAuthenticated: boolean) {
-  if (href === "/novels" || href === originalsNavItem.href) {
+  if (href === "/novels") {
     return cn(navIconLinkBaseClass, "hidden sm:inline-flex");
   }
   if (isAuthenticated && (href === "/library" || href === "/shop")) {
@@ -187,8 +181,8 @@ export function SiteHeader({
   const hideForImmersive = useImmersiveHidesSiteHeader();
 
   const navItems = isAuthenticated
-    ? [novelsNavItem, originalsNavItem, libraryNavItem, shopNavItem]
-    : [novelsNavItem, originalsNavItem, loginNavItem];
+    ? [novelsNavItem, libraryNavItem, shopNavItem]
+    : [novelsNavItem, loginNavItem];
 
   const desktopSearchClassNames = {
     labelClassName:
@@ -275,10 +269,10 @@ export function SiteHeader({
                 aria-label={label}
                 className={className}
               >
-                <span className={navIconWrapperClass}>
-                  <Icon className="size-5 sm:size-4" strokeWidth={1.75} aria-hidden />
+                <span className={cn(navIconWrapperClass, "sm:hidden")}>
+                  <Icon className="size-5" strokeWidth={1.75} aria-hidden />
                 </span>
-                <span className="hidden lg:inline">{label}</span>
+                <span className="hidden sm:inline">{label}</span>
               </Link>
             );
           })}

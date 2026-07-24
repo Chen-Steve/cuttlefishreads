@@ -3,6 +3,7 @@ export { ChapterContentsDropdown } from "./chapter-contents-dropdown";
 export { ChapterReaderHeader } from "./chapter-reader-header";
 export { ChapterUnlockGate } from "./chapter-unlock-gate";
 export { ReadingProgressTracker } from "./reading-progress-tracker";
+export { ReadingEngagementTracker } from "./reading-engagement-tracker";
 export {
   ImmersiveChapterShell,
   useImmersiveHidesSiteHeader,

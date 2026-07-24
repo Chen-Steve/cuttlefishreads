@@ -7,6 +7,7 @@ import {
   type ProfileRole,
 } from "@/lib/roles";
 import { getAllTimeViewsBySlug } from "@/lib/google-analytics";
+import type { NovelEngagementStats } from "@/lib/reading-engagement";
 import type {
   Chapter,
   ChapterListItem,
@@ -38,11 +39,14 @@ type DbNovel = {
   language: string;
   publication_type: string | null;
   created_at: string;
+  view_count?: number | null;
+  reader_count?: number | null;
+  library_add_count?: number | null;
   chapters: { count: number }[];
 };
 
 const NOVEL_LIST_COLUMNS =
-  "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, created_at, updated_at, publisher_id, novelupdates_url, language, publication_type, chapters(count)";
+  "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, created_at, updated_at, publisher_id, novelupdates_url, language, publication_type, view_count, reader_count, library_add_count, chapters(count)";
 
 const NEWLY_ADDED_LIMIT = 7;
 const UNDERRATED_LIMIT = 7;
@@ -1162,27 +1166,141 @@ export async function getReadableChapters(
 }
 
 // -----------------------------------------------------------------------------
+// In-house engagement (views / readers / library adds)
+// -----------------------------------------------------------------------------
+
+export async function getNovelEngagementStats(
+  slug: string,
+): Promise<NovelEngagementStats> {
+  const supabase = createClient(await cookies());
+  const { data, error } = await supabase
+    .from("novels")
+    .select("view_count, reader_count, library_add_count")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error || !data) {
+    if (error) console.error("getNovelEngagementStats:", error);
+    return { views: 0, readers: 0, libraryAdds: 0 };
+  }
+
+  return {
+    views: Number(data.view_count ?? 0),
+    readers: Number(data.reader_count ?? 0),
+    libraryAdds: Number(data.library_add_count ?? 0),
+  };
+}
+
+/** Map of slug → in-house view totals for rankings / browse sort. */
+export async function getInHouseViewsBySlug(
+  slugs: string[],
+): Promise<Record<string, number>> {
+  const unique = [...new Set(slugs.filter(Boolean))];
+  if (unique.length === 0) return {};
+
+  const supabase = createClient(await cookies());
+  const { data, error } = await supabase
+    .from("novels")
+    .select("slug, view_count")
+    .in("slug", unique);
+
+  if (error || !data) {
+    if (error) console.error("getInHouseViewsBySlug:", error);
+    return Object.fromEntries(unique.map((s) => [s, 0]));
+  }
+
+  const result: Record<string, number> = {};
+  for (const row of data as { slug: string; view_count: number | null }[]) {
+    result[row.slug] = Number(row.view_count ?? 0);
+  }
+  for (const slug of unique) {
+    if (result[slug] == null) result[slug] = 0;
+  }
+  return result;
+}
+
+export async function getEngagementStatsByNovelIds(
+  novelIds: string[],
+): Promise<
+  Record<string, NovelEngagementStats & { chapters?: number }>
+> {
+  const unique = [...new Set(novelIds.filter(Boolean))];
+  if (unique.length === 0) return {};
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("novels")
+    .select("id, view_count, reader_count, library_add_count")
+    .in("id", unique);
+
+  if (error || !data) {
+    if (error) console.error("getEngagementStatsByNovelIds:", error);
+    return {};
+  }
+
+  const result: Record<string, NovelEngagementStats> = {};
+  for (const row of data as {
+    id: string;
+    view_count: number | null;
+    reader_count: number | null;
+    library_add_count: number | null;
+  }[]) {
+    result[row.id] = {
+      views: Number(row.view_count ?? 0),
+      readers: Number(row.reader_count ?? 0),
+      libraryAdds: Number(row.library_add_count ?? 0),
+    };
+  }
+  return result;
+}
+
+// -----------------------------------------------------------------------------
 // Ratings from comments (optional stars on top-level comments)
 // -----------------------------------------------------------------------------
 
 export async function getNovelRatingSummary(
   slug: string,
 ): Promise<NovelRatingSummary> {
+  const summaries = await getNovelRatingSummariesBySlug([slug]);
+  return summaries[slug] ?? { average: 0, count: 0 };
+}
+
+/** Batch rating averages for many novels (one query). */
+export async function getNovelRatingSummariesBySlug(
+  slugs: string[],
+): Promise<Record<string, NovelRatingSummary>> {
+  const unique = [...new Set(slugs.filter(Boolean))];
+  if (unique.length === 0) return {};
+
   const supabase = createClient(await cookies());
   const { data, error } = await supabase
     .from("novel_comments")
-    .select("rating")
-    .eq("novel_slug", slug)
+    .select("novel_slug, rating")
+    .in("novel_slug", unique)
     .is("parent_id", null)
     .not("rating", "is", null);
 
-  if (error || !data || data.length === 0) {
-    if (error) console.error("getNovelRatingSummary:", error);
-    return { average: 0, count: 0 };
+  if (error || !data) {
+    if (error) console.error("getNovelRatingSummariesBySlug:", error);
+    return Object.fromEntries(unique.map((s) => [s, { average: 0, count: 0 }]));
   }
 
-  const sum = data.reduce((total, row) => total + (row.rating as number), 0);
-  return { average: sum / data.length, count: data.length };
+  const buckets = new Map<string, { sum: number; count: number }>();
+  for (const row of data as { novel_slug: string; rating: number }[]) {
+    const bucket = buckets.get(row.novel_slug) ?? { sum: 0, count: 0 };
+    bucket.sum += row.rating;
+    bucket.count += 1;
+    buckets.set(row.novel_slug, bucket);
+  }
+
+  const result: Record<string, NovelRatingSummary> = {};
+  for (const slug of unique) {
+    const bucket = buckets.get(slug);
+    result[slug] = bucket
+      ? { average: bucket.sum / bucket.count, count: bucket.count }
+      : { average: 0, count: 0 };
+  }
+  return result;
 }
 
 export async function isChapterReadable(

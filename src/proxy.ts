@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/utils/supabase/middleware";
 import {
   getSiteSurface,
+  isLocalDevHost,
   isMainDomain,
   isOriginalsDomain,
   mainOriginFromRequestHost,
@@ -29,6 +30,8 @@ function isCleanOriginalsPath(pathname: string): boolean {
     pathname.startsWith("/apply/") ||
     pathname === "/account" ||
     pathname.startsWith("/account/") ||
+    pathname === "/library" ||
+    pathname.startsWith("/library/") ||
     pathname === "/workspace" ||
     pathname.startsWith("/workspace/")
   );
@@ -111,6 +114,24 @@ export async function proxy(request: NextRequest) {
   // creator profile; every other path redirects to the canonical main-domain
   // URL so content is never duplicated across hosts.
   if (!skipHostRouting && surface === "creator" && creatorSubdomain) {
+    // Local *.localhost cannot share auth cookies with originals.localhost —
+    // send vanity visits to the originals-host creator page instead.
+    if (isLocalDevHost(host)) {
+      const dest = new URL(
+        originalsOriginFromRequestHost(hostHeader, { override }),
+      );
+      if (pathname === "/" || pathname === "") {
+        dest.pathname = `/creator/${creatorSubdomain}`;
+      } else if (pathname.startsWith("/series/")) {
+        dest.pathname = pathname;
+      } else {
+        dest.href = mainOriginFromRequestHost(hostHeader, { override });
+        dest.pathname = pathname;
+      }
+      dest.search = request.nextUrl.search;
+      return NextResponse.redirect(dest, 307);
+    }
+
     if (pathname === "/" || pathname === "") {
       const url = request.nextUrl.clone();
       url.pathname = `/creator/${creatorSubdomain}`;

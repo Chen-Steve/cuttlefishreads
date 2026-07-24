@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
+  Bookmark,
   ChevronDown,
   Cookie,
   Feather,
@@ -84,6 +85,8 @@ export function AccountDropdown({
   showPublicProfile = true,
   /** Override account settings URL (e.g. `/account` on Originals). */
   accountHref = "/account",
+  /** Library / bookmarks URL (e.g. Originals `/library`). */
+  libraryHref,
   /** Show theme toggle inside the menu (e.g. Originals header). */
   showThemeToggle = false,
 }: {
@@ -99,6 +102,7 @@ export function AccountDropdown({
   publicProfileHref?: string;
   showPublicProfile?: boolean;
   accountHref?: string;
+  libraryHref?: string;
   showThemeToggle?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -191,6 +195,17 @@ export function AccountDropdown({
             />
             Account
           </MenuLink>
+
+          {libraryHref ? (
+            <MenuLink href={libraryHref} onClick={close}>
+              <Bookmark
+                className="size-4 shrink-0 text-muted"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+              Library
+            </MenuLink>
+          ) : null}
 
           {username && showPublicProfile ? (
             <MenuLink

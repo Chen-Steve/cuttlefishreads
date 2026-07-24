@@ -16,8 +16,14 @@ import {
   type TranslatorOption,
 } from "../_components/novels-grid";
 
-type RawNovel = Omit<NovelRow, "chapter_count" | "translator_username"> & {
+type RawNovel = Omit<
+  NovelRow,
+  "chapter_count" | "translator_username" | "view_count" | "reader_count" | "library_add_count"
+> & {
   chapters: { count: number }[];
+  view_count: number | null;
+  reader_count: number | null;
+  library_add_count: number | null;
 };
 
 function buildPublisherOptions(novels: NovelRow[]): TranslatorOption[] {
@@ -53,7 +59,7 @@ export async function WorkspaceNovelsPage({
   let query = admin
     .from("novels")
     .select(
-      "id, title, slug, status, cover_url, genres, updated_at, publisher_id, translator, chapters(count)",
+      "id, title, slug, status, cover_url, genres, updated_at, publisher_id, translator, view_count, reader_count, library_add_count, chapters(count)",
     )
     // Each workspace only manages its own publication type.
     .eq("publication_type", WORKSPACE_PUBLICATION_TYPE[workspace])
@@ -100,6 +106,9 @@ export async function WorkspaceNovelsPage({
       ? (usernameById.get(n.publisher_id) ?? null)
       : null,
     chapter_count: n.chapters?.[0]?.count ?? 0,
+    view_count: Number(n.view_count ?? 0),
+    reader_count: Number(n.reader_count ?? 0),
+    library_add_count: Number(n.library_add_count ?? 0),
   }));
 
   const translatorOptions = access?.isMasterAdmin

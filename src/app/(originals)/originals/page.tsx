@@ -9,6 +9,7 @@ import {
 import { OriginalsHero } from "@/components/originals/originals-hero";
 import { PageContainer } from "@/components/page-container";
 import { ORIGINALS } from "@/lib/constants";
+import { getNovelRatingSummariesBySlug } from "@/lib/data";
 import { getOriginalsHomeData } from "@/lib/originals-data";
 import { originalsPageMetadata } from "@/lib/seo";
 import { createClient } from "@/utils/supabase/server";
@@ -29,6 +30,11 @@ export default async function OriginalsHomePage() {
   const { featured, newlyAdded, recentlyUpdated, completed, catalog } =
     await getOriginalsHomeData();
   const isEmpty = catalog.length === 0;
+
+  const ratingsBySlug = await getNovelRatingSummariesBySlug([
+    ...featured.map((n) => n.slug),
+    ...newlyAdded.map((n) => n.slug),
+  ]);
 
   return (
     <PageContainer className="pt-3 pb-6 sm:py-8 lg:py-10">
@@ -56,8 +62,8 @@ export default async function OriginalsHomePage() {
       ) : (
         <>
           <HomeSection
-            title="Featured"
-            storageKey="cf-originals-featured"
+            title="Trending"
+            storageKey="cf-originals-trending"
             href="/browse"
             linkLabel="View all"
             className="mt-6 sm:mt-8"
@@ -66,9 +72,10 @@ export default async function OriginalsHomePage() {
               novels={featured}
               dense
               fillRow
-              showChapterCount
+              showRatingMeta
+              ratingsBySlug={ratingsBySlug}
               catalogBase="series"
-              emptyLabel="No featured originals yet."
+              emptyLabel="No trending originals yet."
             />
           </HomeSection>
 
@@ -82,7 +89,8 @@ export default async function OriginalsHomePage() {
               novels={newlyAdded}
               dense
               fillRow
-              showChapterCount
+              showRatingMeta
+              ratingsBySlug={ratingsBySlug}
               catalogBase="series"
               emptyLabel="No new originals yet."
             />

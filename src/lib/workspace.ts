@@ -26,7 +26,7 @@ export const WORKSPACE_LABELS: Record<
   { novels: string; noun: string }
 > = {
   translations: { novels: "My Novels", noun: "novel" },
-  originals: { novels: "My Original Series", noun: "series" },
+  originals: { novels: "My Originals", noun: "series" },
 };
 
 /** Which workspace a (client-side) pathname belongs to. */

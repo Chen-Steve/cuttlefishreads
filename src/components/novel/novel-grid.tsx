@@ -1,4 +1,4 @@
-import type { Novel } from "@/types";
+import type { Novel, NovelRatingSummary } from "@/types";
 import { cn } from "@/lib/utils";
 import type { CatalogBase } from "@/lib/catalog-paths";
 import { NovelCard } from "./novel-card";
@@ -15,6 +15,8 @@ export function NovelGrid({
   tightMobile = false,
   tightGap = false,
   showChapterCount = false,
+  showRatingMeta = false,
+  ratingsBySlug,
   catalogBase,
 }: {
   novels: Novel[];
@@ -29,6 +31,8 @@ export function NovelGrid({
   /** Tighter grid gaps without compact card styling. */
   tightGap?: boolean;
   showChapterCount?: boolean;
+  showRatingMeta?: boolean;
+  ratingsBySlug?: Record<string, NovelRatingSummary>;
   catalogBase?: CatalogBase;
 }) {
   if (novels.length === 0) {
@@ -67,6 +71,8 @@ export function NovelGrid({
           dense={dense}
           hideAuthor={hideAuthor}
           showChapterCount={showChapterCount}
+          showRatingMeta={showRatingMeta}
+          rating={ratingsBySlug?.[novel.slug]}
           catalogBase={catalogBase}
         />
       ))}
