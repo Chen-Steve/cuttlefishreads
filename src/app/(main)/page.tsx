@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { ArrowRight, Library } from "lucide-react";
 import { DiscordIcon } from "@/components/discord-icon";
 import { HomeSection } from "@/components/home-section";
+import { LoginFixBulletin } from "@/components/login-fix-bulletin";
 import {
   ContinueReadingSection,
   NovelCarousel,
@@ -99,6 +100,8 @@ export default async function Home() {
       </section>
 
       <ContinueReadingSection novels={catalog} className="mt-0 sm:mt-5" />
+
+      <LoginFixBulletin />
 
       <HomeSection
         title="Featured"
