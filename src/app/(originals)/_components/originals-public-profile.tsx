@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { Coffee, Heart, User } from "lucide-react";
 
+import { ForumActivity } from "@/components/forum/forum-activity";
 import { NovelGrid } from "@/components/novel";
 import { PageContainer } from "@/components/page-container";
 import { ORIGINALS } from "@/lib/constants";
+import type { ForumProfileActivity } from "@/lib/forum/types";
 import { originalsPublicUrl } from "@/lib/hosts";
 import type { Novel } from "@/types";
 
@@ -17,9 +19,11 @@ type OriginalsProfile = {
 export function OriginalsPublicProfile({
   profile,
   originalSeries,
+  forumActivity,
 }: {
   profile: OriginalsProfile;
   originalSeries: Novel[];
+  forumActivity: ForumProfileActivity;
 }) {
   const isAuthor = originalSeries.length > 0;
 
@@ -121,6 +125,8 @@ export function OriginalsPublicProfile({
           </div>
         )}
       </section>
+
+      <ForumActivity activity={forumActivity} />
     </PageContainer>
   );
 }

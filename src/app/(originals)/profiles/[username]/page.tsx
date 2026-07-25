@@ -4,6 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { OriginalsPublicProfile } from "@/app/(originals)/_components/originals-public-profile";
 import { ORIGINALS } from "@/lib/constants";
 import { getPublicProfile } from "@/lib/data";
+import { getForumProfileActivity } from "@/lib/forum/data";
 import { creatorPublicOrigin } from "@/lib/hosts";
 import { getUserOriginalSeries } from "@/lib/originals-data";
 
@@ -37,10 +38,13 @@ export default async function OriginalsProfilePage({
     permanentRedirect(creatorPublicOrigin(profile.username));
   }
 
+  const forumActivity = await getForumProfileActivity(profile.id);
+
   return (
     <OriginalsPublicProfile
       profile={profile}
       originalSeries={originalSeries}
+      forumActivity={forumActivity}
     />
   );
 }

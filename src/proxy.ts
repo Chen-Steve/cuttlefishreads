@@ -28,6 +28,8 @@ function isCleanOriginalsPath(pathname: string): boolean {
     pathname.startsWith("/latest/") ||
     pathname === "/apply" ||
     pathname.startsWith("/apply/") ||
+    pathname === "/forum" ||
+    pathname.startsWith("/forum/") ||
     pathname === "/account" ||
     pathname.startsWith("/account/") ||
     pathname === "/library" ||

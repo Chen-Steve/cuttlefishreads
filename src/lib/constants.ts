@@ -13,7 +13,7 @@ export const ORIGINALS = {
   shortName: "Originals",
   description: "Original fiction from independent authors",
   seoDescription:
-    "Read original web novels on Cuttlefish Originals — free chapters, author-supported stories, and new series.",
+    "Read original web novels on Cuttlefish Originals, author-supported stories, and new series.",
   writeCta: "Start writing",
 } as const;
 

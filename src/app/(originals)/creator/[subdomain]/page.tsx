@@ -5,6 +5,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { OriginalsPublicProfile } from "@/app/(originals)/_components/originals-public-profile";
 import { ORIGINALS } from "@/lib/constants";
 import { getPublicProfile } from "@/lib/data";
+import { getForumProfileActivity } from "@/lib/forum/data";
 import {
   creatorPublicOrigin,
   getSiteSurface,
@@ -56,10 +57,13 @@ export default async function CreatorPage({
 
   if (!isAuthor) notFound();
 
+  const forumActivity = await getForumProfileActivity(profile.id);
+
   return (
     <OriginalsPublicProfile
       profile={profile}
       originalSeries={originalSeries}
+      forumActivity={forumActivity}
     />
   );
 }

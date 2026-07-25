@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { OriginalsFooter } from "@/components/originals/originals-footer";
 import { OriginalsHeader } from "@/components/originals/originals-header";
 import { isAdminEmail } from "@/lib/admin";
+import { getUnreadNotificationCount } from "@/lib/forum/data";
 import { getUserOriginalSeries } from "@/lib/originals-data";
 import { createClient } from "@/utils/supabase/server";
 
@@ -18,20 +19,23 @@ export default async function OriginalsLayout({
   let avatarUrl: string | null = null;
   let isMasterAdmin = false;
   let hasCreatorSubdomain = false;
+  let unreadNotifications = 0;
 
   if (data?.claims) {
-    const [{ data: profile }, originalSeries] = await Promise.all([
+    const [{ data: profile }, originalSeries, unreadCount] = await Promise.all([
       supabase
         .from("profiles")
         .select("username, avatar_url")
         .eq("id", data.claims.sub)
         .maybeSingle(),
       getUserOriginalSeries(data.claims.sub),
+      getUnreadNotificationCount(data.claims.sub),
     ]);
     username = profile?.username ?? null;
     avatarUrl = profile?.avatar_url ?? null;
     isMasterAdmin = isAdminEmail(data.claims.email as string | undefined);
     hasCreatorSubdomain = originalSeries.length > 0;
+    unreadNotifications = unreadCount;
   }
 
   return (
@@ -51,6 +55,7 @@ export default async function OriginalsLayout({
         avatarUrl={avatarUrl}
         isMasterAdmin={isMasterAdmin}
         hasCreatorSubdomain={hasCreatorSubdomain}
+        unreadNotifications={unreadNotifications}
       />
       <main id="main-content" className="flex-1" tabIndex={-1}>
         {children}

@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { BookOpen, LogIn, MessagesSquare } from "lucide-react";
-import { toast } from "sonner";
+import { Bell, BookOpen, LogIn, MessagesSquare } from "lucide-react";
 
 import { AccountDropdown } from "@/components/account-dropdown";
 import {
@@ -14,6 +13,7 @@ import {
 } from "@/components/originals/originals-expandable-search";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ORIGINALS, SITE } from "@/lib/constants";
+import { forumInboxUrl, forumUrl } from "@/lib/forum/constants";
 import {
   creatorPublicOrigin,
   originalsPublicUrl,
@@ -36,30 +36,20 @@ const nav = [
 const navLinkClass =
   "hidden h-9 items-center rounded-lg px-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:inline-flex";
 
-function showComingSoonToast() {
-  const id = toast("Coming soon!");
-  const dismiss = () => {
-    toast.dismiss(id);
-    document.removeEventListener("pointerdown", dismiss, true);
-  };
-  // Skip the opening tap so the toast isn't dismissed immediately.
-  window.setTimeout(() => {
-    document.addEventListener("pointerdown", dismiss, true);
-  }, 0);
-}
-
 export function OriginalsHeader({
   isAuthenticated = false,
   username = null,
   avatarUrl = null,
   isMasterAdmin = false,
   hasCreatorSubdomain = false,
+  unreadNotifications = 0,
 }: {
   isAuthenticated?: boolean;
   username?: string | null;
   avatarUrl?: string | null;
   isMasterAdmin?: boolean;
   hasCreatorSubdomain?: boolean;
+  unreadNotifications?: number;
 }) {
   const pathname = usePathname();
   const [searchExpanded, setSearchExpanded] = useState(false);
@@ -153,12 +143,16 @@ export function OriginalsHeader({
 
           <OriginalsSearchTrigger onOpen={() => setSearchExpanded(true)} />
 
-          <button
-            type="button"
+          <Link
+            href={forumUrl()}
             tabIndex={searchExpanded ? -1 : undefined}
-            onClick={showComingSoonToast}
             aria-label="Forum"
-            className="inline-flex size-10 items-center justify-center rounded-xl text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:h-9 sm:w-auto sm:px-2.5"
+            className={cn(
+              "inline-flex size-10 items-center justify-center rounded-xl transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:h-9 sm:w-auto sm:px-2.5",
+              pathname.startsWith("/forum")
+                ? "bg-accent/10 text-accent"
+                : "text-muted hover:bg-surface hover:text-foreground",
+            )}
           >
             <MessagesSquare
               className="size-5 sm:hidden"
@@ -166,7 +160,35 @@ export function OriginalsHeader({
               aria-hidden
             />
             <span className="hidden text-sm font-medium sm:inline">Forum</span>
-          </button>
+          </Link>
+
+          {isAuthenticated ? (
+            <Link
+              href={forumInboxUrl()}
+              tabIndex={searchExpanded ? -1 : undefined}
+              aria-label={
+                unreadNotifications > 0
+                  ? `Inbox, ${unreadNotifications} unread`
+                  : "Inbox"
+              }
+              className={cn(
+                "relative inline-flex size-10 items-center justify-center rounded-xl transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:size-9",
+                pathname.startsWith("/forum/inbox")
+                  ? "bg-accent/10 text-accent"
+                  : "text-muted hover:bg-surface hover:text-foreground",
+              )}
+            >
+              <Bell className="size-5" strokeWidth={1.75} aria-hidden />
+              {unreadNotifications > 0 ? (
+                <span
+                  className="absolute top-1.5 right-1.5 min-w-4 rounded-md bg-accent px-1 text-[10px] font-semibold leading-4 text-accent-foreground tabular-nums sm:top-1 sm:right-1"
+                  aria-hidden
+                >
+                  {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                </span>
+              ) : null}
+            </Link>
+          ) : null}
 
           {!isAuthenticated ? (
             <Link
