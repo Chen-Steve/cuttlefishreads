@@ -3,25 +3,24 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import {
   authCookieDomainForHost,
+  authCookieOptionsForHost,
   mergeAuthCookieOptions,
 } from "@/lib/auth-cookies";
+import {
+  clearSupabaseAuthCookies,
+  isStaleAuthSessionError,
+  isSupabaseAuthCookie,
+} from "@/lib/auth-session";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-/** Default maxAge used by @supabase/ssr (~400 days). */
-const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 400;
-
-function isSupabaseAuthCookie(name: string): boolean {
-  return name.startsWith("sb-") && name.includes("auth-token");
-}
 
 /**
  * Refresh the auth session and attach cookies to `response` (or a new next()).
  * Pass an existing rewrite/redirect response so cookie Domain options are kept.
  *
- * Also upgrades host-only sb-* auth cookies to the shared Domain so a main-site
- * session becomes visible on originals.* without requiring a fresh login.
+ * On stale refresh tokens, clear auth cookies and treat the request as logged
+ * out — do not keep retrying (that triggers Auth rate limits).
  */
 export const updateSession = async (
   request: NextRequest,
@@ -35,16 +34,9 @@ export const updateSession = async (
 
   const host = request.headers.get("host");
   const sharedDomain = authCookieDomainForHost(host);
-  const sharedCookieOptions = mergeAuthCookieOptions(
-    {
-      httpOnly: false,
-      maxAge: AUTH_COOKIE_MAX_AGE,
-    },
-    host,
-  );
 
   const supabase = createServerClient(supabaseUrl!, supabaseKey!, {
-    cookieOptions: sharedCookieOptions,
+    cookieOptions: authCookieOptionsForHost(host),
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -58,13 +50,18 @@ export const updateSession = async (
             request,
           });
         }
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(
-            name,
-            value,
-            mergeAuthCookieOptions(options, host),
-          ),
-        );
+        cookiesToSet.forEach(({ name, value, options }) => {
+          const merged = mergeAuthCookieOptions(options, host);
+          // Host-only cookies shadow Domain cookies. Expire the host-only
+          // copy only when we are actually writing auth cookies.
+          if (sharedDomain && isSupabaseAuthCookie(name)) {
+            supabaseResponse.cookies.set(name, "", {
+              path: "/",
+              maxAge: 0,
+            });
+          }
+          supabaseResponse.cookies.set(name, value, merged);
+        });
         Object.entries(headers).forEach(([key, value]) =>
           supabaseResponse.headers.set(key, value),
         );
@@ -73,22 +70,19 @@ export const updateSession = async (
   });
 
   // IMPORTANT: Do not run code between createServerClient and getClaims().
-  await supabase.auth.getClaims();
+  const { error } = await supabase.auth.getClaims();
 
-  if (sharedDomain) {
-    for (const cookie of request.cookies.getAll()) {
-      if (!isSupabaseAuthCookie(cookie.name) || !cookie.value) continue;
-
-      // Expire the host-only copy (no Domain) so it cannot shadow the shared one.
-      supabaseResponse.cookies.set(cookie.name, "", {
-        path: "/",
-        maxAge: 0,
+  if (isStaleAuthSessionError(error)) {
+    const names = request.cookies.getAll().map((cookie) => cookie.name);
+    clearSupabaseAuthCookies(names, host, (name, value, options) => {
+      request.cookies.set(name, value);
+      supabaseResponse.cookies.set(name, value, options);
+    });
+    if (!response) {
+      supabaseResponse = NextResponse.next({ request });
+      clearSupabaseAuthCookies(names, host, (name, value, options) => {
+        supabaseResponse.cookies.set(name, value, options);
       });
-      supabaseResponse.cookies.set(
-        cookie.name,
-        cookie.value,
-        sharedCookieOptions,
-      );
     }
   }
 

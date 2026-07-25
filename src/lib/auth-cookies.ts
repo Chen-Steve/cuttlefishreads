@@ -2,6 +2,22 @@ import type { CookieOptions } from "@supabase/ssr";
 
 import { isLocalDevHost, normalizeHost } from "@/lib/hosts";
 
+function siteUrlHost(): string | null {
+  const site = process.env.NEXT_PUBLIC_SITE_URL;
+  if (!site) return null;
+  try {
+    return new URL(site).host;
+  } catch {
+    return null;
+  }
+}
+
+function resolveAuthHost(
+  hostHeader: string | null | undefined,
+): string | null {
+  return hostHeader || siteUrlHost();
+}
+
 /**
  * Shared Supabase auth cookie options so a session on the main site
  * is visible on creator subdomains (username.cuttlefishreads.com).
@@ -19,7 +35,12 @@ export function authCookieDomainForHost(
     return process.env.NEXT_PUBLIC_AUTH_COOKIE_DOMAIN;
   }
 
-  const host = normalizeHost(hostHeader);
+  // Prefer the live request host; fall back to SITE_URL so server actions
+  // still get Domain=.cuttlefishreads.com when Host is unavailable.
+  const rawHost = resolveAuthHost(hostHeader);
+  if (!rawHost) return undefined;
+
+  const host = normalizeHost(rawHost);
 
   // Localhost is a public suffix — Domain=.localhost is not shareable.
   if (isLocalDevHost(host)) {
@@ -40,7 +61,10 @@ export function authCookieOptionsForHost(
   hostHeader: string | null | undefined,
 ): CookieOptions {
   const domain = authCookieDomainForHost(hostHeader);
-  const isLocal = isLocalDevHost(normalizeHost(hostHeader));
+  const rawHost = resolveAuthHost(hostHeader);
+  const isLocal = rawHost
+    ? isLocalDevHost(normalizeHost(rawHost))
+    : process.env.NODE_ENV === "development";
 
   return {
     path: "/",

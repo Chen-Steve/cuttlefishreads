@@ -4,6 +4,7 @@ import { OriginalsHeader } from "@/components/originals/originals-header";
 import { isAdminEmail } from "@/lib/admin";
 import { getUnreadNotificationCount } from "@/lib/forum/data";
 import { getUserOriginalSeries } from "@/lib/originals-data";
+import { getAuthClaims } from "@/utils/supabase/auth";
 import { createClient } from "@/utils/supabase/server";
 
 export default async function OriginalsLayout({
@@ -11,9 +12,8 @@ export default async function OriginalsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-  const isAuthenticated = Boolean(data?.claims);
+  const claims = await getAuthClaims();
+  const isAuthenticated = Boolean(claims);
 
   let username: string | null = null;
   let avatarUrl: string | null = null;
@@ -21,19 +21,20 @@ export default async function OriginalsLayout({
   let hasCreatorSubdomain = false;
   let unreadNotifications = 0;
 
-  if (data?.claims) {
+  if (claims) {
+    const supabase = createClient(await cookies());
     const [{ data: profile }, originalSeries, unreadCount] = await Promise.all([
       supabase
         .from("profiles")
         .select("username, avatar_url")
-        .eq("id", data.claims.sub)
+        .eq("id", claims.sub)
         .maybeSingle(),
-      getUserOriginalSeries(data.claims.sub),
-      getUnreadNotificationCount(data.claims.sub),
+      getUserOriginalSeries(claims.sub),
+      getUnreadNotificationCount(claims.sub),
     ]);
     username = profile?.username ?? null;
     avatarUrl = profile?.avatar_url ?? null;
-    isMasterAdmin = isAdminEmail(data.claims.email as string | undefined);
+    isMasterAdmin = isAdminEmail(claims.email as string | undefined);
     hasCreatorSubdomain = originalSeries.length > 0;
     unreadNotifications = unreadCount;
   }

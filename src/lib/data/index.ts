@@ -17,6 +17,7 @@ import type {
   NovelRatingSummary,
   RecentlyUpdatedNovel,
 } from "@/types";
+import { getAuthClaims } from "@/utils/supabase/auth";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
@@ -768,23 +769,21 @@ export async function getClosestNovelTitleMatch(
 }
 
 export async function getUserCoins(): Promise<number> {
-  const supabase = createClient(await cookies());
-  const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims) return 0;
+  const claims = await getAuthClaims();
+  if (!claims) return 0;
 
+  const supabase = createClient(await cookies());
   const { data } = await supabase
     .from("profiles")
     .select("coins")
-    .eq("id", auth.claims.sub)
+    .eq("id", claims.sub)
     .maybeSingle();
 
   return data?.coins ?? 0;
 }
 
 export async function isUserAuthenticated(): Promise<boolean> {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-  return Boolean(data?.claims);
+  return Boolean(await getAuthClaims());
 }
 
 type DbCommentRow = {

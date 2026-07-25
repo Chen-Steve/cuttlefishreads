@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { getAuthClaims } from "@/utils/supabase/auth";
 import { createClient } from "@/utils/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
 import { hasProfileRole, parseProfileRoles } from "@/lib/roles";
@@ -10,26 +11,26 @@ export default async function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-  const isAuthenticated = Boolean(data?.claims);
+  const claims = await getAuthClaims();
+  const isAuthenticated = Boolean(claims);
 
   let username: string | null = null;
   let avatarUrl: string | null = null;
   let coins = 0;
   let isTranslator = false;
   let isMasterAdmin = false;
-  if (data?.claims) {
+  if (claims) {
+    const supabase = createClient(await cookies());
     const { data: profile } = await supabase
       .from("profiles")
       .select("username, coins, avatar_url, role, roles")
-      .eq("id", data.claims.sub)
+      .eq("id", claims.sub)
       .maybeSingle();
     username = profile?.username ?? null;
     avatarUrl = profile?.avatar_url ?? null;
     coins = profile?.coins ?? 0;
 
-    isMasterAdmin = isAdminEmail(data.claims.email as string | undefined);
+    isMasterAdmin = isAdminEmail(claims.email as string | undefined);
 
     const roles = parseProfileRoles({
       roles: profile?.roles as string[] | null | undefined,
