@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
+import { SiteEmailLink } from "@/components/site-email-link";
 import { publicPageMetadata } from "@/lib/seo";
 import { SITE } from "@/lib/constants";
 
@@ -93,8 +94,12 @@ export default function RefundPage() {
 
         <Section title="5. How to Request a Review">
           <p>
-            If you believe your purchase qualifies for an exception, contact us
-            through our{" "}
+            If you believe your purchase qualifies for an exception, email{" "}
+            <SiteEmailLink
+              mailbox="contact"
+              subject="Refund review request"
+            />{" "}
+            or contact us through our{" "}
             <a
               href={SITE.discordUrl}
               target="_blank"

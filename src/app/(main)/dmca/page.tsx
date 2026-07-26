@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageContainer } from "@/components/page-container";
+import { SiteEmailLink } from "@/components/site-email-link";
 import { SITE } from "@/lib/constants";
 import { publicPageMetadata, siteUrl } from "@/lib/seo";
 
@@ -88,7 +89,7 @@ export default function DmcaPage() {
               <strong>Email:</strong>{" "}
               <a
                 href={`mailto:${dmcaEmail}`}
-                className="text-accent underline-offset-2 hover:underline"
+                className="font-semibold text-accent underline-offset-2 hover:underline"
               >
                 {dmcaEmail}
               </a>
@@ -98,7 +99,9 @@ export default function DmcaPage() {
             </li>
           </ul>
           <p>
-            We may also be reached through our{" "}
+            For general inquiries, email{" "}
+            <SiteEmailLink mailbox="contact" subject="General inquiry" /> or
+            reach us through our{" "}
             <a
               href={SITE.discordUrl}
               target="_blank"
@@ -106,10 +109,9 @@ export default function DmcaPage() {
               className="text-accent underline-offset-2 hover:underline"
             >
               Discord community
-            </a>{" "}
-            for general inquiries, but formal takedown requests should be sent
-            by email so we can respond promptly and maintain a record of your
-            notice.
+            </a>
+            . Formal takedown requests should be sent to the DMCA address above
+            so we can respond promptly and maintain a record of your notice.
           </p>
         </Section>
 
@@ -131,7 +133,9 @@ export default function DmcaPage() {
           <p>
             If you believe material you posted was removed or disabled by
             mistake or misidentification, you may submit a counter-notification
-            to {dmcaEmail} that includes:
+            to{" "}
+            <strong className="text-foreground">{dmcaEmail}</strong> that
+            includes:
           </p>
           <ul>
             <li>Your physical or electronic signature.</li>

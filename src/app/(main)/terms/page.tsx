@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
+import { SiteEmailLink } from "@/components/site-email-link";
 import { publicPageMetadata } from "@/lib/seo";
 import { SITE } from "@/lib/constants";
 
@@ -267,8 +268,12 @@ export default function TermsPage() {
             We may suspend or terminate your access to the Service at any time,
             with or without notice, for conduct that we believe violates these
             Terms, our Community Guidelines, or is harmful to other users, us, or
-            third parties. You may also request account deletion by contacting
-            us. Provisions that by their nature should survive termination
+            third parties. You may also request account deletion by emailing{" "}
+            <SiteEmailLink
+              mailbox="legal"
+              subject="Account deletion request"
+            />
+            . Provisions that by their nature should survive termination
             (including intellectual property, disclaimers, and limitations of
             liability) will survive.
           </p>
@@ -285,8 +290,12 @@ export default function TermsPage() {
 
         <Section title="13. Contact Us">
           <p>
-            If you have questions about these Terms of Service, please contact us
-            through our{" "}
+            If you have questions about these Terms of Service, please email{" "}
+            <SiteEmailLink
+              mailbox="legal"
+              subject="Terms of Service inquiry"
+            />{" "}
+            or reach us through our{" "}
             <a
               href={SITE.discordUrl}
               target="_blank"

@@ -5,6 +5,8 @@ export const SITE = {
   seoDescription:
     "Read popular and niche web novels on Cuttlefish Reads, with updated chapters, novel summaries, genres, and reading progress.",
   discordUrl: "https://discord.gg/VQtwqRAVkP",
+  legalEmail: "legal@cuttlefishreads.com",
+  contactEmail: "contact@cuttlefishreads.com",
 } as const;
 
 /** Public brand for the Originals surface (originals.cuttlefishreads.com). */

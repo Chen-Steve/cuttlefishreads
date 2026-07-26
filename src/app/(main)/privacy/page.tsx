@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
+import { SiteEmailLink } from "@/components/site-email-link";
 import { publicPageMetadata } from "@/lib/seo";
 import { SITE } from "@/lib/constants";
 
@@ -156,10 +157,14 @@ export default function PrivacyPage() {
           <p>
             We retain your personal data for as long as your account is active or
             as needed to provide services. You may request deletion of your
-            account and associated data by contacting us. We will fulfil such
-            requests within a reasonable timeframe, subject to legal obligations,
-            dispute resolution, and records we must keep for security or
-            accounting (for example, purchase history).
+            account and associated data by emailing{" "}
+            <SiteEmailLink
+              mailbox="legal"
+              subject="Account deletion request"
+            />
+            . We will fulfil such requests within a reasonable timeframe, subject
+            to legal obligations, dispute resolution, and records we must keep
+            for security or accounting (for example, purchase history).
           </p>
         </Section>
 
@@ -177,7 +182,12 @@ export default function PrivacyPage() {
             {SITE.name} is intended for adults. You must be at least 18 years old
             to use the Service. We do not knowingly collect personal information
             from anyone under 18. If you believe a minor has provided us with
-            personal data, please contact us and we will delete it promptly.
+            personal data, please email{" "}
+            <SiteEmailLink
+              mailbox="legal"
+              subject="Children's privacy request"
+            />{" "}
+            and we will delete it promptly.
           </p>
         </Section>
 
@@ -193,7 +203,9 @@ export default function PrivacyPage() {
         <Section title="10. Contact Us">
           <p>
             If you have questions or concerns about this Privacy Policy, please
-            contact us through our{" "}
+            email{" "}
+            <SiteEmailLink mailbox="legal" subject="Privacy Policy inquiry" /> or
+            reach us through our{" "}
             <a
               href={SITE.discordUrl}
               target="_blank"

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
+import { SiteEmailLink } from "@/components/site-email-link";
 import { publicPageMetadata } from "@/lib/seo";
 import { SITE } from "@/lib/constants";
 
@@ -138,8 +139,12 @@ export default function GuidelinesPage() {
 
         <Section title="7. Reporting">
           <p>
-            If you see something that breaks these guidelines, contact us through
-            our{" "}
+            If you see something that breaks these guidelines, email{" "}
+            <SiteEmailLink
+              mailbox="contact"
+              subject="Community guidelines report"
+            />{" "}
+            or contact us through our{" "}
             <a
               href={SITE.discordUrl}
               target="_blank"
