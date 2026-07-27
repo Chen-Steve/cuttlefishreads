@@ -13,6 +13,7 @@ import {
 } from "@/components/novel";
 import { PageContainer } from "@/components/page-container";
 import { StarRating } from "@/components/reviews";
+import { StructuredData } from "@/components/structured-data";
 import { Badge } from "@/components/ui/badge";
 import { chapterHref } from "@/lib/catalog-paths";
 import {
@@ -25,7 +26,7 @@ import {
 } from "@/lib/data";
 import { creatorPublicOrigin, originalsPublicUrl } from "@/lib/hosts";
 import { isOriginalNovel } from "@/lib/originals-data";
-import { novelDescription } from "@/lib/seo";
+import { novelDescription, originalsPageMetadata } from "@/lib/seo";
 
 const statusLabel = {
   ongoing: "Ongoing",
@@ -48,11 +49,13 @@ export async function generateMetadata({
   }
 
   const path = `/series/${novel.slug}`;
-  return {
+  return originalsPageMetadata({
     title: `${novel.title} - Original Series`,
     description: novelDescription(novel),
-    alternates: { canonical: originalsPublicUrl(path) },
-  };
+    path,
+    image: novel.coverUrl,
+    openGraphType: "book",
+  });
 }
 
 export default async function OriginalsSeriesPage({
@@ -183,6 +186,26 @@ export default async function OriginalsSeriesPage({
 
   return (
     <PageContainer as="article" width="prose" className="pt-4 sm:pt-6 lg:pt-6">
+      <StructuredData
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Book",
+          name: novel.title,
+          description: novelDescription(novel),
+          url: originalsPublicUrl(`/series/${novel.slug}`),
+          image: novel.coverUrl
+            ? new URL(novel.coverUrl, originalsPublicUrl("/")).toString()
+            : originalsPublicUrl("/cuttle.png"),
+          author: {
+            "@type": "Person",
+            name: novel.translator || novel.author,
+          },
+          genre: novel.genres,
+          inLanguage: "en",
+          dateCreated: novel.createdAt,
+          dateModified: novel.updatedAt,
+        }}
+      />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
         <h1 className="text-xl font-bold tracking-tight text-balance text-foreground sm:hidden">
           {novel.title}

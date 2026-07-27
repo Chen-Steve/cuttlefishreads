@@ -125,11 +125,13 @@ function mapChapter(
   row: DbChapter,
   unlockedNumbers: Set<number>,
   bypassLock: boolean,
+  allowLockedContent = false,
 ): Chapter {
   const listItem = mapChapterListItem(slug, row, unlockedNumbers, bypassLock);
   return {
     ...listItem,
-    content: splitContent(row.content),
+    content:
+      listItem.locked && !allowLockedContent ? [] : splitContent(row.content),
   };
 }
 
@@ -192,14 +194,24 @@ async function fetchNovelRows(): Promise<DbNovel[]> {
 
 async function fetchNovelIdBySlug(
   slug: string,
-): Promise<{ id: string; publisher_id: string | null } | null> {
+): Promise<{
+  id: string;
+  publisher_id: string | null;
+  publication_type: PublicationType;
+} | null> {
   const supabase = createClient(await cookies());
   const { data } = await supabase
     .from("novels")
-    .select("id, publisher_id")
+    .select("id, publisher_id, publication_type")
     .eq("slug", slug)
     .maybeSingle();
-  return data ?? null;
+  if (!data) return null;
+  return {
+    id: data.id,
+    publisher_id: data.publisher_id,
+    publication_type:
+      (data.publication_type as PublicationType) ?? "translation",
+  };
 }
 
 async function fetchDbChapters(novelId: string): Promise<DbChapter[]> {
@@ -614,7 +626,10 @@ export async function getChapters(slug: string): Promise<Chapter[]> {
     getUnlockedChapterNumbers(slug),
   ]);
 
-  return rows.map((row) => mapChapter(slug, row, unlocked, bypassLock));
+  const allowLockedContent = novel.publication_type === "original";
+  return rows.map((row) =>
+    mapChapter(slug, row, unlocked, bypassLock, allowLockedContent),
+  );
 }
 
 /** Chapter list/TOC metadata without body content. */
@@ -681,7 +696,13 @@ export async function getChapter(
   ]);
   if (!row) return undefined;
 
-  return mapChapter(slug, row, unlocked, bypassLock);
+  return mapChapter(
+    slug,
+    row,
+    unlocked,
+    bypassLock,
+    novel.publication_type === "original",
+  );
 }
 
 export async function getAdjacentChapters(

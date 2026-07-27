@@ -206,7 +206,14 @@ export async function proxy(request: NextRequest) {
     );
   }
 
-  return continueWithSession(request);
+  const response = await continueWithSession(request);
+  if (isMainDomain(host)) {
+    response.headers.set(
+      "X-Robots-Tag",
+      "noindex, nofollow, noarchive, noimageindex",
+    );
+  }
+  return response;
 }
 
 export const config = {

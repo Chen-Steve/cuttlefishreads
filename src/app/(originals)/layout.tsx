@@ -1,11 +1,55 @@
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { OriginalsFooter } from "@/components/originals/originals-footer";
 import { OriginalsHeader } from "@/components/originals/originals-header";
 import { isAdminEmail } from "@/lib/admin";
+import { ORIGINALS } from "@/lib/constants";
 import { getUnreadNotificationCount } from "@/lib/forum/data";
+import { originalsPublicOrigin, originalsPublicUrl } from "@/lib/hosts";
 import { getUserOriginalSeries } from "@/lib/originals-data";
 import { getAuthClaims } from "@/utils/supabase/auth";
 import { createClient } from "@/utils/supabase/server";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(originalsPublicOrigin()),
+  title: ORIGINALS.name,
+  description: ORIGINALS.seoDescription,
+  applicationName: ORIGINALS.name,
+  category: "books",
+  keywords: [
+    "original web novels",
+    "indie fiction",
+    "online serial fiction",
+    "web fiction",
+    "independent authors",
+    "Cuttlefish Originals",
+  ],
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    url: originalsPublicUrl("/"),
+    title: ORIGINALS.name,
+    description: ORIGINALS.seoDescription,
+    siteName: ORIGINALS.name,
+    images: [originalsPublicUrl("/cuttle.png")],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: ORIGINALS.name,
+    description: ORIGINALS.seoDescription,
+    images: [originalsPublicUrl("/cuttle.png")],
+  },
+};
 
 export default async function OriginalsLayout({
   children,

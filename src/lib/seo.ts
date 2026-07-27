@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { Novel } from "@/types";
-import { SITE } from "@/lib/constants";
+import { ORIGINALS, SITE } from "@/lib/constants";
 import { originalsPublicUrl } from "@/lib/hosts";
 
 const publicSiteUrl =
@@ -56,18 +56,52 @@ export function publicPageMetadata({
 
 export function originalsPageMetadata({
   title,
-  description = SITE.seoDescription,
+  description = ORIGINALS.seoDescription,
   path,
+  image,
+  openGraphType = "website",
 }: {
   title: string;
   description?: string;
   path: string;
+  image?: string;
+  openGraphType?: "website" | "article" | "book";
 }): Metadata {
+  const canonical = originalsPublicUrl(canonicalPath(path));
+  const brandedTitle =
+    title === ORIGINALS.name ? title : `${title} | ${ORIGINALS.name}`;
+  const socialImage = image
+    ? new URL(image, originalsPublicUrl("/")).toString()
+    : originalsPublicUrl("/cuttle.png");
+
   return {
-    title,
+    title: { absolute: brandedTitle },
     description,
+    applicationName: ORIGINALS.name,
+    keywords: [
+      "original web novels",
+      "indie fiction",
+      "online serial fiction",
+      "web fiction",
+      "independent authors",
+      "Cuttlefish Originals",
+    ],
     alternates: {
-      canonical: originalsPublicUrl(canonicalPath(path)),
+      canonical,
+    },
+    openGraph: {
+      type: openGraphType,
+      url: canonical,
+      title: brandedTitle,
+      description,
+      siteName: ORIGINALS.name,
+      images: [socialImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: brandedTitle,
+      description,
+      images: [socialImage],
     },
   };
 }

@@ -1,10 +1,26 @@
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getAuthClaims } from "@/utils/supabase/auth";
 import { createClient } from "@/utils/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
+import { SITE } from "@/lib/constants";
 import { hasProfileRole, parseProfileRoles } from "@/lib/roles";
+
+export const metadata: Metadata = {
+  title: SITE.name,
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
+};
 
 export default async function MainLayout({
   children,

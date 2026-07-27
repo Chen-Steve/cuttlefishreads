@@ -11,6 +11,7 @@ import {
   ReadingProgressTracker,
   TranslatorNote,
 } from "@/components/reader";
+import { StructuredData } from "@/components/structured-data";
 import {
   getChapter,
   getChapterSummaries,
@@ -19,7 +20,11 @@ import {
 } from "@/lib/data";
 import { creatorPublicOrigin, originalsPublicUrl } from "@/lib/hosts";
 import { isOriginalNovel } from "@/lib/originals-data";
-import { novelDescription } from "@/lib/seo";
+import {
+  novelDescription,
+  originalsPageMetadata,
+  truncateDescription,
+} from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -42,15 +47,15 @@ export async function generateMetadata({
     ? `Chapter ${current.number}: ${current.title}`
     : `Chapter ${current.number}`;
 
-  return {
+  return originalsPageMetadata({
     title: `${novel.title} - ${chapterLabel}`,
-    description: `Read ${novel.title} ${chapterLabel} on Cuttlefish Originals. ${novelDescription(novel)}`,
-    alternates: {
-      canonical: originalsPublicUrl(
-        `/series/${novel.slug}/chapter/${current.number}`,
-      ),
-    },
-  };
+    description: truncateDescription(
+      `Read ${novel.title} ${chapterLabel} on Cuttlefish Originals. ${novelDescription(novel)}`,
+    ),
+    path: `/series/${novel.slug}/chapter/${current.number}`,
+    image: novel.coverUrl,
+    openGraphType: "article",
+  });
 }
 
 export default async function OriginalsChapterPage({
@@ -90,6 +95,29 @@ export default async function OriginalsChapterPage({
 
   return (
     <PageContainer as="article" width="narrow" className="pt-4 sm:pt-6 lg:pt-6">
+      <StructuredData
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Chapter",
+          name: readable.title
+            ? `Chapter ${readable.number}: ${readable.title}`
+            : `Chapter ${readable.number}`,
+          url: originalsPublicUrl(
+            `/series/${novel.slug}/chapter/${readable.number}`,
+          ),
+          datePublished: readable.publishedAt,
+          isPartOf: {
+            "@type": "Book",
+            name: novel.title,
+            url: originalsPublicUrl(`/series/${novel.slug}`),
+          },
+          author: {
+            "@type": "Person",
+            name: novel.translator || novel.author,
+          },
+          position: readable.number,
+        }}
+      />
       <ReadingProgressTracker slug={slug} chapterNumber={chapterNumber} />
       <ReadingEngagementTracker
         slug={slug}

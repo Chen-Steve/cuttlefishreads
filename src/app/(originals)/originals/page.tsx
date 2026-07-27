@@ -8,8 +8,10 @@ import {
 } from "@/components/novel";
 import { OriginalsHero } from "@/components/originals/originals-hero";
 import { PageContainer } from "@/components/page-container";
+import { StructuredData } from "@/components/structured-data";
 import { ORIGINALS } from "@/lib/constants";
 import { getNovelRatingSummariesBySlug } from "@/lib/data";
+import { originalsPublicUrl } from "@/lib/hosts";
 import { getOriginalsHomeData } from "@/lib/originals-data";
 import { originalsPageMetadata } from "@/lib/seo";
 import { createClient } from "@/utils/supabase/server";
@@ -38,6 +40,20 @@ export default async function OriginalsHomePage() {
 
   return (
     <PageContainer className="pt-3 pb-6 sm:py-8 lg:py-10">
+      <StructuredData
+        data={{
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: ORIGINALS.name,
+          description: ORIGINALS.seoDescription,
+          url: originalsPublicUrl("/"),
+          potentialAction: {
+            "@type": "SearchAction",
+            target: `${originalsPublicUrl("/browse")}?q={search_term_string}`,
+            "query-input": "required name=search_term_string",
+          },
+        }}
+      />
       <OriginalsHero
         isAuthenticated={isAuthenticated}
         workspaceHref={workspaceHref}
