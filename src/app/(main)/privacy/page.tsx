@@ -140,9 +140,11 @@ export default function PrivacyPage() {
               work.
             </li>
             <li>
-              <strong>Analytics:</strong> We may use privacy-conscious analytics
-              (for example, aggregated page-view statistics) to understand which
-              novels and pages are popular and to improve the Service.
+              <strong>Analytics:</strong> We use Google Analytics to understand
+              which novels and pages are popular and to improve the Service.
+              Visitors in the European Economic Area, United Kingdom,
+              Switzerland, and California are asked to accept or reject
+              analytics cookies before we store them.
             </li>
           </ul>
           <p>

@@ -6,6 +6,7 @@ import { HomeSection } from "@/components/home-section";
 import { LoginFixBulletin } from "@/components/login-fix-bulletin";
 import {
   ContinueReadingSection,
+  FeaturedNovels,
   NovelCarousel,
   PaginatedRecentlyUpdatedList,
 } from "@/components/novel";
@@ -110,7 +111,7 @@ export default async function Home() {
         linkLabel="View all"
         className="mt-6 sm:mt-8"
       >
-        <NovelCarousel novels={featured} dense fillRow showChapterCount />
+        <FeaturedNovels novels={featured} />
       </HomeSection>
 
       <HomeSection

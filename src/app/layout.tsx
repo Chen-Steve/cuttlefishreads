@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { CookieConsentBanner } from "@/components/cookie-consent-banner";
 import { GoogleAnalyticsPageViews } from "@/components/google-analytics-page-views";
 import { InlineScript } from "@/components/inline-script";
 import { Toaster } from "@/components/ui/sonner";
+import { analyticsConsentInitScript } from "@/lib/analytics-consent";
 import { nationalPark } from "@/lib/fonts";
 import { readerFontVariables } from "@/lib/reader-fonts";
 import { SITE } from "@/lib/constants";
@@ -66,23 +68,17 @@ export default function RootLayout({
     >
       <head>
         <InlineScript html={themeInitScript} />
+        <InlineScript html={analyticsConsentInitScript(GA_MEASUREMENT_ID)} />
       </head>
       <Script
         async
         src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
         strategy="afterInteractive"
       />
-      <Script id="google-analytics" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', '${GA_MEASUREMENT_ID}');
-        `}
-      </Script>
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <GoogleAnalyticsPageViews />
         {children}
+        <CookieConsentBanner />
         <Toaster />
       </body>
     </html>

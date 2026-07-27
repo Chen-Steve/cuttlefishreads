@@ -5,15 +5,10 @@ import { usePathname } from "next/navigation";
 
 import { GA_MEASUREMENT_ID } from "@/lib/google-analytics-id";
 
-declare global {
-  interface Window {
-    gtag?: (...args: unknown[]) => void;
-  }
-}
-
 /**
  * Sends a GA4 page_view on App Router client navigations so chapter reads are
  * counted. The initial full-page load is already tracked by the root gtag config.
+ * With Consent Mode, events are cookieless until analytics_storage is granted.
  */
 export function GoogleAnalyticsPageViews() {
   const pathname = usePathname();

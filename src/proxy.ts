@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/utils/supabase/middleware";
 import {
+  ANALYTICS_CONSENT_REGION_COOKIE,
+  requiresAnalyticsConsentForGeo,
+} from "@/lib/analytics-consent";
+import {
   getSiteSurface,
   isLocalDevHost,
   isMainDomain,
@@ -9,6 +13,43 @@ import {
   originalsOriginFromRequestHost,
   resolveRequestHost,
 } from "@/lib/hosts";
+
+/** Marks EU/EEA/UK/CH or California via a first-party cookie for Consent Mode. */
+function withAnalyticsConsentRegionCookie(
+  request: NextRequest,
+  response: NextResponse,
+): NextResponse {
+  const needs = requiresAnalyticsConsentForGeo(
+    request.headers.get("x-vercel-ip-country"),
+    request.headers.get("x-vercel-ip-country-region"),
+  );
+
+  if (needs) {
+    response.cookies.set(ANALYTICS_CONSENT_REGION_COOKIE, "1", {
+      path: "/",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+      secure: process.env.NODE_ENV === "production",
+    });
+  } else if (request.cookies.has(ANALYTICS_CONSENT_REGION_COOKIE)) {
+    response.cookies.set(ANALYTICS_CONSENT_REGION_COOKIE, "", {
+      path: "/",
+      maxAge: 0,
+    });
+  }
+
+  return response;
+}
+
+async function continueWithSession(
+  request: NextRequest,
+  response?: NextResponse,
+) {
+  return withAnalyticsConsentRegionCookie(
+    request,
+    await updateSession(request, response),
+  );
+}
 
 function cleanOriginalsPath(pathname: string): string {
   if (pathname === "/originals") return "/";
@@ -61,14 +102,17 @@ export async function proxy(request: NextRequest) {
       );
       dest.pathname = cleanOriginalsPath(pathname);
       dest.search = request.nextUrl.search;
-      return NextResponse.redirect(dest, 308);
+      return withAnalyticsConsentRegionCookie(
+        request,
+        NextResponse.redirect(dest, 308),
+      );
     }
 
     if (isCleanOriginalsPath(pathname)) {
       const url = request.nextUrl.clone();
       url.pathname =
         pathname === "/" ? "/originals" : `/originals${pathname}`;
-      return updateSession(request, NextResponse.rewrite(url));
+      return continueWithSession(request, NextResponse.rewrite(url));
     }
 
     // Series and auth routes are shared by the same deployment and can stay
@@ -87,7 +131,10 @@ export async function proxy(request: NextRequest) {
       const dest = new URL(mainOriginFromRequestHost(hostHeader, { override }));
       dest.pathname = pathname;
       dest.search = request.nextUrl.search;
-      return NextResponse.redirect(dest, 308);
+      return withAnalyticsConsentRegionCookie(
+        request,
+        NextResponse.redirect(dest, 308),
+      );
     }
   }
 
@@ -107,7 +154,10 @@ export async function proxy(request: NextRequest) {
       ? cleanOriginalsPath(pathname)
       : pathname;
     dest.search = request.nextUrl.search;
-    return NextResponse.redirect(dest, 308);
+    return withAnalyticsConsentRegionCookie(
+      request,
+      NextResponse.redirect(dest, 308),
+    );
   }
 
   const { surface, creatorSubdomain } = getSiteSurface(host);
@@ -131,13 +181,16 @@ export async function proxy(request: NextRequest) {
         dest.pathname = pathname;
       }
       dest.search = request.nextUrl.search;
-      return NextResponse.redirect(dest, 307);
+      return withAnalyticsConsentRegionCookie(
+        request,
+        NextResponse.redirect(dest, 307),
+      );
     }
 
     if (pathname === "/" || pathname === "") {
       const url = request.nextUrl.clone();
       url.pathname = `/creator/${creatorSubdomain}`;
-      return updateSession(request, NextResponse.rewrite(url));
+      return continueWithSession(request, NextResponse.rewrite(url));
     }
 
     const dest = new URL(
@@ -147,10 +200,13 @@ export async function proxy(request: NextRequest) {
     );
     dest.pathname = pathname;
     dest.search = request.nextUrl.search;
-    return NextResponse.redirect(dest, 308);
+    return withAnalyticsConsentRegionCookie(
+      request,
+      NextResponse.redirect(dest, 308),
+    );
   }
 
-  return updateSession(request);
+  return continueWithSession(request);
 }
 
 export const config = {

@@ -1,5 +1,6 @@
 export { NovelCard } from "./novel-card";
 export { NovelCarousel } from "./novel-carousel";
+export { FeaturedNovels } from "./featured-novels";
 export { ContinueReadingSection } from "./continue-reading-section";
 export { NovelGrid, DENSE_FILL_ROW_LIMIT } from "./novel-grid";
 export { PaginatedNovelGrid } from "./paginated-novel-grid";
