@@ -407,16 +407,6 @@ export function ChapterForm({
           </button>
         </aside>
       </div>
-
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={pending}
-          className={submitButtonClass}
-        >
-          {submitLabel}
-        </button>
-      </div>
     </form>
   );
 }
