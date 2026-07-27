@@ -19,7 +19,7 @@ const BAYER_8 = [
 function parseCssColor(color: string): [number, number, number] {
   const hex = color.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
   if (hex) {
-    let h = hex[1];
+    let h = hex[1]!;
     if (h.length === 3) {
       h = h
         .split("")
@@ -68,10 +68,10 @@ function ditherImage(
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const i = (y * width + x) * 4;
-      const r = data[i];
-      const g = data[i + 1];
-      const b = data[i + 2];
-      const a = data[i + 3] / 255;
+      const r = data[i]!;
+      const g = data[i + 1]!;
+      const b = data[i + 2]!;
+      const a = data[i + 3]! / 255;
       // Treat near-black canvas of the source as transparent.
       const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
       const isBg = luminance < 0.06 && a > 0.5;
@@ -81,7 +81,7 @@ function ditherImage(
       }
       // Invert so darker ink/outlines produce denser dots.
       const coverage = (1 - luminance) * a;
-      const threshold = BAYER_8[y & 7][x & 7];
+      const threshold = BAYER_8[y & 7]![x & 7]!;
       if (coverage > threshold) {
         image.data[i] = ir;
         image.data[i + 1] = ig;
@@ -152,7 +152,7 @@ export function DitheredLogoBackground({
       ref={canvasRef}
       aria-hidden
       className={cn(
-        "pointer-events-none absolute h-auto w-auto max-w-none select-none [image-rendering:pixelated]",
+        "pointer-events-none absolute select-none [image-rendering:pixelated]",
         className,
       )}
     />

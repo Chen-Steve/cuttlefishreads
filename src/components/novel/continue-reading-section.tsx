@@ -6,6 +6,7 @@ import { ArrowRight, ChevronDown } from "lucide-react";
 
 import type { Novel } from "@/types";
 import { useStoredOpen } from "@/hooks/use-stored-open";
+import { DitheredImageBackground } from "@/components/dithered-image-background";
 import { chapterPublicHref } from "@/lib/catalog-paths";
 import {
   CONTINUE_READING_LIMIT,
@@ -52,13 +53,9 @@ function ContinueCard({ item }: { item: ContinueItem }) {
       >
         {novel.coverUrl ? (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <DitheredImageBackground
               src={novel.coverUrl}
-              alt=""
-              draggable={false}
-              className="pointer-events-none absolute inset-0 -z-20 size-full object-cover opacity-35 grayscale contrast-150 [mask-image:radial-gradient(circle,black_0_1px,transparent_1.25px)] [mask-size:4px_4px] [-webkit-mask-image:radial-gradient(circle,black_0_1px,transparent_1.25px)] [-webkit-mask-size:4px_4px]"
-              aria-hidden
+              className="-z-20"
             />
             <span
               className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-r from-surface via-surface/90 to-surface/45"

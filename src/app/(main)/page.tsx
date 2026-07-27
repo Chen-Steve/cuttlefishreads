@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, Library } from "lucide-react";
 import { DiscordIcon } from "@/components/discord-icon";
+import { HomeDiscoveryLinks } from "@/components/home-discovery-links";
 import { HomeSection } from "@/components/home-section";
 import { LoginFixBulletin } from "@/components/login-fix-bulletin";
 import {
@@ -113,6 +114,8 @@ export default async function Home() {
       >
         <FeaturedNovels novels={featured} />
       </HomeSection>
+
+      <HomeDiscoveryLinks novelSlugs={catalog.map((novel) => novel.slug)} />
 
       <HomeSection
         title="Newly added"
