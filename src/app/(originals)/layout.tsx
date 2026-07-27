@@ -6,6 +6,7 @@ import { isAdminEmail } from "@/lib/admin";
 import { ORIGINALS } from "@/lib/constants";
 import { getUnreadNotificationCount } from "@/lib/forum/data";
 import { originalsPublicOrigin, originalsPublicUrl } from "@/lib/hosts";
+import { ensureOAuthProfile } from "@/lib/profile";
 import { getUserOriginalSeries } from "@/lib/originals-data";
 import { getAuthClaims } from "@/utils/supabase/auth";
 import { createClient } from "@/utils/supabase/server";
@@ -77,6 +78,18 @@ export default async function OriginalsLayout({
       getUnreadNotificationCount(claims.sub),
     ]);
     username = profile?.username ?? null;
+    if (!username) {
+      await ensureOAuthProfile(
+        claims.sub,
+        claims.email as string | undefined,
+      );
+      const { data: refreshed } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", claims.sub)
+        .maybeSingle();
+      username = refreshed?.username ?? null;
+    }
     avatarUrl = profile?.avatar_url ?? null;
     isMasterAdmin = isAdminEmail(claims.email as string | undefined);
     hasCreatorSubdomain = originalSeries.length > 0;

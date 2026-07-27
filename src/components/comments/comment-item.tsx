@@ -25,6 +25,127 @@ function formatTimestamp(value: string): string {
   });
 }
 
+function CommentReplyItem({
+  reply,
+  parentId,
+  onDeleted,
+}: {
+  reply: NovelComment;
+  parentId: string;
+  onDeleted?: (parentId: string, replyId: string) => void;
+}) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const isEdited =
+    new Date(reply.updatedAt).getTime() >
+    new Date(reply.createdAt).getTime() + 1000;
+
+  function handleDelete() {
+    setError(null);
+    startTransition(async () => {
+      const result = await deleteComment(reply.id);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setConfirmingDelete(false);
+      onDeleted?.(parentId, reply.id);
+    });
+  }
+
+  return (
+    <li className="rounded-lg bg-background p-3">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Link
+          href={`/u/${reply.username}`}
+          className="text-sm font-semibold text-foreground transition-colors hover:text-accent"
+        >
+          {reply.username}
+        </Link>
+        {reply.isTranslatorReply ? (
+          <Badge className="border-accent/40 bg-accent/10 text-accent">
+            Translator
+          </Badge>
+        ) : null}
+        <time dateTime={reply.createdAt} className="text-xs text-muted">
+          {formatTimestamp(reply.createdAt)}
+        </time>
+        {isEdited ? (
+          <span className="text-xs text-muted">(edited)</span>
+        ) : null}
+      </div>
+      <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+        {reply.body}
+      </p>
+
+      {reply.isOwn ? (
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={() => {
+              setConfirmingDelete(true);
+              setError(null);
+            }}
+            disabled={pending}
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-surface hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50"
+          >
+            <Trash2 className="size-3.5" strokeWidth={1.75} aria-hidden />
+            Delete
+          </button>
+        </div>
+      ) : null}
+
+      {confirmingDelete ? (
+        <div
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby={`delete-reply-${reply.id}`}
+          className="mt-2 rounded-xl border border-border bg-surface p-3 shadow-sm"
+        >
+          <p
+            id={`delete-reply-${reply.id}`}
+            className="text-sm font-semibold text-foreground"
+          >
+            Delete this reply?
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-muted">
+            This action cannot be undone.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={pending}
+              className="inline-flex h-8 items-center rounded-lg bg-red-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+            >
+              {pending ? "Deleting…" : "Delete"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmingDelete(false);
+                setError(null);
+              }}
+              disabled={pending}
+              className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium text-foreground transition-colors hover:border-accent/40 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {error ? (
+        <p role="alert" className="mt-2 text-xs text-red-600 dark:text-red-400">
+          {error}
+        </p>
+      ) : null}
+    </li>
+  );
+}
+
 export function CommentItem({
   comment,
   isLoggedIn,
@@ -33,6 +154,7 @@ export function CommentItem({
   onDeleted,
   onUpdated,
   onReplyAdded,
+  onReplyDeleted,
 }: {
   comment: NovelComment;
   isLoggedIn: boolean;
@@ -41,6 +163,7 @@ export function CommentItem({
   onDeleted?: (id: string) => void;
   onUpdated?: (id: string, body: string) => void;
   onReplyAdded?: (parentId: string, reply: NovelComment) => void;
+  onReplyDeleted?: (parentId: string, replyId: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [replying, setReplying] = useState(false);
@@ -329,30 +452,12 @@ export function CommentItem({
           {comment.replies.length > 0 ? (
             <ul className="mt-3 space-y-2 border-l-2 border-border pl-3">
               {comment.replies.map((reply) => (
-                <li key={reply.id} className="rounded-lg bg-background p-3">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <Link
-                      href={`/u/${reply.username}`}
-                      className="text-sm font-semibold text-foreground transition-colors hover:text-accent"
-                    >
-                      {reply.username}
-                    </Link>
-                    {reply.isTranslatorReply ? (
-                      <Badge className="border-accent/40 bg-accent/10 text-accent">
-                        Translator
-                      </Badge>
-                    ) : null}
-                    <time
-                      dateTime={reply.createdAt}
-                      className="text-xs text-muted"
-                    >
-                      {formatTimestamp(reply.createdAt)}
-                    </time>
-                  </div>
-                  <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-                    {reply.body}
-                  </p>
-                </li>
+                <CommentReplyItem
+                  key={reply.id}
+                  reply={reply}
+                  parentId={comment.id}
+                  onDeleted={onReplyDeleted}
+                />
               ))}
             </ul>
           ) : null}

@@ -6,6 +6,7 @@ import { getAuthClaims } from "@/utils/supabase/auth";
 import { createClient } from "@/utils/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
 import { SITE } from "@/lib/constants";
+import { ensureOAuthProfile } from "@/lib/profile";
 import { hasProfileRole, parseProfileRoles } from "@/lib/roles";
 
 export const metadata: Metadata = {
@@ -43,6 +44,18 @@ export default async function MainLayout({
       .eq("id", claims.sub)
       .maybeSingle();
     username = profile?.username ?? null;
+    if (!username) {
+      await ensureOAuthProfile(
+        claims.sub,
+        claims.email as string | undefined,
+      );
+      const { data: refreshed } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", claims.sub)
+        .maybeSingle();
+      username = refreshed?.username ?? null;
+    }
     avatarUrl = profile?.avatar_url ?? null;
     coins = profile?.coins ?? 0;
 

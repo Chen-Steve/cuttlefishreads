@@ -9,6 +9,7 @@ import {
   PASSWORD_RECOVERY_COOKIE,
   passwordRecoveryCookieOptions,
 } from "@/lib/password-recovery";
+import { ensureOAuthProfile } from "@/lib/profile";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -46,8 +47,12 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      if (data.user?.id) {
+        await ensureOAuthProfile(data.user.id, data.user.email);
+      }
+
       if (safeNext === "/reset-password") {
         redirectResponse.cookies.set(
           PASSWORD_RECOVERY_COOKIE,

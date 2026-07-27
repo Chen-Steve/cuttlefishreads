@@ -92,6 +92,18 @@ export function CommentsPanel({
                     ),
                   )
                 }
+                onReplyDeleted={(parentId, replyId) =>
+                  setComments((prev) =>
+                    prev.map((c) =>
+                      c.id === parentId
+                        ? {
+                            ...c,
+                            replies: c.replies.filter((r) => r.id !== replyId),
+                          }
+                        : c,
+                    ),
+                  )
+                }
               />
             </li>
           ))}

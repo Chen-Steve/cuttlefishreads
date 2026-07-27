@@ -10,6 +10,31 @@ export function normalizeUsername(username: string): string {
   return username.trim().toLowerCase();
 }
 
+/**
+ * Derive a username from an email local part (e.g. jane.doe@gmail.com → jane_doe).
+ * Returns null when the result would be too short or invalid.
+ */
+export function deriveUsernameFromEmail(email: string): string | null {
+  const trimmed = email.trim().toLowerCase();
+  const at = trimmed.indexOf("@");
+  if (at <= 0) return null;
+
+  const local = trimmed.slice(0, at).split("+")[0] ?? "";
+  if (!local) return null;
+
+  let username = local
+    .replace(/[^a-z0-9_]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+
+  if (username.length < USERNAME_MIN) return null;
+  if (username.length > USERNAME_MAX) {
+    username = username.slice(0, USERNAME_MAX);
+  }
+
+  return USERNAME_PATTERN.test(username) ? username : null;
+}
+
 const ADJECTIVES = [
   "happy",
   "great",

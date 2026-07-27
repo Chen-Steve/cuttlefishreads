@@ -5,13 +5,13 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/utils/supabase/server";
-import { createAdminClient } from "@/utils/supabase/admin";
 import {
   isOriginalsDomain,
   mainOriginFromRequestHost,
   normalizeHost,
 } from "@/lib/hosts";
 import { absoluteUrl } from "@/lib/seo";
+import { ensureProfileWithUsername } from "@/lib/profile";
 import { generateRandomUsername } from "@/lib/username";
 import { PASSWORD_RECOVERY_COOKIE } from "@/lib/password-recovery";
 
@@ -117,44 +117,6 @@ export async function signup(
 
   revalidatePath("/", "layout");
   return redirectAfterAuth(safeRedirect);
-}
-
-/** Create/update profiles.username, retrying on rare unique collisions. */
-async function ensureProfileWithUsername(
-  userId: string,
-  initialUsername: string
-): Promise<string | undefined> {
-  const admin = createAdminClient();
-  let username = initialUsername;
-
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const { error } = await admin.from("profiles").upsert(
-      {
-        id: userId,
-        username,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id" }
-    );
-
-    if (!error) {
-      if (attempt > 0) {
-        await admin.auth.admin.updateUserById(userId, {
-          user_metadata: { username },
-        });
-      }
-      return undefined;
-    }
-
-    if (error.code !== "23505") {
-      return error.message;
-    }
-
-    // Word combos first; append digits if the namespace is crowded.
-    username = generateRandomUsername(attempt >= 3);
-  }
-
-  return "Could not assign a username. Please try again.";
 }
 
 export async function requestPasswordReset(
