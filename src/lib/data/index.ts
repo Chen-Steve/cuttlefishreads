@@ -536,7 +536,6 @@ export async function getLibraryNovels(): Promise<Novel[]> {
 export type PublicProfile = {
   id: string;
   username: string;
-  /** @deprecated Prefer `roles` — kept for older UI checks. */
   role: "user" | "translator";
   roles: ProfileRole[];
   isTranslator: boolean;
@@ -551,13 +550,12 @@ export async function getPublicProfile(
   const supabase = createClient(await cookies());
   const { data } = await supabase
     .from("profiles")
-    .select("id, username, role, roles, avatar_url, kofi_url, patreon_url")
+    .select("id, username, role, avatar_url, kofi_url, patreon_url")
     .eq("username", username.trim().toLowerCase())
     .maybeSingle();
 
   if (!data?.username) return null;
   const roles = parseProfileRoles({
-    roles: data.roles as string[] | null | undefined,
     role: data.role as string | null | undefined,
   });
   const isTranslator = hasProfileRole(roles, "translator");
@@ -842,12 +840,11 @@ async function getCurrentUser(): Promise<CurrentUser | null> {
   const id = auth.claims.sub as string;
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, roles")
+    .select("role")
     .eq("id", id)
     .maybeSingle();
 
   const roles = parseProfileRoles({
-    roles: profile?.roles as string[] | null | undefined,
     role: profile?.role as string | null | undefined,
   });
 

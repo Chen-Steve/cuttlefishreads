@@ -39,7 +39,7 @@ export default async function MainLayout({
     const supabase = createClient(await cookies());
     const { data: profile } = await supabase
       .from("profiles")
-      .select("username, coins, avatar_url, role, roles")
+      .select("username, coins, avatar_url, role")
       .eq("id", claims.sub)
       .maybeSingle();
     username = profile?.username ?? null;
@@ -49,7 +49,6 @@ export default async function MainLayout({
     isMasterAdmin = isAdminEmail(claims.email as string | undefined);
 
     const roles = parseProfileRoles({
-      roles: profile?.roles as string[] | null | undefined,
       role: profile?.role as string | null | undefined,
     });
     isTranslator = hasProfileRole(roles, "translator");

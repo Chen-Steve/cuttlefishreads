@@ -102,6 +102,7 @@ export async function WorkspaceDashboardPage({
                   "novel_slug, chapter_number, translator_share, created_at, user_id",
                 )
                 .in("novel_slug", slugs)
+                .eq("hidden_from_translator", false)
                 .order("created_at", { ascending: false })
             : Promise.resolve({ data: [] }),
           mode === "all"
@@ -173,6 +174,7 @@ export async function WorkspaceDashboardPage({
   const novelsWithPurchases = rows.filter((n) => purchasesByNovel.has(n.slug));
 
   // Earnings are the exact translator share credited per unlock (70% of list).
+  // Hidden every-4th purchases are excluded from the query above.
   const stats: NovelStat[] = rows.map((n) => ({
     id: n.id,
     slug: n.slug,

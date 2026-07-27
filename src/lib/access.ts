@@ -5,9 +5,9 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
 import {
   hasProfileRole,
-  legacyRoleFromRoles,
+  isTranslatorRole,
   parseProfileRoles,
-  withProfileRole,
+  storedRoleFromFlags,
   type ProfileRole,
 } from "@/lib/roles";
 
@@ -15,7 +15,7 @@ export type AdminAccess = {
   userId: string;
   email: string | undefined;
   username: string | null;
-  /** Granted profile roles (currently just translator). */
+  /** Granted profile roles derived from profiles.role. */
   roles: ProfileRole[];
   // Master admin from the ADMIN_EMAILS env allowlist — full, unscoped access.
   isMasterAdmin: boolean;
@@ -25,15 +25,15 @@ export type AdminAccess = {
   hasWorkspace: boolean;
 };
 
-// Workspace access is driven by profiles.roles, but an approved translator
+// Workspace access is driven by profiles.role, but an approved translator
 // application can drift out of sync (e.g. approval ran before a profile row
 // existed). When that happens, sync the profile and treat them as translator.
 async function ensureTranslatorApplicationRole(
   admin: ReturnType<typeof createAdminClient>,
   userId: string,
-  currentRoles: ProfileRole[],
-): Promise<ProfileRole[]> {
-  if (currentRoles.includes("translator")) return currentRoles;
+  isTranslator: boolean,
+): Promise<boolean> {
+  if (isTranslator) return true;
 
   const { data: application } = await admin
     .from("translator_applications")
@@ -41,14 +41,12 @@ async function ensureTranslatorApplicationRole(
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (application?.status !== "approved") return currentRoles;
+  if (application?.status !== "approved") return false;
 
-  const nextRoles = withProfileRole(currentRoles, "translator");
   const { error } = await admin.from("profiles").upsert(
     {
       id: userId,
-      roles: nextRoles,
-      role: legacyRoleFromRoles(nextRoles),
+      role: "translator",
       username: application.username || null,
       updated_at: new Date().toISOString(),
     },
@@ -57,10 +55,10 @@ async function ensureTranslatorApplicationRole(
 
   if (error) {
     console.error("[getAdminAccess] failed to sync translator role:", error);
-    return currentRoles;
+    return false;
   }
 
-  return nextRoles;
+  return true;
 }
 
 /** Current request's access from JWT + profile. Null when logged out. */
@@ -77,20 +75,23 @@ export async function getAdminAccess(): Promise<AdminAccess | null> {
   const admin = createAdminClient();
   const { data: profile } = await admin
     .from("profiles")
-    .select("username, role, roles")
+    .select("username, role")
     .eq("id", userId)
     .maybeSingle();
 
-  let roles = parseProfileRoles({
-    roles: profile?.roles as string[] | null | undefined,
-    role: profile?.role as string | null | undefined,
-  });
+  let isTranslator = isTranslatorRole(profile?.role as string | null | undefined);
 
   if (!isMasterAdmin) {
-    roles = await ensureTranslatorApplicationRole(admin, userId, roles);
+    isTranslator = await ensureTranslatorApplicationRole(
+      admin,
+      userId,
+      isTranslator,
+    );
   }
 
-  const isTranslator = hasProfileRole(roles, "translator");
+  const roles = parseProfileRoles({
+    role: isTranslator ? "translator" : "user",
+  });
 
   return {
     userId,
@@ -103,7 +104,7 @@ export async function getAdminAccess(): Promise<AdminAccess | null> {
   };
 }
 
-/** Grant a role without removing any existing ones. */
+/** Grant translator access via profiles.role. */
 export async function grantProfileRole(
   userId: string,
   role: ProfileRole,
@@ -112,21 +113,19 @@ export async function grantProfileRole(
   const admin = createAdminClient();
   const { data: profile } = await admin
     .from("profiles")
-    .select("roles, role, username")
+    .select("role, username")
     .eq("id", userId)
     .maybeSingle();
 
-  const existing = parseProfileRoles({
-    roles: profile?.roles as string[] | null | undefined,
-    role: profile?.role as string | null | undefined,
-  });
-  const nextRoles = withProfileRole(existing, role);
+  const alreadyTranslator = isTranslatorRole(
+    profile?.role as string | null | undefined,
+  );
+  const nextTranslator = role === "translator" || alreadyTranslator;
 
   const { error } = await admin.from("profiles").upsert(
     {
       id: userId,
-      roles: nextRoles,
-      role: legacyRoleFromRoles(nextRoles),
+      role: storedRoleFromFlags(nextTranslator),
       username: username || profile?.username || null,
       updated_at: new Date().toISOString(),
     },

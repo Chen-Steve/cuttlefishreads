@@ -97,7 +97,7 @@ export default async function ApplyPage() {
   const [{ data: profile }, { data: application }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("username, role, roles")
+      .select("username, role")
       .eq("id", userId)
       .maybeSingle(),
     supabase
@@ -108,7 +108,6 @@ export default async function ApplyPage() {
   ]);
 
   const roles = parseProfileRoles({
-    roles: profile?.roles as string[] | null | undefined,
     role: profile?.role as string | null | undefined,
   });
   const isTranslator = hasProfileRole(roles, "translator");

@@ -1,24 +1,24 @@
 /**
- * Profile roles: translators (main catalog) are application-gated.
+ * Profile role: translators (main catalog) are application-gated.
  * Originals publishing is open to any signed-in user — no stored author role.
  * Master admin stays an env allowlist, not a stored role.
+ *
+ * Source of truth is profiles.role ('user' | 'translator').
+ * The legacy profiles.roles array is ignored.
  */
 
 export const PROFILE_ROLES = ["translator"] as const;
 
 export type ProfileRole = (typeof PROFILE_ROLES)[number];
 
+export type StoredProfileRole = "user" | "translator";
+
+/** Read translator access from profiles.role. */
 export function parseProfileRoles(input: {
-  roles?: string[] | null;
   role?: string | null;
+  /** @deprecated Ignored — profiles.role is the source of truth. */
+  roles?: string[] | null;
 }): ProfileRole[] {
-  const fromArray = (input.roles ?? []).filter(
-    (value): value is ProfileRole => value === "translator",
-  );
-  if (fromArray.length > 0) {
-    return [...new Set(fromArray)];
-  }
-  // Legacy single-column fallback before roles was backfilled.
   if (input.role === "translator") return ["translator"];
   return [];
 }
@@ -30,18 +30,12 @@ export function hasProfileRole(
   return roles.includes(role);
 }
 
-/** Legacy profiles.role value kept in sync for older queries. */
-export function legacyRoleFromRoles(
-  roles: readonly ProfileRole[],
-): "user" | "translator" {
-  return roles.includes("translator") ? "translator" : "user";
+export function isTranslatorRole(role: string | null | undefined): boolean {
+  return role === "translator";
 }
 
-/** Merge a granted role into an existing roles array (idempotent). */
-export function withProfileRole(
-  existing: readonly ProfileRole[],
-  role: ProfileRole,
-): ProfileRole[] {
-  if (existing.includes(role)) return [...existing];
-  return [...existing, role];
+export function storedRoleFromFlags(
+  isTranslator: boolean,
+): StoredProfileRole {
+  return isTranslator ? "translator" : "user";
 }

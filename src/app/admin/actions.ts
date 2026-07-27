@@ -346,15 +346,19 @@ async function _createNovel(
     originalAuthor = String(formData.get("originalAuthor") ?? "").trim();
     translator = String(formData.get("translator") ?? "").trim() || (access.username ?? "");
     const publisherUsername = String(formData.get("publisherUsername") ?? "").trim();
-    if (publisherUsername) {
-      const { data: profile } = await admin
-        .from("profiles")
-        .select("id")
-        .eq("username", publisherUsername)
-        .maybeSingle();
-      if (!profile) return { error: `No user found with username "${publisherUsername}".` };
-      publisherId = profile.id;
+    if (!publisherUsername) {
+      return {
+        error:
+          "Publisher username is required so chapter purchases credit the translator.",
+      };
     }
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("id, role")
+      .eq("username", publisherUsername)
+      .maybeSingle();
+    if (!profile) return { error: `No user found with username "${publisherUsername}".` };
+    publisherId = profile.id;
   } else {
     originalAuthor = "";
     translator = access.username ?? "";
@@ -507,7 +511,6 @@ export async function updateNovel(
       existing.translator ||
       (access.username ?? "");
     const publisherUsername = String(formData.get("publisherUsername") ?? "").trim();
-    publisherId = null;
     if (publisherUsername) {
       const { data: profile } = await admin
         .from("profiles")
@@ -516,11 +519,20 @@ export async function updateNovel(
         .maybeSingle();
       if (!profile) return { error: `No user found with username "${publisherUsername}".` };
       publisherId = profile.id;
+    } else if (existing.publisher_id) {
+      // Keep the existing publisher when the field is left blank — never wipe
+      // publisher_id, or chapter purchases stop crediting the translator.
+      publisherId = existing.publisher_id;
+    } else {
+      return {
+        error:
+          "Publisher username is required so chapter purchases credit the translator.",
+      };
     }
   } else {
     originalAuthor = "";
     translator = access.username ?? existing.translator ?? "";
-    publisherId = existing.publisher_id;
+    publisherId = existing.publisher_id ?? access.userId;
   }
 
   let coverUrl = existing.cover_url;
