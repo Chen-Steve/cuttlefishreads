@@ -2,12 +2,11 @@
 
 import { useId, useState } from "react";
 import Link from "next/link";
-import { BookOpen } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import type { Novel } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import {
-  chapterHref,
   novelHref,
   type CatalogBase,
 } from "@/lib/catalog-paths";
@@ -76,10 +75,6 @@ function FeaturedDetails({
   catalogBase: CatalogBase;
 }) {
   const detailHref = novelHref(novel.slug, catalogBase);
-  const startHref =
-    novel.chapterCount > 0
-      ? chapterHref(novel.slug, 1, catalogBase)
-      : detailHref;
   const synopsisPreview = novel.synopsis ? previewSynopsis(novel.synopsis) : "";
 
   return (
@@ -117,10 +112,10 @@ function FeaturedDetails({
       ) : null}
 
       <Link
-        href={startHref}
+        href={detailHref}
         className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:h-11 sm:w-fit"
       >
-        <BookOpen className="size-4" strokeWidth={1.75} aria-hidden />
+        <ArrowRight className="size-4" strokeWidth={2} aria-hidden />
         Start reading
       </Link>
     </div>
