@@ -115,6 +115,7 @@ export default async function ForumThreadPage({
           <ForumPostItem
             key={post.id}
             post={post}
+            categorySlug={thread.categorySlug}
             canReact={Boolean(viewer)}
             isMasterAdmin={Boolean(viewer?.isMasterAdmin)}
           />

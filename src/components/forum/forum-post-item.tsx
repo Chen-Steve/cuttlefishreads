@@ -12,25 +12,34 @@ import {
 } from "@/app/(originals)/originals/forum/actions";
 import { ForumAvatar } from "@/components/forum/forum-avatar";
 import { ReactionBar } from "@/components/forum/reaction-bar";
-import { forumProfileUrl, MAX_POST_LENGTH } from "@/lib/forum/constants";
+import {
+  forumCategoryUrl,
+  forumProfileUrl,
+  MAX_POST_LENGTH,
+} from "@/lib/forum/constants";
 import type { ForumPost } from "@/lib/forum/types";
 import { formatRelativeDate } from "@/lib/utils";
 
 const actionClass =
   "rounded-lg px-1.5 py-0.5 text-xs font-medium text-muted transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50";
 
+type ConfirmKind = "delete" | "remove" | null;
+
 export function ForumPostItem({
   post,
+  categorySlug,
   canReact,
   isMasterAdmin,
 }: {
   post: ForumPost;
+  categorySlug: string;
   canReact: boolean;
   isMasterAdmin: boolean;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(post.body);
+  const [confirming, setConfirming] = useState<ConfirmKind>(null);
   const [pending, startTransition] = useTransition();
 
   function handleSave(event: React.FormEvent) {
@@ -46,36 +55,47 @@ export function ForumPostItem({
     });
   }
 
-  function handleDelete() {
-    const message = post.isOpeningPost
-      ? "Delete this post? It will remove the whole thread."
-      : "Delete this post?";
-    if (!window.confirm(message)) return;
-
+  function handleConfirmDelete() {
     startTransition(async () => {
       const result = await deletePost(post.id);
       if (result.error) {
         toast.error(result.error);
         return;
       }
-      router.refresh();
-    });
-  }
-
-  function handleModeratorRemove() {
-    if (!window.confirm("Remove this post from the board?")) return;
-
-    startTransition(async () => {
-      const result = await moderatePost(post.id, true);
-      if (result.error) {
-        toast.error(result.error);
+      setConfirming(null);
+      if (post.isOpeningPost) {
+        router.push(forumCategoryUrl(categorySlug));
         return;
       }
       router.refresh();
     });
   }
 
+  function handleConfirmRemove() {
+    startTransition(async () => {
+      const result = await moderatePost(post.id, true);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      setConfirming(null);
+      router.refresh();
+    });
+  }
+
   const edited = post.updatedAt !== post.createdAt;
+  const confirmTitle =
+    confirming === "remove"
+      ? "Remove this post from the board?"
+      : post.isOpeningPost
+        ? "Delete this thread?"
+        : "Delete this post?";
+  const confirmBody =
+    confirming === "remove"
+      ? "Readers will no longer see this post. You can restore it later from moderation if needed."
+      : post.isOpeningPost
+        ? "This is the opening post, so the whole thread will be removed."
+        : "This action cannot be undone.";
 
   return (
     <article
@@ -146,7 +166,7 @@ export function ForumPostItem({
             canReact={canReact}
           />
 
-          {post.isOwn && !editing ? (
+          {post.isOwn && !editing && confirming === null ? (
             <>
               <button
                 type="button"
@@ -158,7 +178,7 @@ export function ForumPostItem({
               </button>
               <button
                 type="button"
-                onClick={handleDelete}
+                onClick={() => setConfirming("delete")}
                 disabled={pending}
                 className={actionClass}
               >
@@ -167,10 +187,10 @@ export function ForumPostItem({
             </>
           ) : null}
 
-          {isMasterAdmin && !post.isOwn ? (
+          {isMasterAdmin && !post.isOwn && confirming === null ? (
             <button
               type="button"
-              onClick={handleModeratorRemove}
+              onClick={() => setConfirming("remove")}
               disabled={pending}
               className={actionClass}
             >
@@ -178,6 +198,53 @@ export function ForumPostItem({
             </button>
           ) : null}
         </div>
+
+        {confirming ? (
+          <div
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby={`delete-post-${post.id}`}
+            className="mt-3 rounded-xl border border-border bg-background p-3 shadow-sm"
+          >
+            <p
+              id={`delete-post-${post.id}`}
+              className="text-sm font-semibold text-foreground"
+            >
+              {confirmTitle}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-muted">
+              {confirmBody}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={
+                  confirming === "remove"
+                    ? handleConfirmRemove
+                    : handleConfirmDelete
+                }
+                disabled={pending}
+                className="inline-flex h-8 items-center rounded-lg bg-red-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              >
+                {pending
+                  ? confirming === "remove"
+                    ? "Removing…"
+                    : "Deleting…"
+                  : confirming === "remove"
+                    ? "Remove"
+                    : "Delete"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirming(null)}
+                disabled={pending}
+                className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium text-foreground transition-colors hover:border-accent/40 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </article>
   );

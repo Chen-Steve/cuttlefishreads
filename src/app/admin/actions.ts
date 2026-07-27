@@ -928,3 +928,173 @@ export async function updateChapter(
   revalidatePublicPaths(existing.novels?.publication_type);
   return { success: "Chapter saved." };
 }
+
+export type LaunchKitState = { error?: string; message?: string };
+
+const MAX_LAUNCH_GRAPHIC_BYTES = 5 * 1024 * 1024;
+
+function resolveLaunchGraphicFile(
+  bound: File | null | undefined,
+  formData: FormData,
+  field: string,
+): File | null {
+  if (bound instanceof File && bound.size > 0) return bound;
+  const fromForm = formData.get(field);
+  if (fromForm instanceof File && fromForm.size > 0) return fromForm;
+  return null;
+}
+
+function validateLaunchGraphic(file: File, label: string): string | null {
+  if (file.size > MAX_LAUNCH_GRAPHIC_BYTES) {
+    return `${label} is too large (max ${MAX_LAUNCH_GRAPHIC_BYTES / 1024 / 1024} MB).`;
+  }
+  if (file.type && !file.type.startsWith("image/")) {
+    return `${label} must be an image file (JPEG, PNG, WebP, or GIF).`;
+  }
+  return null;
+}
+
+async function uploadLaunchGraphic(
+  admin: ReturnType<typeof createAdminClient>,
+  novelId: string,
+  kind: "square" | "vertical",
+  file: File,
+): Promise<string> {
+  const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
+  const path = `launch-kit/${novelId}-${kind}-${Date.now()}.${ext}`;
+
+  const { error } = await admin.storage
+    .from("covers")
+    .upload(path, file, { contentType: file.type || undefined, upsert: false });
+
+  if (error) {
+    throw new Error(`${kind} graphic upload failed: ${error.message}`);
+  }
+
+  const {
+    data: { publicUrl },
+  } = admin.storage.from("covers").getPublicUrl(path);
+  return publicUrl;
+}
+
+export async function updateLaunchKit(
+  novelId: string,
+  squareFile: File | null,
+  verticalFile: File | null,
+  _prev: LaunchKitState,
+  formData: FormData,
+): Promise<LaunchKitState> {
+  try {
+    return await _updateLaunchKit(novelId, squareFile, verticalFile, formData);
+  } catch (err) {
+    console.error("[updateLaunchKit] unexpected error:", err);
+    return {
+      error:
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred. Please try again.",
+    };
+  }
+}
+
+async function _updateLaunchKit(
+  novelId: string,
+  squareFile: File | null,
+  verticalFile: File | null,
+  formData: FormData,
+): Promise<LaunchKitState> {
+  const auth = await requireWorkspace();
+  if (!auth.access) return { error: auth.error };
+
+  const admin = createAdminClient();
+  const { data: novel } = await admin
+    .from("novels")
+    .select("id, publisher_id, publication_type")
+    .eq("id", novelId)
+    .maybeSingle();
+
+  if (!novel) return { error: "That series no longer exists." };
+  if (novel.publication_type !== "original") {
+    return { error: "Launch kits are only available for Originals series." };
+  }
+  if (!ownsNovel(auth.access, novel.publisher_id)) {
+    return { error: "You can only manage your own series." };
+  }
+
+  const shortAnnouncement = String(formData.get("shortAnnouncement") ?? "").trim();
+  const longAnnouncement = String(formData.get("longAnnouncement") ?? "").trim();
+  if (shortAnnouncement.length > 500) {
+    return { error: "Short announcement must be 500 characters or fewer." };
+  }
+  if (longAnnouncement.length > 4000) {
+    return { error: "Long announcement must be 4000 characters or fewer." };
+  }
+
+  const referral = parseSupportLink(
+    String(formData.get("referralUrl") ?? ""),
+    "Referral",
+  );
+  if (referral && typeof referral === "object") return { error: referral.error };
+
+  const launchDateRaw = String(formData.get("launchDate") ?? "").trim();
+  let launchDate: string | null = null;
+  if (launchDateRaw) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(launchDateRaw)) {
+      return { error: "Enter a valid launch date." };
+    }
+    launchDate = launchDateRaw;
+  }
+
+  const square = resolveLaunchGraphicFile(squareFile, formData, "squareGraphic");
+  if (square) {
+    const err = validateLaunchGraphic(square, "Square cover graphic");
+    if (err) return { error: err };
+  }
+  const vertical = resolveLaunchGraphicFile(
+    verticalFile,
+    formData,
+    "verticalGraphic",
+  );
+  if (vertical) {
+    const err = validateLaunchGraphic(vertical, "Vertical mobile graphic");
+    if (err) return { error: err };
+  }
+
+  const { data: existing } = await admin
+    .from("novel_launch_kits")
+    .select("square_graphic_url, vertical_graphic_url")
+    .eq("novel_id", novelId)
+    .maybeSingle();
+
+  let squareUrl = existing?.square_graphic_url ?? null;
+  let verticalUrl = existing?.vertical_graphic_url ?? null;
+  if (square) {
+    squareUrl = await uploadLaunchGraphic(admin, novelId, "square", square);
+  }
+  if (vertical) {
+    verticalUrl = await uploadLaunchGraphic(admin, novelId, "vertical", vertical);
+  }
+
+  const payload = {
+    novel_id: novelId,
+    short_announcement: shortAnnouncement || null,
+    long_announcement: longAnnouncement || null,
+    square_graphic_url: squareUrl,
+    vertical_graphic_url: verticalUrl,
+    referral_url: referral,
+    launch_date: launchDate,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await admin.from("novel_launch_kits").upsert(payload, {
+    onConflict: "novel_id",
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath(workspaceInternalPath("/workspace/launch-kit"));
+  revalidatePath(
+    workspaceInternalPath(`/workspace/novels/${novelId}/launch-kit`),
+  );
+  return { message: "Launch kit saved." };
+}

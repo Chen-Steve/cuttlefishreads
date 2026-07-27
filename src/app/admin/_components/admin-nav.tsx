@@ -85,6 +85,8 @@ export function AdminNav({
     ...(kind === "translations"
       ? [{ href: `${base}/dashboard`, label: "Stats" }]
       : []),
+    // Launch Kit stays implemented under /workspace/launch-kit but is hidden
+    // from authors until the feature is ready to ship.
     { href: `${base}/comments`, label: "Comments" },
     { href: `${base}/settings`, label: "Settings" },
   ];

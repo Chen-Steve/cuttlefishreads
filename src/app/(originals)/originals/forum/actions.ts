@@ -247,8 +247,12 @@ export async function deletePost(postId: string): Promise<ForumActionState> {
 
   if (!post) return { error: "Post not found." };
 
+  // Soft-delete must use the service role: setting deleted_at makes the row
+  // fail the public SELECT policy, and PostgREST RETURNING then errors with
+  // "new row violates row-level security policy".
+  const admin = createAdminClient();
   const now = new Date().toISOString();
-  const { error } = await supabase
+  const { error } = await admin
     .from("forum_posts")
     .update({ deleted_at: now, updated_at: now })
     .eq("id", postId)
@@ -258,14 +262,15 @@ export async function deletePost(postId: string): Promise<ForumActionState> {
 
   // Nothing survives before the opening post, so if no earlier post remains
   // this was it — withdraw the thread rather than leave it headless.
-  const { count: earlierPosts } = await supabase
+  const { count: earlierPosts } = await admin
     .from("forum_posts")
     .select("id", { count: "exact", head: true })
     .eq("thread_id", post.thread_id)
+    .is("deleted_at", null)
     .lt("created_at", post.created_at);
 
   if ((earlierPosts ?? 0) === 0) {
-    await supabase
+    await admin
       .from("forum_threads")
       .update({ deleted_at: now, updated_at: now })
       .eq("id", post.thread_id)
