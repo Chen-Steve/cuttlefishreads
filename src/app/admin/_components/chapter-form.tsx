@@ -149,18 +149,51 @@ export function ChapterForm({
 
   return (
     <form action={action} className="flex flex-col gap-4">
-      <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <Link
-          href={`${base}/novels/${novelId}/chapters`}
-          className="inline-flex h-11 shrink-0 items-center gap-1 rounded-xl border border-border bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        >
-          <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
-          Back to chapters
-        </Link>
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-          {isEdit ? `Edit chapter ${initial!.number}` : "Add chapter"}
-        </h1>
-      </div>
+      {isEdit ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <Link
+              href={`${base}/novels/${novelId}/chapters`}
+              className="inline-flex h-11 shrink-0 items-center gap-1 rounded-xl border border-border bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
+              Back to chapters
+            </Link>
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+              Edit chapter {initial!.number}
+            </h1>
+          </div>
+          <button
+            type="submit"
+            disabled={pending}
+            className={submitButtonClass}
+          >
+            {submitLabel}
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <Link
+              href={`${base}/novels/${novelId}/chapters`}
+              className="inline-flex h-11 shrink-0 items-center gap-1 rounded-xl border border-border bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
+              Back to chapters
+            </Link>
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+              Add chapter
+            </h1>
+          </div>
+          <button
+            type="submit"
+            disabled={pending}
+            className={submitButtonClass}
+          >
+            {submitLabel}
+          </button>
+        </div>
+      )}
 
       {!isEdit && state.error && (
         <p
