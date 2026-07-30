@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { getAdminAccess } from "@/lib/access";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { AdminNav } from "./_components/admin-nav";
 
 export const metadata: Metadata = {
@@ -13,6 +14,16 @@ export const metadata: Metadata = {
     follow: false,
   },
 };
+
+async function hasOriginalNovel(userId: string): Promise<boolean> {
+  const admin = createAdminClient();
+  const { count } = await admin
+    .from("novels")
+    .select("id", { count: "exact", head: true })
+    .eq("publisher_id", userId)
+    .eq("publication_type", "original");
+  return (count ?? 0) > 0;
+}
 
 export default async function AdminLayout({
   children,
@@ -28,6 +39,12 @@ export default async function AdminLayout({
     redirect("/apply");
   }
 
+  // Only surface the Originals workspace switch once the translator has
+  // actually published something there (master admins always see it).
+  const canSwitchWorkspace =
+    access.isMasterAdmin ||
+    (access.isTranslator && (await hasOriginalNovel(access.userId)));
+
   return (
     <>
       <a
@@ -39,7 +56,7 @@ export default async function AdminLayout({
       <main className="flex-1">
         <AdminNav
           isMasterAdmin={access.isMasterAdmin}
-          canSwitchWorkspace={access.isMasterAdmin || access.isTranslator}
+          canSwitchWorkspace={canSwitchWorkspace}
         />
         <div id="workspace-content" tabIndex={-1}>
           {children}
