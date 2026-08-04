@@ -1,12 +1,10 @@
-"use client";
-
-import { useId, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
-import { useStoredOpen } from "@/hooks/use-stored-open";
-import { cn } from "@/lib/utils";
+import { HomeSectionToggle } from "@/components/home-section-toggle";
 
+/** Server section shell — only the collapse control is a client island. */
 export function HomeSection({
   title,
   storageKey,
@@ -24,31 +22,17 @@ export function HomeSection({
   children: ReactNode;
   className?: string;
 }) {
-  const { open, toggle } = useStoredOpen(storageKey, defaultOpen);
-  const panelId = useId();
+  const panelId = `home-section-panel-${storageKey}`;
 
   return (
     <section className={className}>
       <div className="mb-3 flex items-baseline justify-between gap-4">
-        <button
-          type="button"
-          aria-expanded={open}
-          aria-controls={panelId}
-          onClick={toggle}
-          className="inline-flex min-w-0 items-center gap-1.5 rounded-md text-left outline-offset-2 transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-accent"
-        >
-          <h2 className="text-lg font-semibold leading-none tracking-tight text-foreground">
-            {title}
-          </h2>
-          <ChevronDown
-            className={cn(
-              "size-4 shrink-0 text-muted transition-transform",
-              open && "rotate-180",
-            )}
-            strokeWidth={2}
-            aria-hidden
-          />
-        </button>
+        <HomeSectionToggle
+          title={title}
+          storageKey={storageKey}
+          panelId={panelId}
+          defaultOpen={defaultOpen}
+        />
         {href && linkLabel ? (
           <Link
             href={href}
@@ -60,7 +44,7 @@ export function HomeSection({
         ) : null}
       </div>
 
-      {open ? <div id={panelId}>{children}</div> : null}
+      <div id={panelId}>{children}</div>
     </section>
   );
 }

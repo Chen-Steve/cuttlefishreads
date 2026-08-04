@@ -15,13 +15,19 @@ import {
 } from "@/lib/reading-progress";
 import { cn } from "@/lib/utils";
 
+/** Fields needed to resume reading — keep the homepage client payload small. */
+export type ContinueReadingNovel = Pick<
+  Novel,
+  "id" | "slug" | "title" | "coverUrl" | "chapterCount" | "publicationType"
+>;
+
 type ContinueItem = {
-  novel: Novel;
+  novel: ContinueReadingNovel;
   chapterNumber: number;
 };
 
 function resolveContinueItems(
-  novels: Novel[],
+  novels: ContinueReadingNovel[],
   progress: ReadingProgressEntry[],
 ): ContinueItem[] {
   const bySlug = new Map(novels.map((novel) => [novel.slug, novel]));
@@ -81,7 +87,7 @@ export function ContinueReadingSection({
   novels,
   className = "mt-0 sm:mt-5",
 }: {
-  novels: Novel[];
+  novels: ContinueReadingNovel[];
   className?: string;
 }) {
   const [items, setItems] = useState<ContinueItem[] | null>(null);

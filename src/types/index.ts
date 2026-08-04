@@ -21,6 +21,10 @@ export interface Novel {
   tags: string[];
   status: "ongoing" | "completed" | "hiatus";
   chapterCount: number;
+  /** In-house view total (Originals). Translations typically stay 0. */
+  viewCount?: number;
+  /** Bookmark / library-add total — usable for translation popularity. */
+  libraryAddCount?: number;
   createdAt: string;
   updatedAt: string;
   publisherId?: string;

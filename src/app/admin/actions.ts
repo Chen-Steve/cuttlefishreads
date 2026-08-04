@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess, type AdminAccess } from "@/lib/access";
+import { revalidateNovelsDataCache } from "@/lib/data";
 import { slugify } from "@/lib/utils";
 import {
   workspaceBaseForPublicationType,
@@ -24,6 +25,7 @@ import {
 
 // Public pages that show a novel of the given type.
 function revalidatePublicPaths(publicationType: string | null | undefined) {
+  revalidateNovelsDataCache();
   if (publicationType === "original") {
     revalidatePath("/originals", "layout");
     revalidatePath("/series", "layout");

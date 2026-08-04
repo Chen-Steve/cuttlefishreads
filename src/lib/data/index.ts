@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache, revalidateTag } from "next/cache";
 import { cookies } from "next/headers";
 
 import type { Genre, Language, PublicationType } from "@/lib/constants";
@@ -111,6 +112,8 @@ function mapNovel(row: DbNovel): Novel {
     tags: row.tags ?? [],
     status: row.status as Novel["status"],
     chapterCount: row.chapters?.[0]?.count ?? 0,
+    viewCount: Number(row.view_count ?? 0),
+    libraryAddCount: Number(row.library_add_count ?? 0),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     publisherId: row.publisher_id ?? undefined,
@@ -212,19 +215,38 @@ const getUnlockedChapterNumbers = cache(
   },
 );
 
-async function fetchNovelRows(): Promise<DbNovel[]> {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("novels")
-    .select(NOVEL_LIST_COLUMNS)
-    .order("updated_at", { ascending: false });
+/** Tags for cross-request catalog caches (invalidate from admin mutations). */
+export const NOVELS_CATALOG_CACHE_TAG = "novels-catalog";
+export const RECENTLY_UPDATED_NOVELS_CACHE_TAG = "recently-updated-novels";
 
-  if (error) {
-    console.error("fetchNovelRows:", error);
-    return [];
-  }
-  return (data ?? []) as DbNovel[];
+const CATALOG_REVALIDATE_SECONDS = 60 * 5;
+
+/** Bust shared novel-list caches after create/update/delete/publish. */
+export function revalidateNovelsDataCache() {
+  revalidateTag(NOVELS_CATALOG_CACHE_TAG, "max");
+  revalidateTag(RECENTLY_UPDATED_NOVELS_CACHE_TAG, "max");
 }
+
+const fetchNovelRows = unstable_cache(
+  async (): Promise<DbNovel[]> => {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("novels")
+      .select(NOVEL_LIST_COLUMNS)
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      console.error("fetchNovelRows:", error);
+      return [];
+    }
+    return (data ?? []) as DbNovel[];
+  },
+  ["novels-catalog-rows"],
+  {
+    revalidate: CATALOG_REVALIDATE_SECONDS,
+    tags: [NOVELS_CATALOG_CACHE_TAG],
+  },
+);
 
 /** Request-scoped novel id (+ publisher / publication type) by slug. */
 const fetchNovelIdBySlug = cache(
@@ -332,10 +354,10 @@ async function fetchDbChapterSummaries(
   return data ?? [];
 }
 
-export async function getNovels(): Promise<Novel[]> {
+export const getNovels = cache(async (): Promise<Novel[]> => {
   const rows = await fetchNovelRows();
   return rows.map(mapNovel);
-}
+});
 
 export const getNovel = cache(
   async (slug: string): Promise<Novel | undefined> => {
@@ -385,6 +407,7 @@ export const getNovel = cache(
   },
 );
 
+/** Homepage featured ranking by GA4 all-time novel + chapter pageviews. */
 export async function getFeaturedNovels(
   novels?: Novel[],
 ): Promise<Novel[]> {
@@ -410,10 +433,32 @@ export async function getNewlyAddedNovels(
     .slice(0, NEWLY_ADDED_LIMIT);
 }
 
-function shuffleNovels(novels: Novel[]): Novel[] {
+function hashSeed(seed: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+/** Deterministic PRNG so underrated picks stay stable for a cache window. */
+function mulberry32(seed: number) {
+  let state = seed;
+  return () => {
+    state |= 0;
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffleNovels(novels: Novel[], seed: string): Novel[] {
   const items = [...novels];
+  const random = mulberry32(hashSeed(seed));
   for (let i = items.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     const current = items[i]!;
     items[i] = items[j]!;
     items[j] = current;
@@ -421,7 +466,7 @@ function shuffleNovels(novels: Novel[]): Novel[] {
   return items;
 }
 
-/** Random novels excluding featured and newly-added picks. */
+/** Daily-rotated picks excluding featured and newly-added. */
 export async function getUnderratedNovels(
   excludeSlugs: Iterable<string>,
   limit = UNDERRATED_LIMIT,
@@ -430,7 +475,8 @@ export async function getUnderratedNovels(
   const excluded = new Set(excludeSlugs);
   const catalog = novels ?? (await getNovels());
   const pool = catalog.filter((novel) => !excluded.has(novel.slug));
-  return shuffleNovels(pool).slice(0, limit);
+  const dayKey = new Date().toISOString().slice(0, 10);
+  return shuffleNovels(pool, `underrated:${dayKey}`).slice(0, limit);
 }
 
 export async function getCompletedNovels(
@@ -459,76 +505,98 @@ type DbRecentChapterRpcRow = {
 
 const RECENT_CHAPTERS_PER_NOVEL = 3;
 
-export async function getRecentlyUpdatedNovels(): Promise<RecentlyUpdatedNovel[]> {
-  const admin = createAdminClient();
-  const { data, error } = await admin.rpc("recently_updated_chapters", {
-    per_novel: RECENT_CHAPTERS_PER_NOVEL,
-  });
+type CachedRecentlyUpdatedNovel = Omit<RecentlyUpdatedNovel, "updatedAtLabel">;
 
-  if (error) {
-    console.error("getRecentlyUpdatedNovels:", error);
-    return [];
-  }
+const loadRecentlyUpdatedNovels = unstable_cache(
+  async (): Promise<CachedRecentlyUpdatedNovel[]> => {
+    const admin = createAdminClient();
+    const { data, error } = await admin.rpc("recently_updated_chapters", {
+      per_novel: RECENT_CHAPTERS_PER_NOVEL,
+    });
 
-  type NovelAccumulator = {
-    slug: string;
-    title: string;
-    coverUrl?: string;
-    chapters: Array<{
-      number: number;
-      title: string;
-      isAdvanced: boolean;
-      publishedAt: string;
-    }>;
-  };
-
-  const bySlug = new Map<string, NovelAccumulator>();
-
-  for (const row of (data ?? []) as DbRecentChapterRpcRow[]) {
-    let entry = bySlug.get(row.novel_slug);
-    if (!entry) {
-      entry = {
-        slug: row.novel_slug,
-        title: row.novel_title,
-        coverUrl: row.cover_url ?? undefined,
-        chapters: [],
-      };
-      bySlug.set(row.novel_slug, entry);
+    if (error) {
+      console.error("getRecentlyUpdatedNovels:", error);
+      return [];
     }
 
-    if (entry.chapters.length >= RECENT_CHAPTERS_PER_NOVEL) continue;
+    type NovelAccumulator = {
+      slug: string;
+      title: string;
+      coverUrl?: string;
+      chapters: Array<{
+        number: number;
+        title: string;
+        isAdvanced: boolean;
+        publishedAt: string;
+      }>;
+    };
 
-    entry.chapters.push({
-      number: row.chapter_number,
-      title: row.chapter_title,
-      isAdvanced: !row.is_free,
-      publishedAt: row.published_at,
-    });
-  }
+    const bySlug = new Map<string, NovelAccumulator>();
 
-  return [...bySlug.values()]
-    .map((entry): RecentlyUpdatedNovel | null => {
-      const latest = entry.chapters[0];
-      if (!latest) return null;
+    for (const row of (data ?? []) as DbRecentChapterRpcRow[]) {
+      let entry = bySlug.get(row.novel_slug);
+      if (!entry) {
+        entry = {
+          slug: row.novel_slug,
+          title: row.novel_title,
+          coverUrl: row.cover_url ?? undefined,
+          chapters: [],
+        };
+        bySlug.set(row.novel_slug, entry);
+      }
 
-      return {
-        slug: entry.slug,
-        title: entry.title,
-        coverUrl: entry.coverUrl,
-        recentChapters: entry.chapters.map(({ number, title, isAdvanced }) => ({
-          number,
-          title,
-          isAdvanced,
-        })),
-        updatedAt: latest.publishedAt,
-        updatedAtLabel: formatRelativeDate(latest.publishedAt),
-      };
-    })
-    .filter((novel): novel is RecentlyUpdatedNovel => novel !== null)
-    .sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-    );
-}
+      if (entry.chapters.length >= RECENT_CHAPTERS_PER_NOVEL) continue;
+
+      entry.chapters.push({
+        number: row.chapter_number,
+        title: row.chapter_title,
+        isAdvanced: !row.is_free,
+        publishedAt: row.published_at,
+      });
+    }
+
+    return [...bySlug.values()]
+      .map((entry): CachedRecentlyUpdatedNovel | null => {
+        const latest = entry.chapters[0];
+        if (!latest) return null;
+
+        return {
+          slug: entry.slug,
+          title: entry.title,
+          coverUrl: entry.coverUrl,
+          recentChapters: entry.chapters.map(
+            ({ number, title, isAdvanced }) => ({
+              number,
+              title,
+              isAdvanced,
+            }),
+          ),
+          updatedAt: latest.publishedAt,
+        };
+      })
+      .filter((novel): novel is CachedRecentlyUpdatedNovel => novel !== null)
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
+  },
+  ["recently-updated-novels"],
+  {
+    revalidate: CATALOG_REVALIDATE_SECONDS,
+    tags: [RECENTLY_UPDATED_NOVELS_CACHE_TAG],
+  },
+);
+
+export const getRecentlyUpdatedNovels = cache(
+  async (): Promise<RecentlyUpdatedNovel[]> => {
+    const rows = await loadRecentlyUpdatedNovels();
+    // Relative labels stay request-fresh; only the RPC payload is cached.
+    return rows.map((novel) => ({
+      ...novel,
+      updatedAtLabel: formatRelativeDate(novel.updatedAt),
+    }));
+  },
+);
 
 export const getBookmarkedSlugs = cache(async (): Promise<Set<string>> => {
   const claims = await getAuthClaims();

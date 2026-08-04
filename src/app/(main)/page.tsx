@@ -37,24 +37,33 @@ export default async function Home() {
   ]);
   const catalog = allNovels.filter((novel) => !isOriginalNovel(novel));
   const translationSlugs = new Set(catalog.map((novel) => novel.slug));
-  const recentlyUpdated = allRecentlyUpdated.filter(
-    (novel) => translationSlugs.has(novel.slug),
+  const recentlyUpdated = allRecentlyUpdated.filter((novel) =>
+    translationSlugs.has(novel.slug),
   );
-  const [featured, newlyAdded] = await Promise.all([
+
+  // Section sorts are in-memory once the catalog is loaded.
+  const [featured, newlyAdded, completed] = await Promise.all([
     getFeaturedNovels(catalog),
     getNewlyAddedNovels(catalog),
-  ]);
-  const [underrated, completed] = await Promise.all([
-    getUnderratedNovels(
-      [
-        ...featured.map((novel) => novel.slug),
-        ...newlyAdded.map((novel) => novel.slug),
-      ],
-      undefined,
-      catalog,
-    ),
     getCompletedNovels(catalog),
   ]);
+  const underrated = await getUnderratedNovels(
+    [
+      ...featured.map((novel) => novel.slug),
+      ...newlyAdded.map((novel) => novel.slug),
+    ],
+    undefined,
+    catalog,
+  );
+
+  const continueNovels = catalog.map((novel) => ({
+    id: novel.id,
+    slug: novel.slug,
+    title: novel.title,
+    coverUrl: novel.coverUrl,
+    chapterCount: novel.chapterCount,
+    publicationType: novel.publicationType,
+  }));
 
   return (
     <PageContainer className="pt-3 pb-6 sm:py-8 lg:py-10">
@@ -101,7 +110,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <ContinueReadingSection novels={catalog} className="mt-0 sm:mt-5" />
+      <ContinueReadingSection novels={continueNovels} className="mt-0 sm:mt-5" />
 
       <LoginFixBulletin />
 
@@ -115,7 +124,7 @@ export default async function Home() {
         <FeaturedNovels novels={featured} />
       </HomeSection>
 
-      <HomeDiscoveryLinks novelSlugs={catalog.map((novel) => novel.slug)} />
+      <HomeDiscoveryLinks hasNovels={catalog.length > 0} />
 
       <HomeSection
         title="Newly added"
@@ -141,7 +150,11 @@ export default async function Home() {
         title="Recently updated"
         storageKey="cf-home-section-recently-updated"
       >
-        <PaginatedRecentlyUpdatedList novels={recentlyUpdated} pageSize={8} />
+        <PaginatedRecentlyUpdatedList
+          novels={recentlyUpdated}
+          pageSize={8}
+          maxPages={5}
+        />
       </HomeSection>
 
       {completed.length > 0 ? (

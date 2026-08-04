@@ -1,7 +1,6 @@
 import { cache } from "react";
 import {
   getCompletedNovels,
-  getInHouseViewsBySlug,
   getNewlyAddedNovels,
   getNovels,
   getRecentlyUpdatedNovels,
@@ -27,11 +26,10 @@ export const getUserOriginalSeries = cache(async function (
   return (await getUserCreatedNovels(userId)).filter(isOriginalNovel);
 });
 
-async function getTrendingOriginals(catalog: Novel[]): Promise<Novel[]> {
+function getTrendingOriginals(catalog: Novel[]): Novel[] {
   if (catalog.length === 0) return [];
-  const viewsBySlug = await getInHouseViewsBySlug(catalog.map((n) => n.slug));
   return [...catalog]
-    .sort((a, b) => (viewsBySlug[b.slug] ?? 0) - (viewsBySlug[a.slug] ?? 0))
+    .sort((a, b) => (b.viewCount ?? 0) - (a.viewCount ?? 0))
     .slice(0, TRENDING_LIMIT);
 }
 
@@ -39,8 +37,7 @@ export async function getOriginalsHomeData() {
   const catalog = await getOriginalsCatalog();
   const slugs = new Set(catalog.map((n) => n.slug));
 
-  const [featured, newlyAdded, recentlyUpdated, completed] = await Promise.all([
-    getTrendingOriginals(catalog),
+  const [newlyAdded, recentlyUpdated, completed] = await Promise.all([
     getNewlyAddedNovels(catalog),
     getRecentlyUpdatedNovels().then((rows) =>
       rows.filter((n) => slugs.has(n.slug)),
@@ -48,5 +45,11 @@ export async function getOriginalsHomeData() {
     getCompletedNovels(catalog),
   ]);
 
-  return { catalog, featured, newlyAdded, recentlyUpdated, completed };
+  return {
+    catalog,
+    featured: getTrendingOriginals(catalog),
+    newlyAdded,
+    recentlyUpdated,
+    completed,
+  };
 }

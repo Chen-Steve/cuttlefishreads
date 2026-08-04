@@ -1,12 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dices } from "lucide-react";
 
+import { getRandomTranslationHref } from "@/app/(main)/home-actions";
 import { DiscordIcon } from "@/components/discord-icon";
 import { DitheredImageBackground } from "@/components/dithered-image-background";
 import { SITE } from "@/lib/constants";
-import { novelHref } from "@/lib/catalog-paths";
 
 function TileBackground({ src }: { src: string }) {
   return (
@@ -21,16 +22,22 @@ function TileBackground({ src }: { src: string }) {
 }
 
 export function HomeDiscoveryLinks({
-  novelSlugs,
+  hasNovels,
 }: {
-  novelSlugs: string[];
+  hasNovels: boolean;
 }) {
   const router = useRouter();
+  const [busy, setBusy] = useState(false);
 
-  function openRandomNovel() {
-    if (novelSlugs.length === 0) return;
-    const slug = novelSlugs[Math.floor(Math.random() * novelSlugs.length)]!;
-    router.push(novelHref(slug));
+  async function openRandomNovel() {
+    if (!hasNovels || busy) return;
+    setBusy(true);
+    try {
+      const href = await getRandomTranslationHref();
+      if (href) router.push(href);
+    } finally {
+      setBusy(false);
+    }
   }
 
   const tileClass =
@@ -43,8 +50,8 @@ export function HomeDiscoveryLinks({
     >
       <button
         type="button"
-        onClick={openRandomNovel}
-        disabled={novelSlugs.length === 0}
+        onClick={() => void openRandomNovel()}
+        disabled={!hasNovels || busy}
         className={`${tileClass} hover:text-accent disabled:cursor-not-allowed disabled:opacity-50`}
       >
         <TileBackground src="/background1.jpg" />

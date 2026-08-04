@@ -121,6 +121,7 @@ export default async function OriginalsHomePage() {
             <PaginatedRecentlyUpdatedList
               novels={recentlyUpdated}
               pageSize={6}
+              maxPages={5}
               catalogBase="series"
             />
           </HomeSection>

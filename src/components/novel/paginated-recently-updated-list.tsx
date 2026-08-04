@@ -47,17 +47,24 @@ function buildPageRange(
 export function PaginatedRecentlyUpdatedList({
   novels,
   pageSize = 8,
+  /** Caps client payload / pagination depth (e.g. 5 → at most 5 pages). */
+  maxPages,
   catalogBase = "novels",
 }: {
   novels: RecentlyUpdatedNovel[];
   pageSize?: number;
+  maxPages?: number;
   catalogBase?: import("@/lib/catalog-paths").CatalogBase;
 }) {
+  const limited =
+    maxPages != null && maxPages > 0
+      ? novels.slice(0, pageSize * maxPages)
+      : novels;
   const [page, setPage] = useState(0);
-  const totalPages = Math.max(1, Math.ceil(novels.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(limited.length / pageSize));
   const safePage = Math.min(page, totalPages - 1);
   const start = safePage * pageSize;
-  const pageNovels = novels.slice(start, start + pageSize);
+  const pageNovels = limited.slice(start, start + pageSize);
   const pageItems = buildPageRange(safePage, totalPages);
 
   return (
