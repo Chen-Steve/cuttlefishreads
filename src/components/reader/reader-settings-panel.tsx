@@ -3,8 +3,10 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from "react";
 import { Check, ChevronDown, Minus, Plus, RotateCcw, Settings } from "lucide-react";
@@ -33,10 +35,13 @@ function getFocusable(container: HTMLElement) {
 
 export function ReaderSettingsPanel({
   placement = "down",
+  navRef,
 }: {
   placement?: "up" | "down";
+  navRef: React.RefObject<HTMLElement | null>;
 }) {
   const [open, setOpen] = useState(false);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties | undefined>();
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -111,6 +116,36 @@ export function ReaderSettingsPanel({
     };
   }, [open]);
 
+  useLayoutEffect(() => {
+    if (!open) {
+      setPanelStyle(undefined);
+      return;
+    }
+
+    function updatePosition() {
+      const nav = navRef.current;
+      if (!nav) return;
+
+      const rect = nav.getBoundingClientRect();
+      const gap = 8;
+      setPanelStyle({
+        width: rect.width,
+        left: rect.left,
+        ...(placement === "up"
+          ? { bottom: window.innerHeight - rect.top + gap, top: "auto" }
+          : { top: rect.bottom + gap, bottom: "auto" }),
+      });
+    }
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, placement, navRef]);
+
   return (
     <div ref={ref} className="relative">
       <button
@@ -138,10 +173,8 @@ export function ReaderSettingsPanel({
           id={dialogId}
           aria-labelledby={titleId}
           tabIndex={-1}
-          className={cn(
-            "absolute left-1/2 z-30 w-[min(17.5rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-border bg-surface p-2.5 shadow-lg outline-none",
-            placement === "up" ? "bottom-full mb-2" : "top-full mt-2",
-          )}
+          style={panelStyle}
+          className="fixed z-30 rounded-2xl border border-border bg-surface p-2.5 shadow-lg outline-none"
         >
           <div className="mb-1 flex items-center justify-between gap-2 px-0.5">
             <h2

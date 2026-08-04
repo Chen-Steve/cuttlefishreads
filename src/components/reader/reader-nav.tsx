@@ -1,3 +1,6 @@
+"use client";
+
+import { useRef } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Chapter, ChapterSummary } from "@/types";
@@ -26,8 +29,11 @@ export function ReaderNav({
   showSettings?: boolean;
   catalogBase?: CatalogBase;
 }) {
+  const navRef = useRef<HTMLElement>(null);
+
   return (
     <nav
+      ref={navRef}
       aria-label="Chapter navigation"
       className="mx-auto flex w-full max-w-md items-center gap-0.5 rounded-2xl border border-border/80 bg-surface/90 p-1 shadow-sm"
     >
@@ -48,9 +54,10 @@ export function ReaderNav({
           currentChapter={currentChapter}
           placement={menuPlacement}
           catalogBase={catalogBase}
+          navRef={navRef}
         />
         {showSettings ? (
-          <ReaderSettingsPanel placement={menuPlacement} />
+          <ReaderSettingsPanel placement={menuPlacement} navRef={navRef} />
         ) : null}
       </div>
 

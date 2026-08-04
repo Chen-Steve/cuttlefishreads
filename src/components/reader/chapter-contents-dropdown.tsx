@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type RefObject,
 } from "react";
 import Link from "next/link";
 import { ChevronDown, List, Lock } from "lucide-react";
@@ -15,15 +16,9 @@ import type { ChapterSummary } from "@/types";
 import { chapterHref } from "@/lib/catalog-paths";
 import { readerChromeBtnClass } from "./reader-chrome";
 
-const TITLE_DISPLAY_MAX = 10;
-
 function chapterListLabel(chapter: ChapterSummary): string {
   if (!chapter.title) return `Chapter ${chapter.number}`;
-  const title =
-    chapter.title.length > TITLE_DISPLAY_MAX
-      ? `${chapter.title.slice(0, TITLE_DISPLAY_MAX)}…`
-      : chapter.title;
-  return `Chapter ${chapter.number}: ${title}`;
+  return `Chapter ${chapter.number}: ${chapter.title}`;
 }
 
 export function ChapterContentsDropdown({
@@ -32,17 +27,17 @@ export function ChapterContentsDropdown({
   currentChapter,
   placement = "down",
   catalogBase = "novels",
+  navRef,
 }: {
   slug: string;
   chapters: ChapterSummary[];
   currentChapter: number;
   placement?: "up" | "down";
   catalogBase?: import("@/lib/catalog-paths").CatalogBase;
+  navRef: RefObject<HTMLElement | null>;
 }) {
   const [open, setOpen] = useState(false);
-  const [mobilePanelStyle, setMobilePanelStyle] = useState<
-    CSSProperties | undefined
-  >();
+  const [panelStyle, setPanelStyle] = useState<CSSProperties | undefined>();
   const ref = useRef<HTMLDivElement>(null);
   const currentRef = useRef<HTMLAnchorElement>(null);
 
@@ -70,30 +65,26 @@ export function ChapterContentsDropdown({
     }
   }, [open]);
 
-  // On small screens, pin the menu to the viewport center so it doesn’t sit
-  // under a slightly off-center trigger or clip the screen edges.
+  // Match the chapter nav bar width and position on all screen sizes.
   useLayoutEffect(() => {
     if (!open) {
-      setMobilePanelStyle(undefined);
+      setPanelStyle(undefined);
       return;
     }
 
     function updatePosition() {
-      const trigger = ref.current;
-      if (!trigger) return;
+      const nav = navRef.current;
+      if (!nav) return;
 
-      if (window.matchMedia("(min-width: 640px)").matches) {
-        setMobilePanelStyle(undefined);
-        return;
-      }
-
-      const rect = trigger.getBoundingClientRect();
-      const gap = 6;
-      setMobilePanelStyle(
-        placement === "up"
+      const rect = nav.getBoundingClientRect();
+      const gap = 8;
+      setPanelStyle({
+        width: rect.width,
+        left: rect.left,
+        ...(placement === "up"
           ? { bottom: window.innerHeight - rect.top + gap, top: "auto" }
-          : { top: rect.bottom + gap, bottom: "auto" },
-      );
+          : { top: rect.bottom + gap, bottom: "auto" }),
+      });
     }
 
     updatePosition();
@@ -103,7 +94,7 @@ export function ChapterContentsDropdown({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [open, placement]);
+  }, [open, placement, navRef]);
 
   return (
     <div ref={ref} className="relative">
@@ -133,15 +124,8 @@ export function ChapterContentsDropdown({
         <div
           role="listbox"
           aria-label="Chapters"
-          style={mobilePanelStyle}
-          className={cn(
-            "z-30 max-h-72 w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 overflow-y-auto rounded-2xl border border-border bg-surface shadow-lg",
-            "fixed left-1/2",
-            "sm:absolute sm:w-80",
-            placement === "up"
-              ? "sm:top-auto sm:bottom-full sm:mb-2"
-              : "sm:top-full sm:bottom-auto sm:mt-2",
-          )}
+          style={panelStyle}
+          className="fixed z-30 max-h-72 overflow-y-auto rounded-2xl border border-border bg-surface shadow-lg"
         >
           {chapters.map((chapter) => {
             const isCurrent = chapter.number === currentChapter;
