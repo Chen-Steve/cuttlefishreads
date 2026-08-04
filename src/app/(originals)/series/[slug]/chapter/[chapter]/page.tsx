@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { CommentSection } from "@/components/comments";
+import { CommentSection, CommentsFallback } from "@/components/comments";
 import { PageContainer } from "@/components/page-container";
 import {
   ChapterContent,
   ChapterReaderHeader,
   ImmersiveChapterShell,
-  ReaderNav,
   ReadingEngagementTracker,
   ReadingProgressTracker,
   TranslatorNote,
@@ -92,6 +92,9 @@ export default async function OriginalsChapterPage({
       : undefined;
 
   const freeChapters = chapters.map((c) => ({ ...c, locked: false }));
+  const chapterTitles = Object.fromEntries(
+    freeChapters.map((c) => [c.number, c.title || `Chapter ${c.number}`]),
+  );
 
   return (
     <PageContainer as="article" width="narrow" className="pt-4 sm:pt-6 lg:pt-6">
@@ -131,60 +134,52 @@ export default async function OriginalsChapterPage({
             novelTitle={novel.title}
             chapterNumber={chapterNumber}
             chapterTitle={readable.title}
-            previous={previous}
-            next={next}
-            chapters={freeChapters}
             catalogBase="series"
           />
         }
+        nav={{
+          slug,
+          previous,
+          next,
+          chapters: freeChapters,
+          currentChapter: chapterNumber,
+          catalogBase: "series",
+        }}
         content={<ChapterContent paragraphs={readable.content} />}
-        bottomNav={
-          <ReaderNav
-            slug={slug}
-            previous={previous}
-            next={next}
-            chapters={freeChapters}
-            currentChapter={chapterNumber}
-            menuPlacement="up"
-            catalogBase="series"
-          />
-        }
-        afterContent={
-          <>
-            <TranslatorNote
-              name={
-                novel.translator || novel.translatorUsername || "The author"
-              }
-              username={novel.translatorUsername}
-              profileHref={
-                novel.translatorUsername
-                  ? creatorPublicOrigin(novel.translatorUsername)
-                  : undefined
-              }
-              note={
-                readable.useGlobalTranslatorNote
-                  ? (novel.translatorGlobalNote ?? null)
-                  : readable.translatorNote
-              }
-              kofiUrl={novel.translatorKofiUrl}
-              patreonUrl={novel.translatorPatreonUrl}
-            />
-
-            <hr className="my-6 border-border" />
-
-            <section className="mb-10">
-              <h2 className="mb-4 text-lg font-semibold tracking-tight text-foreground">
-                Comments
-              </h2>
-              <CommentSection
-                mode="chapter"
-                novelSlug={slug}
-                chapterNumber={chapterNumber}
-              />
-            </section>
-          </>
-        }
       />
+
+      <TranslatorNote
+        name={novel.translator || novel.translatorUsername || "The author"}
+        username={novel.translatorUsername}
+        profileHref={
+          novel.translatorUsername
+            ? creatorPublicOrigin(novel.translatorUsername)
+            : undefined
+        }
+        note={
+          readable.useGlobalTranslatorNote
+            ? (novel.translatorGlobalNote ?? null)
+            : readable.translatorNote
+        }
+        kofiUrl={novel.translatorKofiUrl}
+        patreonUrl={novel.translatorPatreonUrl}
+      />
+
+      <hr className="my-6 border-border" />
+
+      <section className="mb-10">
+        <h2 className="mb-4 text-lg font-semibold tracking-tight text-foreground">
+          Comments
+        </h2>
+        <Suspense fallback={<CommentsFallback />}>
+          <CommentSection
+            mode="chapter"
+            novelSlug={slug}
+            chapterNumber={chapterNumber}
+            chapterTitles={chapterTitles}
+          />
+        </Suspense>
+      </section>
     </PageContainer>
   );
 }

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
 import { BookOpen, Coffee, Eye, Heart } from "lucide-react";
-import { CommentSection } from "@/components/comments";
+import { CommentSection, CommentsFallback } from "@/components/comments";
 import {
   BookmarkButton,
   BulkBuyChapters,
@@ -311,7 +312,18 @@ export default async function NovelDetailPage({
         <h2 className="mb-4 text-lg font-semibold tracking-tight text-foreground">
           Comments
         </h2>
-        <CommentSection mode="novel" novelSlug={novel.slug} />
+        <Suspense fallback={<CommentsFallback />}>
+          <CommentSection
+            mode="novel"
+            novelSlug={novel.slug}
+            chapterTitles={Object.fromEntries(
+              chapters.map((c) => [
+                c.number,
+                c.title || `Chapter ${c.number}`,
+              ]),
+            )}
+          />
+        </Suspense>
       </section>
     </PageContainer>
   );

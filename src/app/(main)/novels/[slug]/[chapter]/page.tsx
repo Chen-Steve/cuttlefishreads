@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
-import { CommentSection } from "@/components/comments";
+import { CommentSection, CommentsFallback } from "@/components/comments";
 import { PageContainer } from "@/components/page-container";
 import {
   ChapterContent,
   ChapterReaderHeader,
   ChapterUnlockGate,
   ImmersiveChapterShell,
-  ReaderNav,
   ReadingProgressTracker,
   TranslatorNote,
 } from "@/components/reader";
@@ -82,12 +82,10 @@ export default async function ChapterReaderPage({
   const { slug, chapter } = await params;
   const chapterNumber = Number(chapter);
 
-  const [novel, current, chapters, userCoins, isLoggedIn] = await Promise.all([
+  const [novel, current, chapters] = await Promise.all([
     getNovel(slug),
     getChapter(slug, chapterNumber),
     getChapterSummaries(slug),
-    getUserCoins(),
-    isUserAuthenticated(),
   ]);
 
   if (!novel || !current || Number.isNaN(chapterNumber)) {
@@ -107,6 +105,16 @@ export default async function ChapterReaderPage({
       ? { number: chapters[index + 1]!.number }
       : undefined;
 
+  const unlockState = current.locked
+    ? await Promise.all([getUserCoins(), isUserAuthenticated()])
+    : null;
+  const userCoins = unlockState?.[0] ?? 0;
+  const isLoggedIn = unlockState?.[1] ?? false;
+
+  const chapterTitles = Object.fromEntries(
+    chapters.map((c) => [c.number, c.title || `Chapter ${c.number}`]),
+  );
+
   return (
     <PageContainer as="article" width="narrow" className="pt-4 sm:pt-6 lg:pt-6">
       <span data-hide-main-footer hidden />
@@ -120,11 +128,16 @@ export default async function ChapterReaderPage({
             novelTitle={novel.title}
             chapterNumber={chapterNumber}
             chapterTitle={current.title}
-            previous={previous}
-            next={next}
-            chapters={chapters}
           />
         }
+        nav={{
+          slug,
+          previous,
+          next,
+          chapters,
+          currentChapter: chapterNumber,
+          showBottomNav: !current.locked,
+        }}
         content={
           current.locked ? (
             <ChapterUnlockGate
@@ -139,51 +152,41 @@ export default async function ChapterReaderPage({
             <ChapterContent paragraphs={current.content} />
           )
         }
-        bottomNav={
-          !current.locked ? (
-            <ReaderNav
-              slug={slug}
-              previous={previous}
-              next={next}
-              chapters={chapters}
-              currentChapter={chapterNumber}
-              menuPlacement="up"
-            />
-          ) : undefined
-        }
-        afterContent={
-          !current.locked ? (
-            <>
-              <TranslatorNote
-                name={
-                  novel.translator || novel.translatorUsername || "The translator"
-                }
-                username={novel.translatorUsername}
-                note={
-                  current.useGlobalTranslatorNote
-                    ? (novel.translatorGlobalNote ?? null)
-                    : current.translatorNote
-                }
-                kofiUrl={novel.translatorKofiUrl}
-                patreonUrl={novel.translatorPatreonUrl}
-              />
-
-              <hr className="my-6 border-border" />
-
-              <section className="mb-10">
-                <h2 className="mb-4 text-lg font-semibold tracking-tight text-foreground">
-                  Comments
-                </h2>
-                <CommentSection
-                  mode="chapter"
-                  novelSlug={slug}
-                  chapterNumber={chapterNumber}
-                />
-              </section>
-            </>
-          ) : undefined
-        }
       />
+
+      {!current.locked ? (
+        <>
+          <TranslatorNote
+            name={
+              novel.translator || novel.translatorUsername || "The translator"
+            }
+            username={novel.translatorUsername}
+            note={
+              current.useGlobalTranslatorNote
+                ? (novel.translatorGlobalNote ?? null)
+                : current.translatorNote
+            }
+            kofiUrl={novel.translatorKofiUrl}
+            patreonUrl={novel.translatorPatreonUrl}
+          />
+
+          <hr className="my-6 border-border" />
+
+          <section className="mb-10">
+            <h2 className="mb-4 text-lg font-semibold tracking-tight text-foreground">
+              Comments
+            </h2>
+            <Suspense fallback={<CommentsFallback />}>
+              <CommentSection
+                mode="chapter"
+                novelSlug={slug}
+                chapterNumber={chapterNumber}
+                chapterTitles={chapterTitles}
+              />
+            </Suspense>
+          </section>
+        </>
+      ) : null}
     </PageContainer>
   );
 }

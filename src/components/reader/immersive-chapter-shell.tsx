@@ -10,9 +10,24 @@ import {
 import { usePathname } from "next/navigation";
 
 import { useReaderSettings } from "@/hooks/use-reader-settings";
+import type { CatalogBase } from "@/lib/catalog-paths";
 import { cn } from "@/lib/utils";
+import type { Chapter, ChapterSummary } from "@/types";
 
-const CHAPTER_PATH = /^\/novels\/[^/]+\/\d+\/?$/;
+import { ReaderNav } from "./reader-nav";
+
+const CHAPTER_PATH = /^\/(?:novels|series)\/[^/]+\/(?:chapter\/)?\d+\/?$/;
+
+export type ChapterReaderNavConfig = {
+  slug: string;
+  previous?: Pick<Chapter, "number">;
+  next?: Pick<Chapter, "number">;
+  chapters: ChapterSummary[];
+  currentChapter: number;
+  catalogBase?: CatalogBase;
+  /** Bottom prev/next bar; omit on locked chapters. Default true. */
+  showBottomNav?: boolean;
+};
 
 function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) return false;
@@ -33,18 +48,18 @@ export function useImmersiveHidesSiteHeader() {
 export function ImmersiveChapterShell({
   header,
   content,
-  bottomNav,
-  afterContent,
+  nav,
 }: {
   header: ReactNode;
   content: ReactNode;
-  bottomNav?: ReactNode;
-  afterContent?: ReactNode;
+  /** Single chapters payload shared by top and bottom nav. */
+  nav?: ChapterReaderNavConfig;
 }) {
   const { settings } = useReaderSettings();
   const immersive = settings.immersive;
   const [showChrome, setShowChrome] = useState(true);
   const immersiveEnabledRef = useRef(false);
+  const showBottomNav = Boolean(nav && nav.showBottomNav !== false);
 
   useEffect(() => {
     if (!immersiveEnabledRef.current) {
@@ -74,14 +89,32 @@ export function ImmersiveChapterShell({
           chromeHidden && "pointer-events-none -translate-y-full",
         )}
       >
-        <div className={cn(immersive && "mx-auto w-full max-w-2xl")}>{header}</div>
+        <div
+          className={cn(
+            "flex flex-col items-center gap-2.5",
+            immersive && "mx-auto w-full max-w-2xl",
+          )}
+        >
+          {header}
+          {nav ? (
+            <ReaderNav
+              slug={nav.slug}
+              previous={nav.previous}
+              next={nav.next}
+              chapters={nav.chapters}
+              currentChapter={nav.currentChapter}
+              showSettings
+              catalogBase={nav.catalogBase}
+            />
+          ) : null}
+        </div>
       </header>
 
       {immersive && showChrome ? <div className="h-36 sm:h-40" aria-hidden /> : null}
 
       <div onClick={onContentClick}>{content}</div>
 
-      {bottomNav ? (
+      {showBottomNav && nav ? (
         <div
           data-reader-chrome={immersive ? "" : undefined}
           className={cn(
@@ -92,16 +125,22 @@ export function ImmersiveChapterShell({
           )}
         >
           <div className={cn(immersive && "mx-auto w-full max-w-2xl")}>
-            {bottomNav}
+            <ReaderNav
+              slug={nav.slug}
+              previous={nav.previous}
+              next={nav.next}
+              chapters={nav.chapters}
+              currentChapter={nav.currentChapter}
+              menuPlacement="up"
+              catalogBase={nav.catalogBase}
+            />
           </div>
         </div>
       ) : null}
 
-      {immersive && showChrome && bottomNav ? (
+      {immersive && showChrome && showBottomNav ? (
         <div className="h-16" aria-hidden />
       ) : null}
-
-      {afterContent}
     </>
   );
 }

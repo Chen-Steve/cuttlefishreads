@@ -8,26 +8,33 @@ import {
 
 import { CommentsPanel } from "./comments-panel";
 
-export async function CommentSection({
-  mode,
-  novelSlug,
-  chapterNumber,
-}: {
-  mode: "novel" | "chapter";
-  novelSlug: string;
-  chapterNumber?: number;
-}) {
-  const [isLoggedIn, summaries] = await Promise.all([
-    isUserAuthenticated(),
-    getChapterSummaries(novelSlug),
-  ]);
-
-  const chapterTitles = Object.fromEntries(
+function titlesFromSummaries(
+  summaries: { number: number; title: string }[],
+): Record<number, string> {
+  return Object.fromEntries(
     summaries.map((chapter) => [
       chapter.number,
       chapter.title || `Chapter ${chapter.number}`,
     ]),
   );
+}
+
+export async function CommentSection({
+  mode,
+  novelSlug,
+  chapterNumber,
+  chapterTitles: chapterTitlesProp,
+}: {
+  mode: "novel" | "chapter";
+  novelSlug: string;
+  chapterNumber?: number;
+  /** When provided, skips a redundant chapter-summaries fetch. */
+  chapterTitles?: Record<number, string>;
+}) {
+  const isLoggedIn = await isUserAuthenticated();
+  const chapterTitles =
+    chapterTitlesProp ??
+    titlesFromSummaries(await getChapterSummaries(novelSlug));
 
   if (mode === "chapter") {
     if (chapterNumber == null) return null;

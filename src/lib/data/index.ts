@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 
 import type { Genre, Language, PublicationType } from "@/lib/constants";
@@ -163,20 +164,53 @@ function mapChapterListItem(
   };
 }
 
-async function getUnlockedChapterNumbers(
-  slug: string,
-): Promise<Set<number>> {
+type CurrentUser = {
+  id: string;
+  isAdmin: boolean;
+  roles: ProfileRole[];
+  role: "user" | "translator";
+};
+
+/** Request-scoped current user (auth claims + profile roles). */
+const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
+  const claims = await getAuthClaims();
+  if (!claims) return null;
+
+  const id = claims.sub as string;
   const supabase = createClient(await cookies());
-  const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims) return new Set();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", id)
+    .maybeSingle();
 
-  const { data } = await supabase
-    .from("chapter_unlocks")
-    .select("chapter_number")
-    .eq("novel_slug", slug);
+  const roles = parseProfileRoles({
+    role: profile?.role as string | null | undefined,
+  });
 
-  return new Set((data ?? []).map((r) => r.chapter_number));
-}
+  return {
+    id,
+    isAdmin: isAdminEmail(claims.email as string | undefined),
+    roles,
+    role: hasProfileRole(roles, "translator") ? "translator" : "user",
+  };
+});
+
+/** Request-scoped unlock set for a novel. */
+const getUnlockedChapterNumbers = cache(
+  async (slug: string): Promise<Set<number>> => {
+    const claims = await getAuthClaims();
+    if (!claims) return new Set();
+
+    const supabase = createClient(await cookies());
+    const { data } = await supabase
+      .from("chapter_unlocks")
+      .select("chapter_number")
+      .eq("novel_slug", slug);
+
+    return new Set((data ?? []).map((r) => r.chapter_number));
+  },
+);
 
 async function fetchNovelRows(): Promise<DbNovel[]> {
   const admin = createAdminClient();
@@ -192,27 +226,30 @@ async function fetchNovelRows(): Promise<DbNovel[]> {
   return (data ?? []) as DbNovel[];
 }
 
-async function fetchNovelIdBySlug(
-  slug: string,
-): Promise<{
-  id: string;
-  publisher_id: string | null;
-  publication_type: PublicationType;
-} | null> {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase
-    .from("novels")
-    .select("id, publisher_id, publication_type")
-    .eq("slug", slug)
-    .maybeSingle();
-  if (!data) return null;
-  return {
-    id: data.id,
-    publisher_id: data.publisher_id,
-    publication_type:
-      (data.publication_type as PublicationType) ?? "translation",
-  };
-}
+/** Request-scoped novel id (+ publisher / publication type) by slug. */
+const fetchNovelIdBySlug = cache(
+  async (
+    slug: string,
+  ): Promise<{
+    id: string;
+    publisher_id: string | null;
+    publication_type: PublicationType;
+  } | null> => {
+    const supabase = createClient(await cookies());
+    const { data } = await supabase
+      .from("novels")
+      .select("id, publisher_id, publication_type")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (!data) return null;
+    return {
+      id: data.id,
+      publisher_id: data.publisher_id,
+      publication_type:
+        (data.publication_type as PublicationType) ?? "translation",
+    };
+  },
+);
 
 async function fetchDbChapters(novelId: string): Promise<DbChapter[]> {
   const admin = createAdminClient();
@@ -300,51 +337,53 @@ export async function getNovels(): Promise<Novel[]> {
   return rows.map(mapNovel);
 }
 
-export async function getNovel(slug: string): Promise<Novel | undefined> {
-  const supabase = createClient(await cookies());
-  const { data, error } = await supabase
-    .from("novels")
-    .select(NOVEL_LIST_COLUMNS)
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (error || !data) return undefined;
-
-  const novel = mapNovel(data as DbNovel);
-
-  if (novel.publisherId) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username, translator_note, kofi_url, patreon_url")
-      .eq("id", novel.publisherId)
+export const getNovel = cache(
+  async (slug: string): Promise<Novel | undefined> => {
+    const supabase = createClient(await cookies());
+    const { data, error } = await supabase
+      .from("novels")
+      .select(NOVEL_LIST_COLUMNS)
+      .eq("slug", slug)
       .maybeSingle();
-    if (profile?.username) {
-      novel.translatorUsername = profile.username;
-    }
-    if (profile?.translator_note?.trim()) {
-      novel.translatorGlobalNote = profile.translator_note;
-    }
-    if (profile?.kofi_url) {
-      novel.translatorKofiUrl = profile.kofi_url;
-    }
-    if (profile?.patreon_url) {
-      novel.translatorPatreonUrl = profile.patreon_url;
-    }
-  } else if (novel.translator) {
-    // No publisher assigned — try to find a profile whose username matches
-    // the translator name set by an admin so the name can still be linked.
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("username", novel.translator)
-      .maybeSingle();
-    if (profile?.username) {
-      novel.translatorUsername = profile.username;
-    }
-  }
 
-  return novel;
-}
+    if (error || !data) return undefined;
+
+    const novel = mapNovel(data as DbNovel);
+
+    if (novel.publisherId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("username, translator_note, kofi_url, patreon_url")
+        .eq("id", novel.publisherId)
+        .maybeSingle();
+      if (profile?.username) {
+        novel.translatorUsername = profile.username;
+      }
+      if (profile?.translator_note?.trim()) {
+        novel.translatorGlobalNote = profile.translator_note;
+      }
+      if (profile?.kofi_url) {
+        novel.translatorKofiUrl = profile.kofi_url;
+      }
+      if (profile?.patreon_url) {
+        novel.translatorPatreonUrl = profile.patreon_url;
+      }
+    } else if (novel.translator) {
+      // No publisher assigned — try to find a profile whose username matches
+      // the translator name set by an admin so the name can still be linked.
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("username", novel.translator)
+        .maybeSingle();
+      if (profile?.username) {
+        novel.translatorUsername = profile.username;
+      }
+    }
+
+    return novel;
+  },
+);
 
 export async function getFeaturedNovels(
   novels?: Novel[],
@@ -491,39 +530,41 @@ export async function getRecentlyUpdatedNovels(): Promise<RecentlyUpdatedNovel[]
     );
 }
 
-export async function getBookmarkedSlugs(): Promise<Set<string>> {
-  const supabase = createClient(await cookies());
-  const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims) return new Set();
+export const getBookmarkedSlugs = cache(async (): Promise<Set<string>> => {
+  const claims = await getAuthClaims();
+  if (!claims) return new Set();
 
   // Bookmarks are publicly readable (for /u/<username> profiles), so always
   // scope personal-library reads to the signed-in user.
+  const supabase = createClient(await cookies());
   const { data, error } = await supabase
     .from("bookmarks")
     .select("novel_slug")
-    .eq("user_id", auth.claims.sub);
+    .eq("user_id", claims.sub);
 
   if (error) {
     console.error("getBookmarkedSlugs:", error);
     return new Set();
   }
   return new Set((data ?? []).map((r) => r.novel_slug));
-}
+});
 
-export async function isNovelBookmarked(slug: string): Promise<boolean> {
-  const supabase = createClient(await cookies());
-  const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims) return false;
+export const isNovelBookmarked = cache(
+  async (slug: string): Promise<boolean> => {
+    const claims = await getAuthClaims();
+    if (!claims) return false;
 
-  const { data } = await supabase
-    .from("bookmarks")
-    .select("id")
-    .eq("user_id", auth.claims.sub)
-    .eq("novel_slug", slug)
-    .maybeSingle();
+    const supabase = createClient(await cookies());
+    const { data } = await supabase
+      .from("bookmarks")
+      .select("id")
+      .eq("user_id", claims.sub)
+      .eq("novel_slug", slug)
+      .maybeSingle();
 
-  return Boolean(data);
-}
+    return Boolean(data);
+  },
+);
 
 export async function getLibraryNovels(): Promise<Novel[]> {
   const bookmarked = await getBookmarkedSlugs();
@@ -610,7 +651,7 @@ export async function getUserCreatedNovels(userId: string): Promise<Novel[]> {
   return ((data ?? []) as DbNovel[]).map(mapNovel);
 }
 
-export async function getChapters(slug: string): Promise<Chapter[]> {
+export const getChapters = cache(async (slug: string): Promise<Chapter[]> => {
   const novel = await fetchNovelIdBySlug(slug);
   if (!novel) return [];
 
@@ -628,80 +669,82 @@ export async function getChapters(slug: string): Promise<Chapter[]> {
   return rows.map((row) =>
     mapChapter(slug, row, unlocked, bypassLock, allowLockedContent),
   );
-}
+});
 
 /** Chapter list/TOC metadata without body content. */
-export async function getChapterListItems(
-  slug: string,
-): Promise<ChapterListItem[]> {
-  const novel = await fetchNovelIdBySlug(slug);
-  if (!novel) return [];
+export const getChapterListItems = cache(
+  async (slug: string): Promise<ChapterListItem[]> => {
+    const novel = await fetchNovelIdBySlug(slug);
+    if (!novel) return [];
 
-  const currentUser = await getCurrentUser();
-  const isPublisher =
-    novel.publisher_id !== null && currentUser?.id === novel.publisher_id;
-  const bypassLock = currentUser?.isAdmin === true || isPublisher;
+    const currentUser = await getCurrentUser();
+    const isPublisher =
+      novel.publisher_id !== null && currentUser?.id === novel.publisher_id;
+    const bypassLock = currentUser?.isAdmin === true || isPublisher;
 
-  const [rows, unlocked] = await Promise.all([
-    fetchDbChapterMetas(novel.id),
-    getUnlockedChapterNumbers(slug),
-  ]);
+    const [rows, unlocked] = await Promise.all([
+      fetchDbChapterMetas(novel.id),
+      getUnlockedChapterNumbers(slug),
+    ]);
 
-  return rows.map((row) =>
-    mapChapterListItem(slug, row, unlocked, bypassLock),
-  );
-}
+    return rows.map((row) =>
+      mapChapterListItem(slug, row, unlocked, bypassLock),
+    );
+  },
+);
 
-export async function getChapterSummaries(
-  slug: string,
-): Promise<ChapterSummary[]> {
-  const novel = await fetchNovelIdBySlug(slug);
-  if (!novel) return [];
+export const getChapterSummaries = cache(
+  async (slug: string): Promise<ChapterSummary[]> => {
+    const novel = await fetchNovelIdBySlug(slug);
+    if (!novel) return [];
 
-  const currentUser = await getCurrentUser();
-  const isPublisher =
-    novel.publisher_id !== null && currentUser?.id === novel.publisher_id;
-  const bypassLock = currentUser?.isAdmin === true || isPublisher;
+    const currentUser = await getCurrentUser();
+    const isPublisher =
+      novel.publisher_id !== null && currentUser?.id === novel.publisher_id;
+    const bypassLock = currentUser?.isAdmin === true || isPublisher;
 
-  const [rows, unlocked] = await Promise.all([
-    fetchDbChapterSummaries(novel.id),
-    getUnlockedChapterNumbers(slug),
-  ]);
+    const [rows, unlocked] = await Promise.all([
+      fetchDbChapterSummaries(novel.id),
+      getUnlockedChapterNumbers(slug),
+    ]);
 
-  return rows.map((row) => ({
-    number: row.number,
-    title: row.title,
-    locked:
-      !isNaturallyFree(row) && !unlocked.has(row.number) && !bypassLock,
-  }));
-}
+    return rows.map((row) => ({
+      number: row.number,
+      title: row.title,
+      locked:
+        !isNaturallyFree(row) && !unlocked.has(row.number) && !bypassLock,
+    }));
+  },
+);
 
-export async function getChapter(
-  slug: string,
-  chapterNumber: number,
-): Promise<Chapter | undefined> {
-  const novel = await fetchNovelIdBySlug(slug);
-  if (!novel) return undefined;
+export const getChapter = cache(
+  async (
+    slug: string,
+    chapterNumber: number,
+  ): Promise<Chapter | undefined> => {
+    const novel = await fetchNovelIdBySlug(slug);
+    if (!novel) return undefined;
 
-  const currentUser = await getCurrentUser();
-  const isPublisher =
-    novel.publisher_id !== null && currentUser?.id === novel.publisher_id;
-  const bypassLock = currentUser?.isAdmin === true || isPublisher;
+    const currentUser = await getCurrentUser();
+    const isPublisher =
+      novel.publisher_id !== null && currentUser?.id === novel.publisher_id;
+    const bypassLock = currentUser?.isAdmin === true || isPublisher;
 
-  const [row, unlocked] = await Promise.all([
-    fetchDbChapter(novel.id, chapterNumber),
-    getUnlockedChapterNumbers(slug),
-  ]);
-  if (!row) return undefined;
+    const [row, unlocked] = await Promise.all([
+      fetchDbChapter(novel.id, chapterNumber),
+      getUnlockedChapterNumbers(slug),
+    ]);
+    if (!row) return undefined;
 
-  return mapChapter(
-    slug,
-    row,
-    unlocked,
-    bypassLock,
-    novel.publication_type === "original",
-  );
-}
+    return mapChapter(
+      slug,
+      row,
+      unlocked,
+      bypassLock,
+      novel.publication_type === "original",
+    );
+  },
+);
 
 export async function getAdjacentChapters(
   slug: string,
@@ -787,7 +830,7 @@ export async function getClosestNovelTitleMatch(
   return { slug, title, coverUrl };
 }
 
-export async function getUserCoins(): Promise<number> {
+export const getUserCoins = cache(async (): Promise<number> => {
   const claims = await getAuthClaims();
   if (!claims) return 0;
 
@@ -799,11 +842,11 @@ export async function getUserCoins(): Promise<number> {
     .maybeSingle();
 
   return data?.coins ?? 0;
-}
+});
 
-export async function isUserAuthenticated(): Promise<boolean> {
+export const isUserAuthenticated = cache(async (): Promise<boolean> => {
   return Boolean(await getAuthClaims());
-}
+});
 
 type DbCommentRow = {
   id: string;
@@ -824,37 +867,6 @@ type DbLikeRow = {
   comment_id: string;
   user_id: string;
 };
-
-type CurrentUser = {
-  id: string;
-  isAdmin: boolean;
-  roles: ProfileRole[];
-  role: "user" | "translator";
-};
-
-async function getCurrentUser(): Promise<CurrentUser | null> {
-  const supabase = createClient(await cookies());
-  const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims) return null;
-
-  const id = auth.claims.sub as string;
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", id)
-    .maybeSingle();
-
-  const roles = parseProfileRoles({
-    role: profile?.role as string | null | undefined,
-  });
-
-  return {
-    id,
-    isAdmin: isAdminEmail(auth.claims.email as string | undefined),
-    roles,
-    role: hasProfileRole(roles, "translator") ? "translator" : "user",
-  };
-}
 
 async function getCurrentUserId(): Promise<string | null> {
   const user = await getCurrentUser();
