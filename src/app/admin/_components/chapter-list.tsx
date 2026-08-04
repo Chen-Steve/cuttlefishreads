@@ -144,10 +144,6 @@ export function ChapterList({
                     ? `Chapter ${chapter.number}: ${chapter.title}`
                     : `Chapter ${chapter.number}`}
                 </span>
-                <span className="shrink-0 text-xs font-normal tabular-nums text-muted">
-                  {chapter.word_count.toLocaleString()} word
-                  {chapter.word_count === 1 ? "" : "s"}
-                </span>
                 {chapter.is_published ? (
                   <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
                     Published
@@ -166,6 +162,11 @@ export function ChapterList({
                 ) : (
                   <span>{chapter.coin_cost} cookies</span>
                 )}
+                <span aria-hidden>·</span>
+                <span className="tabular-nums">
+                  {chapter.word_count.toLocaleString()} word
+                  {chapter.word_count === 1 ? "" : "s"}
+                </span>
               </p>
             </div>
 

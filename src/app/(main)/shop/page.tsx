@@ -26,10 +26,6 @@ export default async function ShopPage() {
 
   return (
     <PageContainer as="section" className="pt-4 pb-8 sm:pt-5 sm:pb-10 lg:pt-6 lg:pb-12">
-      <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-        Cookie Shop
-      </h1>
-
       <Suspense fallback={null}>
         <CoinPackages
           packages={COIN_PACKAGES}
@@ -46,16 +42,14 @@ export default async function ShopPage() {
         >
           Refund Policy
         </Link>
-        . Having issues?{" "}
+        . Having issues? Email{" "}
         <a
-          href={SITE.discordUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+          href={`mailto:${SITE.supportEmail}`}
           className="font-medium text-foreground underline-offset-2 hover:text-accent hover:underline"
         >
-          Contact us on Discord
-        </a>
-        .
+          {SITE.supportEmail}
+        </a>{" "}
+        — replies within 1 day.
       </p>
     </PageContainer>
   );

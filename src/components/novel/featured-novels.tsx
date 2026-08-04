@@ -83,7 +83,7 @@ function FeaturedDetails({
       role="region"
       aria-live="polite"
       aria-label={`${novel.title} details`}
-      className="mt-3 rounded-xl bg-surface px-4 py-4 sm:mt-4 sm:px-5 sm:py-5"
+      className="mt-1.5 rounded-xl bg-surface px-4 py-4 sm:mt-2 sm:px-5 sm:py-5"
     >
       <Link
         href={detailHref}

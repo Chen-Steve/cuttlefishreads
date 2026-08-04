@@ -7,6 +7,7 @@ export const SITE = {
   discordUrl: "https://discord.gg/VQtwqRAVkP",
   legalEmail: "legal@cuttlefishreads.com",
   contactEmail: "contact@cuttlefishreads.com",
+  supportEmail: "support@cuttlefishreads.com",
 } as const;
 
 /** Public brand for the Originals surface (originals.cuttlefishreads.com). */
