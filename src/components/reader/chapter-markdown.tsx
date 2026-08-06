@@ -38,7 +38,7 @@ export function renderMarkdownParagraphs(paragraphs: string[]): ReactNode[][] {
 }
 
 const footnoteLinkClassName =
-  "footnote-link scroll-mt-4 rounded-sm text-current underline decoration-current/40 underline-offset-2 outline-none transition-colors hover:decoration-current focus-visible:ring-2 focus-visible:ring-current/40";
+  "footnote-link scroll-mt-4 rounded-sm font-semibold text-accent underline decoration-accent/70 underline-offset-2 outline-none transition-colors hover:text-accent-hover hover:decoration-accent focus-visible:ring-2 focus-visible:ring-accent/40";
 
 /**
  * Chapter body with footnote markers as superscript links. Inline
@@ -87,7 +87,7 @@ export function renderChapterParagraphs(
       nodes.push(
         <sup
           key={`${paragraphIndex}-r-${partIndex}`}
-          className="footnote-ref relative -top-0.5 ml-0.5 text-[0.7em] leading-none"
+          className="footnote-ref relative -top-0.5 ml-0.5 text-[0.8em] leading-none"
         >
           <a
             id={refId}
