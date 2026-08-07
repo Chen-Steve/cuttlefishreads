@@ -66,7 +66,7 @@ export function InboxList({
       <div className="rounded-xl border border-dashed border-border bg-surface px-4 py-10 text-center">
         <Bell className="mx-auto size-8 text-muted" strokeWidth={1.5} aria-hidden />
         <p className="mt-3 text-sm text-muted">
-          Nothing here yet. Replies and reactions to your posts will show up in
+          Replies and reactions to your posts will show up in
           this inbox.
         </p>
       </div>

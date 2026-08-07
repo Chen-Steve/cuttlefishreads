@@ -144,8 +144,8 @@ export function NotificationsList({
           aria-hidden
         />
         <p className="mt-3 text-sm text-muted">
-          Nothing here yet. Comment replies, likes, and new chapters from your
-          library will show up here.
+          Comment replies, likes, and new chapters from bookmarked
+          novels will show up here.
         </p>
       </div>
     );
