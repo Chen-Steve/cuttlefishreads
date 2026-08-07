@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getAdminAccess, type AdminAccess } from "@/lib/access";
+import { notifyComment } from "@/lib/notifications/data";
 import { createAdminClient } from "@/utils/supabase/admin";
 import type { NovelComment } from "@/types";
 
@@ -40,11 +41,12 @@ export async function replyToComment(
   const { data: parent, error: parentError } = await admin
     .from("novel_comments")
     .select(
-      "id, novel_id, novel_slug, chapter_number, parent_id, novels(publisher_id)",
+      "id, user_id, novel_id, novel_slug, chapter_number, parent_id, novels(publisher_id)",
     )
     .eq("id", commentId)
     .maybeSingle<{
       id: string;
+      user_id: string;
       novel_id: string;
       novel_slug: string;
       chapter_number: number | null;
@@ -81,12 +83,25 @@ export async function replyToComment(
     return { error: error?.message ?? "Failed to post reply." };
   }
 
+  await notifyComment([
+    {
+      user_id: parent.user_id,
+      actor_id: access.userId,
+      type: "reply",
+      comment_id: parent.id,
+      reply_id: inserted.id,
+    },
+  ]);
+
   revalidatePath(`/novels/${parent.novel_slug}`);
   if (parent.chapter_number != null) {
     revalidatePath(`/novels/${parent.novel_slug}/${parent.chapter_number}`);
   }
   revalidatePath("/admin/comments");
   revalidatePath("/originals/workspace/comments");
+  revalidatePath("/account");
+  revalidatePath("/notifications");
+  revalidatePath("/", "layout");
 
   return {
     reply: {

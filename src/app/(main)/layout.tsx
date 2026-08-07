@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { getUnreadNotificationCount } from "@/lib/notifications/data";
 import { getAuthClaims } from "@/utils/supabase/auth";
 import { createClient } from "@/utils/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
@@ -36,13 +37,17 @@ export default async function MainLayout({
   let coins = 0;
   let isTranslator = false;
   let isMasterAdmin = false;
+  let unreadNotifications = 0;
   if (claims) {
     const supabase = createClient(await cookies());
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username, coins, avatar_url, role")
-      .eq("id", claims.sub)
-      .maybeSingle();
+    const [{ data: profile }, unreadCount] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("username, coins, avatar_url, role")
+        .eq("id", claims.sub)
+        .maybeSingle(),
+      getUnreadNotificationCount(claims.sub),
+    ]);
     username = profile?.username ?? null;
     if (!username) {
       await ensureOAuthProfile(
@@ -58,6 +63,7 @@ export default async function MainLayout({
     }
     avatarUrl = profile?.avatar_url ?? null;
     coins = profile?.coins ?? 0;
+    unreadNotifications = unreadCount;
 
     isMasterAdmin = isAdminEmail(claims.email as string | undefined);
 
@@ -82,6 +88,7 @@ export default async function MainLayout({
         coins={coins}
         isTranslator={isTranslator}
         isMasterAdmin={isMasterAdmin}
+        unreadNotifications={unreadNotifications}
       />
       <div className="contents [&:has([data-hide-main-footer])_footer]:hidden">
         <main id="main-content" className="flex-1" tabIndex={-1}>

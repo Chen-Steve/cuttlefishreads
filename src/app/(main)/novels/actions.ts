@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
+import { notifyComment } from "@/lib/notifications/data";
 import { getNovelComments, isChapterReadable } from "@/lib/data";
 import type { NovelComment } from "@/types";
 import { createClient } from "@/utils/supabase/server";
@@ -301,7 +302,7 @@ export async function replyToComment(
 
   const { data: parent, error: parentError } = await supabase
     .from("novel_comments")
-    .select("id, novel_id, novel_slug, chapter_number, parent_id")
+    .select("id, user_id, novel_id, novel_slug, chapter_number, parent_id")
     .eq("id", parentId)
     .maybeSingle();
 
@@ -353,8 +354,20 @@ export async function replyToComment(
       .maybeSingle(),
   ]);
 
+  await notifyComment([
+    {
+      user_id: parent.user_id,
+      actor_id: userId,
+      type: "reply",
+      comment_id: parent.id,
+      reply_id: inserted.id,
+    },
+  ]);
+
   revalidateCommentPaths(parent.novel_slug, parent.chapter_number);
   revalidatePath("/account");
+  revalidatePath("/notifications");
+  revalidatePath("/", "layout");
 
   return {
     comment: {
@@ -468,11 +481,13 @@ export async function toggleCommentLike(commentId: string): Promise<LikeState> {
     return { error: "Comment not found." };
   }
 
+  const userId = auth.claims.sub as string;
+
   const { data: existing } = await supabase
     .from("novel_comment_likes")
     .select("id")
     .eq("comment_id", commentId)
-    .eq("user_id", auth.claims.sub)
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (existing) {
@@ -487,12 +502,23 @@ export async function toggleCommentLike(commentId: string): Promise<LikeState> {
   }
 
   const { error } = await supabase.from("novel_comment_likes").insert({
-    user_id: auth.claims.sub,
+    user_id: userId,
     comment_id: commentId,
   });
   if (error) return { error: error.message };
 
+  await notifyComment([
+    {
+      user_id: comment.user_id,
+      actor_id: userId,
+      type: "like",
+      comment_id: comment.id,
+    },
+  ]);
+
   revalidateCommentPaths(comment.novel_slug, comment.chapter_number);
+  revalidatePath("/notifications");
+  revalidatePath("/", "layout");
   return { liked: true };
 }
 

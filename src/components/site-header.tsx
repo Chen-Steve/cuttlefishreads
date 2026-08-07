@@ -169,6 +169,7 @@ export function SiteHeader({
   coins = 0,
   isTranslator = false,
   isMasterAdmin = false,
+  unreadNotifications = 0,
 }: {
   isAuthenticated?: boolean;
   username?: string | null;
@@ -176,6 +177,7 @@ export function SiteHeader({
   coins?: number;
   isTranslator?: boolean;
   isMasterAdmin?: boolean;
+  unreadNotifications?: number;
 }) {
   const isDesktop = useIsDesktopNav();
   const hideForImmersive = useImmersiveHidesSiteHeader();
@@ -286,6 +288,7 @@ export function SiteHeader({
               coins={coins}
               isMasterAdmin={isMasterAdmin}
               showTranslatorWorkspace={isMasterAdmin || isTranslator}
+              unreadNotifications={unreadNotifications}
             />
           ) : null}
         </nav>

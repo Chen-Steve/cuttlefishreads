@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess, type AdminAccess } from "@/lib/access";
 import { revalidateNovelsDataCache } from "@/lib/data";
+import { notifyBookmarkersOfChapter } from "@/lib/notifications/data";
 import { slugify } from "@/lib/utils";
 import {
   workspaceBaseForPublicationType,
@@ -703,11 +704,21 @@ export async function createChapter(
     .update({ updated_at: new Date().toISOString() })
     .eq("id", novelId);
 
+  const released =
+    isFree || (unlockAt != null && new Date(unlockAt).getTime() <= Date.now());
+  await notifyBookmarkersOfChapter({
+    novelId,
+    chapterNumber: number,
+    released,
+    excludeUserId: auth.access.userId,
+  });
+
   const workspaceBase = workspaceBaseForPublicationType(
     novel.publication_type,
   );
   revalidatePath(workspaceInternalPath(workspaceBase));
   revalidatePublicPaths(novel.publication_type);
+  revalidatePath("/", "layout");
   redirect(`${workspaceBase}/novels/${novelId}/chapters`);
 }
 
@@ -722,9 +733,17 @@ export async function setChapterPublished(
 
   const { data: existing } = await admin
     .from("chapters")
-    .select("id, novel_id, novels(publisher_id, publication_type)")
+    .select(
+      "id, novel_id, number, is_free, unlock_at, novels(publisher_id, publication_type)",
+    )
     .eq("id", chapterId)
-    .maybeSingle<ChapterWithNovel>();
+    .maybeSingle<
+      ChapterWithNovel & {
+        number: number;
+        is_free: boolean;
+        unlock_at: string | null;
+      }
+    >();
   if (!existing) return { error: "Chapter not found." };
   if (!ownsNovel(auth.access, existing.novels?.publisher_id ?? null)) {
     return { error: "You can only manage your own novels." };
@@ -742,6 +761,19 @@ export async function setChapterPublished(
     .update({ updated_at: new Date().toISOString() })
     .eq("id", existing.novel_id);
 
+  if (published) {
+    const released =
+      existing.is_free ||
+      (existing.unlock_at != null &&
+        new Date(existing.unlock_at).getTime() <= Date.now());
+    await notifyBookmarkersOfChapter({
+      novelId: existing.novel_id,
+      chapterNumber: existing.number,
+      released,
+      excludeUserId: auth.access.userId,
+    });
+  }
+
   const workspaceBase = workspaceBaseForPublicationType(
     existing.novels?.publication_type,
   );
@@ -751,6 +783,7 @@ export async function setChapterPublished(
     ),
   );
   revalidatePublicPaths(existing.novels?.publication_type);
+  revalidatePath("/", "layout");
   return {};
 }
 
@@ -770,6 +803,12 @@ export async function publishAllChapters(novelId: string): Promise<AdminState> {
     return { error: "You can only manage your own novels." };
   }
 
+  const { data: drafts } = await admin
+    .from("chapters")
+    .select("number, is_free, unlock_at")
+    .eq("novel_id", novelId)
+    .eq("is_published", false);
+
   const { error } = await admin
     .from("chapters")
     .update({ is_published: true, updated_at: new Date().toISOString() })
@@ -783,6 +822,19 @@ export async function publishAllChapters(novelId: string): Promise<AdminState> {
     .update({ updated_at: new Date().toISOString() })
     .eq("id", novelId);
 
+  for (const chapter of drafts ?? []) {
+    const released =
+      chapter.is_free ||
+      (chapter.unlock_at != null &&
+        new Date(chapter.unlock_at).getTime() <= Date.now());
+    await notifyBookmarkersOfChapter({
+      novelId,
+      chapterNumber: chapter.number as number,
+      released,
+      excludeUserId: auth.access.userId,
+    });
+  }
+
   const workspaceBase = workspaceBaseForPublicationType(
     novel.publication_type,
   );
@@ -790,6 +842,7 @@ export async function publishAllChapters(novelId: string): Promise<AdminState> {
     workspaceInternalPath(`${workspaceBase}/novels/${novelId}/chapters`),
   );
   revalidatePublicPaths(novel.publication_type);
+  revalidatePath("/", "layout");
   return {};
 }
 

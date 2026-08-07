@@ -16,6 +16,7 @@ import { ORIGINALS, SITE } from "@/lib/constants";
 import { forumInboxUrl, forumUrl } from "@/lib/forum/constants";
 import {
   creatorPublicOrigin,
+  mainPublicOrigin,
   originalsPublicUrl,
 } from "@/lib/hosts";
 import { cn } from "@/lib/utils";
@@ -219,6 +220,8 @@ export function OriginalsHeader({
                   : undefined
               }
               accountHref={originalsPublicUrl("/account")}
+              notificationsHref={`${mainPublicOrigin()}/notifications`}
+              unreadNotifications={unreadNotifications}
             />
           ) : (
             <ThemeToggle />

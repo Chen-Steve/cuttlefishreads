@@ -56,7 +56,7 @@ function CommentReplyItem({
   }
 
   return (
-    <li className="rounded-lg bg-background p-3">
+    <li id={`comment-${reply.id}`} className="scroll-mt-20 rounded-lg bg-background p-3">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <Link
           href={`/u/${reply.username}`}
@@ -220,7 +220,10 @@ export function CommentItem({
   }
 
   return (
-    <article className="rounded-xl border border-border bg-surface p-4">
+    <article
+      id={`comment-${comment.id}`}
+      className="scroll-mt-20 rounded-xl border border-border bg-surface p-4"
+    >
       <div className="flex items-start gap-3">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent/10">
           <User className="size-4 text-accent" strokeWidth={1.75} aria-hidden />

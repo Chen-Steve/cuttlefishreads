@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Cookie,
   Feather,
+  Bell,
   LogOut,
   PenLine,
   Settings,
@@ -54,11 +55,13 @@ function MenuLink({
   onClick?: () => void;
   children: React.ReactNode;
 }) {
-  const className =
-    "flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background";
-
   return (
-    <Link href={href} role="menuitem" onClick={onClick} className={className}>
+    <Link
+      href={href}
+      role="menuitem"
+      onClick={onClick}
+      className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-background"
+    >
       {children}
     </Link>
   );
@@ -85,10 +88,14 @@ export function AccountDropdown({
   showPublicProfile = true,
   /** Override account settings URL (e.g. `/account` on Originals). */
   accountHref = "/account",
+  /** Notifications inbox URL (main site `/notifications`). */
+  notificationsHref = "/notifications",
   /** Library / bookmarks URL (e.g. Originals `/library`). */
   libraryHref,
   /** Show theme toggle inside the menu (e.g. Originals header). */
   showThemeToggle = false,
+  /** Unread comment notification count for the avatar badge. */
+  unreadNotifications = 0,
 }: {
   username?: string | null;
   avatarUrl?: string | null;
@@ -102,8 +109,10 @@ export function AccountDropdown({
   publicProfileHref?: string;
   showPublicProfile?: boolean;
   accountHref?: string;
+  notificationsHref?: string;
   libraryHref?: string;
   showThemeToggle?: boolean;
+  unreadNotifications?: number;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -127,6 +136,8 @@ export function AccountDropdown({
   }, [open]);
 
   const close = () => setOpen(false);
+  const badgeLabel =
+    unreadNotifications > 9 ? "9+" : String(unreadNotifications);
 
   return (
     <div ref={ref} className="relative">
@@ -135,13 +146,31 @@ export function AccountDropdown({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={username ? `Account menu for ${username}` : "Account menu"}
+        aria-label={
+          username
+            ? unreadNotifications > 0
+              ? `Account menu for ${username}, ${unreadNotifications} unread notifications`
+              : `Account menu for ${username}`
+            : unreadNotifications > 0
+              ? `Account menu, ${unreadNotifications} unread notifications`
+              : "Account menu"
+        }
         className={triggerClass}
       >
-        <AccountAvatar
-          avatarUrl={avatarUrl}
-          className="size-7 border border-border sm:size-6"
-        />
+        <span className="relative shrink-0">
+          <AccountAvatar
+            avatarUrl={avatarUrl}
+            className="size-7 border border-border sm:size-6"
+          />
+          {unreadNotifications > 0 ? (
+            <span
+              className="absolute -top-1 -right-1 flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-4 text-accent-foreground tabular-nums"
+              aria-hidden
+            >
+              {badgeLabel}
+            </span>
+          ) : null}
+        </span>
         <span className="hidden max-w-32 truncate lg:inline">
           {username || "Account"}
         </span>
@@ -186,6 +215,20 @@ export function AccountDropdown({
               )}
             </div>
           </div>
+
+          <MenuLink href={notificationsHref} onClick={close}>
+            <Bell
+              className="size-4 shrink-0 text-muted"
+              strokeWidth={1.75}
+              aria-hidden
+            />
+            <span className="min-w-0 flex-1 text-left">Notifications</span>
+            {unreadNotifications > 0 ? (
+              <span className="rounded-md bg-accent px-1.5 text-[10px] font-semibold leading-4 text-accent-foreground tabular-nums">
+                {badgeLabel}
+              </span>
+            ) : null}
+          </MenuLink>
 
           <MenuLink href={accountHref} onClick={close}>
             <Settings
