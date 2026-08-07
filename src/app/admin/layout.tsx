@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { getAdminAccess } from "@/lib/access";
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
   },
 };
 
-async function hasOriginalNovel(userId: string): Promise<boolean> {
+const hasOriginalNovel = cache(async (userId: string): Promise<boolean> => {
   const admin = createAdminClient();
   const { count } = await admin
     .from("novels")
@@ -23,7 +24,7 @@ async function hasOriginalNovel(userId: string): Promise<boolean> {
     .eq("publisher_id", userId)
     .eq("publication_type", "original");
   return (count ?? 0) > 0;
-}
+});
 
 export default async function AdminLayout({
   children,

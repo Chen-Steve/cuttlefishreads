@@ -93,6 +93,26 @@ export async function notifyBookmarkersOfChapter(opts: {
   released: boolean;
   excludeUserId?: string | null;
 }) {
+  await notifyBookmarkersOfChapters({
+    novelId: opts.novelId,
+    chapters: [
+      { chapterNumber: opts.chapterNumber, released: opts.released },
+    ],
+    excludeUserId: opts.excludeUserId,
+  });
+}
+
+/**
+ * Notify bookmarkers about one or more chapter publish/release events.
+ * Loads bookmarks once and inserts all notification rows in a single batch.
+ */
+export async function notifyBookmarkersOfChapters(opts: {
+  novelId: string;
+  chapters: Array<{ chapterNumber: number; released: boolean }>;
+  excludeUserId?: string | null;
+}) {
+  if (opts.chapters.length === 0) return;
+
   const admin = createAdminClient();
   const { data: bookmarks, error } = await admin
     .from("bookmarks")
@@ -100,7 +120,7 @@ export async function notifyBookmarkersOfChapter(opts: {
     .eq("novel_id", opts.novelId);
 
   if (error) {
-    console.error("notifyBookmarkersOfChapter:", error);
+    console.error("notifyBookmarkersOfChapters:", error);
     return;
   }
 
@@ -114,12 +134,14 @@ export async function notifyBookmarkersOfChapter(opts: {
   if (recipients.length === 0) return;
 
   await notifyUsers(
-    recipients.map((userId) => ({
-      user_id: userId,
-      type: opts.released ? "chapter_released" : "chapter_published",
-      novel_id: opts.novelId,
-      chapter_number: opts.chapterNumber,
-    })),
+    opts.chapters.flatMap((chapter) =>
+      recipients.map((userId) => ({
+        user_id: userId,
+        type: chapter.released ? "chapter_released" : "chapter_published",
+        novel_id: opts.novelId,
+        chapter_number: chapter.chapterNumber,
+      })),
+    ),
   );
 }
 

@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess, type AdminAccess } from "@/lib/access";
 import { revalidateNovelsDataCache } from "@/lib/data";
-import { notifyBookmarkersOfChapter } from "@/lib/notifications/data";
+import { notifyBookmarkersOfChapter, notifyBookmarkersOfChapters } from "@/lib/notifications/data";
 import { slugify } from "@/lib/utils";
 import {
   workspaceBaseForPublicationType,
@@ -822,18 +822,20 @@ export async function publishAllChapters(novelId: string): Promise<AdminState> {
     .update({ updated_at: new Date().toISOString() })
     .eq("id", novelId);
 
-  for (const chapter of drafts ?? []) {
-    const released =
-      chapter.is_free ||
-      (chapter.unlock_at != null &&
-        new Date(chapter.unlock_at).getTime() <= Date.now());
-    await notifyBookmarkersOfChapter({
-      novelId,
-      chapterNumber: chapter.number as number,
-      released,
-      excludeUserId: auth.access.userId,
-    });
-  }
+  await notifyBookmarkersOfChapters({
+    novelId,
+    chapters: (drafts ?? []).map((chapter) => {
+      const released =
+        chapter.is_free ||
+        (chapter.unlock_at != null &&
+          new Date(chapter.unlock_at).getTime() <= Date.now());
+      return {
+        chapterNumber: chapter.number as number,
+        released,
+      };
+    }),
+    excludeUserId: auth.access.userId,
+  });
 
   const workspaceBase = workspaceBaseForPublicationType(
     novel.publication_type,

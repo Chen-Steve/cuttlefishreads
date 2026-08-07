@@ -29,6 +29,9 @@ type CommentRow = {
 const COMMENT_COLUMNS =
   "id, novel_slug, chapter_number, parent_id, body, rating, user_id, created_at, updated_at";
 
+/** Newest top-level comments loaded for the workspace comments page. */
+const TOP_COMMENTS_LIMIT = 100;
+
 export async function WorkspaceCommentsPage({
   workspace,
 }: {
@@ -59,7 +62,7 @@ export async function WorkspaceCommentsPage({
     novelRows.map((n) => [n.slug, n.publisher_id]),
   );
 
-  // Top-level comments across every owned novel, newest first.
+  // Newest top-level comments across owned novels (capped for page weight).
   const { data: topData } =
     slugs.length === 0
       ? { data: [] as CommentRow[] }
@@ -69,9 +72,11 @@ export async function WorkspaceCommentsPage({
           .in("novel_slug", slugs)
           .is("parent_id", null)
           .order("created_at", { ascending: false })
+          .limit(TOP_COMMENTS_LIMIT)
           .returns<CommentRow[]>();
 
   const topRows = topData ?? [];
+  const commentsTruncated = topRows.length >= TOP_COMMENTS_LIMIT;
   const parentIds = topRows.map((row) => row.id);
 
   const { data: replyData } =
@@ -158,6 +163,9 @@ export async function WorkspaceCommentsPage({
         Reader comments across your{" "}
         {workspace === "originals" ? "series" : "novels"}. Reply directly to
         start a thread.
+        {commentsTruncated
+          ? ` Showing the ${TOP_COMMENTS_LIMIT} most recent.`
+          : null}
       </p>
 
       <div className="mt-6">

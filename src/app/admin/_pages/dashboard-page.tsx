@@ -27,13 +27,8 @@ type NovelStat = {
   coinsEarned: number;
 };
 
-function tally<T extends string>(rows: { key: T }[]): Map<T, number> {
-  const map = new Map<T, number>();
-  for (const row of rows) {
-    map.set(row.key, (map.get(row.key) ?? 0) + 1);
-  }
-  return map;
-}
+/** Recent purchase rows shown under the stats table (newest first). */
+const RECENT_PURCHASES_LIMIT = 100;
 
 // Translator balances can be fractional (exact 70% split). Keep one decimal
 // place and drop a trailing ".0".
@@ -61,7 +56,7 @@ export async function WorkspaceDashboardPage({
 
   let novelsQuery = admin
     .from("novels")
-    .select("id, slug, title")
+    .select("id, slug, title, library_add_count")
     .eq("publication_type", WORKSPACE_PUBLICATION_TYPE[workspace])
     .order("updated_at", { ascending: false });
 
@@ -70,7 +65,12 @@ export async function WorkspaceDashboardPage({
   }
 
   const { data: novels } = await novelsQuery.returns<
-    { id: string; slug: string; title: string }[]
+    {
+      id: string;
+      slug: string;
+      title: string;
+      library_add_count: number | null;
+    }[]
   >();
 
   const rows = novels ?? [];
@@ -85,60 +85,60 @@ export async function WorkspaceDashboardPage({
     monthlyViews: [],
   };
 
-  const [bookmarksRes, unlocksRes, googleAnalytics, allTimeViewsBySlug] =
-    novelIds.length === 0
-      ? [
-          { data: [] },
-          { data: [] },
-          emptyAnalytics,
-          {} as Record<string, number>,
-        ]
-      : await Promise.all([
-          admin.from("bookmarks").select("novel_id").in("novel_id", novelIds),
-          showEarnings
-            ? admin
-                .from("chapter_unlocks")
-                .select(
-                  "novel_slug, chapter_number, translator_share, created_at, user_id",
-                )
-                .in("novel_slug", slugs)
-                .eq("hidden_from_translator", false)
-                .order("created_at", { ascending: false })
-            : Promise.resolve({ data: [] }),
-          mode === "all"
-            ? Promise.resolve(emptyAnalytics)
-            : getGoogleAnalyticsDashboard(slugs, mode),
-          getAllTimeViewsBySlug(slugs),
-        ]);
-
-  const bookmarksByNovel = tally(
-    ((bookmarksRes.data ?? []) as { novel_id: string }[]).map((r) => ({
-      key: r.novel_id,
-    })),
-  );
-
-  const unlockRows = (unlocksRes.data ?? []) as {
+  type UnlockStatRow = {
+    novel_slug: string;
+    purchase_count: number;
+    coins_earned: number;
+  };
+  type UnlockDetailRow = {
     novel_slug: string;
     chapter_number: number;
     translator_share: number;
     created_at: string;
     user_id: string;
-  }[];
+  };
+
+  let unlockStats: UnlockStatRow[] = [];
+  let unlockRows: UnlockDetailRow[] = [];
+  let googleAnalytics: GoogleAnalyticsDashboard = emptyAnalytics;
+  let allTimeViewsBySlug: Record<string, number> = {};
+
+  if (novelIds.length > 0) {
+    const [unlockStatsRes, recentUnlocksRes, ga, views] = await Promise.all([
+      showEarnings
+        ? admin.rpc("novel_unlock_stats", { p_slugs: slugs })
+        : Promise.resolve({ data: null }),
+      showEarnings
+        ? admin
+            .from("chapter_unlocks")
+            .select(
+              "novel_slug, chapter_number, translator_share, created_at, user_id",
+            )
+            .in("novel_slug", slugs)
+            .eq("hidden_from_translator", false)
+            .order("created_at", { ascending: false })
+            .limit(RECENT_PURCHASES_LIMIT)
+        : Promise.resolve({ data: null }),
+      mode === "all"
+        ? Promise.resolve(emptyAnalytics)
+        : getGoogleAnalyticsDashboard(slugs, mode),
+      getAllTimeViewsBySlug(slugs),
+    ]);
+
+    unlockStats = (unlockStatsRes.data ?? []) as UnlockStatRow[];
+    unlockRows = (recentUnlocksRes.data ?? []) as UnlockDetailRow[];
+    googleAnalytics = ga;
+    allTimeViewsBySlug = views;
+  }
 
   const purchasesBySlug = new Map<string, number>();
   const earnedBySlug = new Map<string, number>();
-  for (const row of unlockRows) {
-    purchasesBySlug.set(
-      row.novel_slug,
-      (purchasesBySlug.get(row.novel_slug) ?? 0) + 1,
-    );
-    earnedBySlug.set(
-      row.novel_slug,
-      (earnedBySlug.get(row.novel_slug) ?? 0) + row.translator_share,
-    );
+  for (const row of unlockStats) {
+    purchasesBySlug.set(row.novel_slug, Number(row.purchase_count ?? 0));
+    earnedBySlug.set(row.novel_slug, Number(row.coins_earned ?? 0));
   }
 
-  // Resolve buyer usernames for the individual-purchase list.
+  // Resolve buyer usernames for the recent-purchase list.
   const buyerIds = [...new Set(unlockRows.map((r) => r.user_id))];
   const usernameById = new Map<string, string>();
   if (buyerIds.length > 0) {
@@ -151,9 +151,8 @@ export async function WorkspaceDashboardPage({
     }
   }
 
-  // Group individual purchases by novel, newest first (unlockRows is already
-  // ordered by created_at desc). Each row carries the exact translator share
-  // that was credited at purchase time.
+  // Group recent purchases by novel, newest first (unlockRows is already
+  // ordered by created_at desc). Totals come from novel_unlock_stats.
   type Purchase = {
     chapterNumber: number;
     buyer: string;
@@ -171,16 +170,20 @@ export async function WorkspaceDashboardPage({
     });
     purchasesByNovel.set(row.novel_slug, list);
   }
-  const novelsWithPurchases = rows.filter((n) => purchasesByNovel.has(n.slug));
+  const novelsWithPurchases = rows.filter(
+    (n) => (purchasesBySlug.get(n.slug) ?? 0) > 0,
+  );
+  const recentPurchasesTruncated =
+    unlockRows.length >= RECENT_PURCHASES_LIMIT;
 
   // Earnings are the exact translator share credited per unlock (70% of list).
-  // Hidden every-4th purchases are excluded from the query above.
+  // Hidden every-4th purchases are excluded from the stats RPC above.
   const stats: NovelStat[] = rows.map((n) => ({
     id: n.id,
     slug: n.slug,
     title: n.title,
     views: allTimeViewsBySlug[n.slug] ?? 0,
-    bookmarks: bookmarksByNovel.get(n.id) ?? 0,
+    bookmarks: Number(n.library_add_count ?? 0),
     purchases: purchasesBySlug.get(n.slug) ?? 0,
     coinsEarned: earnedBySlug.get(n.slug) ?? 0,
   }));
@@ -292,6 +295,9 @@ export async function WorkspaceDashboardPage({
           </h2>
           <p className="mt-0.5 text-sm text-muted">
             Individual chapter unlocks per novel, with your 70% earnings.
+            {recentPurchasesTruncated
+              ? ` Showing the ${RECENT_PURCHASES_LIMIT} most recent.`
+              : null}
           </p>
 
           {novelsWithPurchases.length === 0 ? (
@@ -302,7 +308,8 @@ export async function WorkspaceDashboardPage({
             <div className="mt-4 flex flex-col gap-6">
               {novelsWithPurchases.map((n) => {
                 const purchases = purchasesByNovel.get(n.slug) ?? [];
-                const earned = purchases.reduce((sum, p) => sum + p.earned, 0);
+                const totalPurchases = purchasesBySlug.get(n.slug) ?? 0;
+                const earned = earnedBySlug.get(n.slug) ?? 0;
                 return (
                   <div
                     key={n.id}
@@ -311,48 +318,54 @@ export async function WorkspaceDashboardPage({
                     <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-3">
                       <h3 className="font-medium text-foreground">{n.title}</h3>
                       <span className="text-xs text-muted">
-                        {purchases.length.toLocaleString()} purchase
-                        {purchases.length === 1 ? "" : "s"} ·{" "}
+                        {totalPurchases.toLocaleString()} purchase
+                        {totalPurchases === 1 ? "" : "s"} ·{" "}
                         <span className="font-semibold text-amber-600 dark:text-amber-400">
                           {formatCoins(earned)} cookies
                         </span>
                       </span>
                     </div>
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border text-left text-xs text-muted">
-                          <th className="px-4 py-3 font-medium">Reader</th>
-                          <th className="px-4 py-3 text-right font-medium">
-                            Chapter
-                          </th>
-                          <th className="px-4 py-3 text-right font-medium">Date</th>
-                          <th className="px-4 py-3 text-right font-medium">
-                            Earned
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {purchases.map((p, i) => (
-                          <tr
-                            key={`${n.slug}-${p.chapterNumber}-${i}`}
-                            className="border-b border-border last:border-0"
-                          >
-                            <td className="px-4 py-3 text-foreground">
-                              {p.buyer}
-                            </td>
-                            <td className="px-4 py-3 text-right tabular-nums text-foreground">
-                              Ch. {p.chapterNumber}
-                            </td>
-                            <td className="px-4 py-3 text-right tabular-nums text-muted">
-                              {new Date(p.createdAt).toLocaleDateString()}
-                            </td>
-                            <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600 dark:text-amber-400">
-                              {formatCoins(p.earned)}
-                            </td>
+                    {purchases.length === 0 ? (
+                      <p className="px-4 py-6 text-center text-sm text-muted">
+                        No recent purchases in this list.
+                      </p>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border text-left text-xs text-muted">
+                            <th className="px-4 py-3 font-medium">Reader</th>
+                            <th className="px-4 py-3 text-right font-medium">
+                              Chapter
+                            </th>
+                            <th className="px-4 py-3 text-right font-medium">Date</th>
+                            <th className="px-4 py-3 text-right font-medium">
+                              Earned
+                            </th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {purchases.map((p, i) => (
+                            <tr
+                              key={`${n.slug}-${p.chapterNumber}-${i}`}
+                              className="border-b border-border last:border-0"
+                            >
+                              <td className="px-4 py-3 text-foreground">
+                                {p.buyer}
+                              </td>
+                              <td className="px-4 py-3 text-right tabular-nums text-foreground">
+                                Ch. {p.chapterNumber}
+                              </td>
+                              <td className="px-4 py-3 text-right tabular-nums text-muted">
+                                {new Date(p.createdAt).toLocaleDateString()}
+                              </td>
+                              <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600 dark:text-amber-400">
+                                {formatCoins(p.earned)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 );
               })}

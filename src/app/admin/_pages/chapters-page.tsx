@@ -3,7 +3,6 @@ import { ChevronLeft, PlusCircle } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/page-container";
-import { countWords } from "@/lib/utils";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
 import {
@@ -22,7 +21,7 @@ type ChapterRow = {
   id: string;
   number: number;
   title: string;
-  content: string;
+  word_count: number | null;
   is_free: boolean;
   coin_cost: number;
   is_published: boolean;
@@ -57,15 +56,15 @@ export async function WorkspaceChaptersPage({
   const { data: chapters } = await admin
     .from("chapters")
     .select(
-      "id, number, title, content, is_free, coin_cost, is_published, unlock_at",
+      "id, number, title, word_count, is_free, coin_cost, is_published, unlock_at",
     )
     .eq("novel_id", novelId)
     .order("number", { ascending: true })
     .returns<ChapterRow[]>();
 
-  const rows = (chapters ?? []).map(({ content, ...chapter }) => ({
+  const rows = (chapters ?? []).map((chapter) => ({
     ...chapter,
-    word_count: countWords(content),
+    word_count: Number(chapter.word_count ?? 0),
   }));
   const draftCount = rows.filter((c) => !c.is_published).length;
 

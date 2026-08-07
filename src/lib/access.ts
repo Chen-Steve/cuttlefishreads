@@ -1,10 +1,9 @@
-import { cookies } from "next/headers";
+import { cache } from "react";
 
-import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { getAuthClaims } from "@/utils/supabase/auth";
 import { isAdminEmail } from "@/lib/admin";
 import {
-  hasProfileRole,
   isTranslatorRole,
   parseProfileRoles,
   storedRoleFromFlags,
@@ -61,11 +60,12 @@ async function ensureTranslatorApplicationRole(
   return true;
 }
 
-/** Current request's access from JWT + profile. Null when logged out. */
-export async function getAdminAccess(): Promise<AdminAccess | null> {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-  const claims = data?.claims;
+/**
+ * Current request's access from JWT + profile. Null when logged out.
+ * Request-scoped via React cache so layout + page share one lookup.
+ */
+export const getAdminAccess = cache(async (): Promise<AdminAccess | null> => {
+  const claims = await getAuthClaims();
   if (!claims) return null;
 
   const userId = claims.sub as string;
@@ -102,7 +102,7 @@ export async function getAdminAccess(): Promise<AdminAccess | null> {
     isTranslator,
     hasWorkspace: isMasterAdmin || isTranslator,
   };
-}
+});
 
 /** Grant translator access via profiles.role. */
 export async function grantProfileRole(
