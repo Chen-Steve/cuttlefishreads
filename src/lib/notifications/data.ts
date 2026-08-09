@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 
 import {
@@ -32,6 +33,18 @@ type NotifyRow = {
   chapter_number?: number | null;
 };
 
+function toInsertRow(row: NotifyRow) {
+  return {
+    user_id: row.user_id,
+    actor_id: row.actor_id ?? null,
+    type: row.type,
+    comment_id: row.comment_id ?? null,
+    reply_id: row.reply_id ?? null,
+    novel_id: row.novel_id ?? null,
+    chapter_number: row.chapter_number ?? null,
+  };
+}
+
 /**
  * Inbox rows are written with the service role. Duplicates (code 23505) are
  * ignored so re-likes / re-publishes stay quiet.
@@ -43,34 +56,24 @@ export async function notifyUsers(rows: NotifyRow[]) {
   if (filtered.length === 0) return;
 
   const admin = createAdminClient();
-  const { error } = await admin.from("notifications").insert(
-    filtered.map((row) => ({
-      user_id: row.user_id,
-      actor_id: row.actor_id ?? null,
-      type: row.type,
-      comment_id: row.comment_id ?? null,
-      reply_id: row.reply_id ?? null,
-      novel_id: row.novel_id ?? null,
-      chapter_number: row.chapter_number ?? null,
-    })),
-  );
-  if (error && error.code !== "23505") {
+  const payload = filtered.map(toInsertRow);
+  const { error } = await admin.from("notifications").insert(payload);
+  if (!error) return;
+  if (error.code === "23505" || error.message?.includes("duplicate")) {
     // Batch insert can fail entirely on one conflict — fall back per-row.
-    for (const row of filtered) {
-      const { error: rowError } = await admin.from("notifications").insert({
-        user_id: row.user_id,
-        actor_id: row.actor_id ?? null,
-        type: row.type,
-        comment_id: row.comment_id ?? null,
-        reply_id: row.reply_id ?? null,
-        novel_id: row.novel_id ?? null,
-        chapter_number: row.chapter_number ?? null,
-      });
-      if (rowError && rowError.code !== "23505") {
-        console.error("notifyUsers:", rowError);
-      }
-    }
+    await Promise.all(
+      payload.map(async (row) => {
+        const { error: rowError } = await admin
+          .from("notifications")
+          .insert(row);
+        if (rowError && rowError.code !== "23505") {
+          console.error("notifyUsers:", rowError);
+        }
+      }),
+    );
+    return;
   }
+  console.error("notifyUsers:", error);
 }
 
 /** @deprecated Use notifyUsers */
@@ -147,72 +150,41 @@ export async function notifyBookmarkersOfChapters(opts: {
 
 /**
  * Create chapter_released rows for timed unlocks that became free today for
- * this reader's bookmarked novels. Runs on inbox load so we don't need cron.
- * Only today's unlocks — never backfill older released chapters.
+ * one reader. Runs on inbox load so we don't need a cron.
  */
-async function materializeDueChapterReleases(userId: string) {
+async function materializeDueChapterReleases(userId: string): Promise<number> {
   const admin = createAdminClient();
-
-  const { data: bookmarks } = await admin
-    .from("bookmarks")
-    .select("novel_id")
-    .eq("user_id", userId);
-
-  const novelIds = [
-    ...new Set((bookmarks ?? []).map((row) => row.novel_id as string)),
-  ];
-  if (novelIds.length === 0) return;
-
-  const now = new Date();
-  const startOfToday = new Date(now);
-  startOfToday.setHours(0, 0, 0, 0);
-
-  const { data: dueChapters, error } = await admin
-    .from("chapters")
-    .select("novel_id, number, unlock_at")
-    .in("novel_id", novelIds)
-    .eq("is_published", true)
-    .eq("is_free", false)
-    .not("unlock_at", "is", null)
-    .gte("unlock_at", startOfToday.toISOString())
-    .lte("unlock_at", now.toISOString());
+  const { data, error } = await admin.rpc("materialize_due_chapter_releases", {
+    p_user_id: userId,
+  });
 
   if (error) {
     console.error("materializeDueChapterReleases:", error);
-    return;
-  }
-  if (!dueChapters?.length) return;
-
-  await notifyUsers(
-    dueChapters.map((chapter) => ({
-      user_id: userId,
-      type: "chapter_released" as const,
-      novel_id: chapter.novel_id as string,
-      chapter_number: chapter.number as number,
-    })),
-  );
-}
-
-export async function getUnreadNotificationCount(
-  userId: string,
-): Promise<number> {
-  await materializeDueChapterReleases(userId);
-
-  const supabase = createClient(await cookies());
-  const { count, error } = await supabase
-    .from("notifications")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .is("read_at", null)
-    .is("dismissed_at", null);
-
-  if (error) {
-    console.error("getUnreadNotificationCount:", error);
     return 0;
   }
 
-  return count ?? 0;
+  return typeof data === "number" ? data : Number(data ?? 0);
 }
+
+/** Unread badge count only — no write-on-read materialization. */
+export const getUnreadNotificationCount = cache(
+  async (userId: string): Promise<number> => {
+    const supabase = createClient(await cookies());
+    const { count, error } = await supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .is("read_at", null)
+      .is("dismissed_at", null);
+
+    if (error) {
+      console.error("getUnreadNotificationCount:", error);
+      return 0;
+    }
+
+    return count ?? 0;
+  },
+);
 
 /** @deprecated Use getUnreadNotificationCount */
 export const getUnreadCommentNotificationCount = getUnreadNotificationCount;

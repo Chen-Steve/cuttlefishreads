@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { NotificationsList } from "@/components/notifications/notifications-list";
 import { PageContainer } from "@/components/page-container";
 import { getNotifications } from "@/lib/notifications/data";
-import { createClient } from "@/utils/supabase/server";
+import { getAuthClaims } from "@/utils/supabase/auth";
 
 export const metadata: Metadata = {
   title: "Notifications",
@@ -14,13 +13,12 @@ export const metadata: Metadata = {
 };
 
 export default async function NotificationsPage() {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     redirect("/login?redirect=/notifications");
   }
 
-  const notifications = await getNotifications(data.claims.sub as string);
+  const notifications = await getNotifications(claims.sub as string);
 
   return (
     <PageContainer as="section" width="narrow" className="flex flex-col gap-5">
