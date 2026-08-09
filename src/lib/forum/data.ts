@@ -1,7 +1,7 @@
-import { cookies } from "next/headers";
+import { cache } from "react";
 
 import { isAdminEmail } from "@/lib/admin";
-import { createClient } from "@/utils/supabase/server";
+import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 
 import {
   isForumReactionKey,
@@ -96,18 +96,17 @@ export type ForumViewer = {
 
 /** Signed-in member plus whether they moderate. Null when logged out. */
 export async function getForumViewer(): Promise<ForumViewer | null> {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) return null;
+  const claims = await getAuthClaims();
+  if (!claims) return null;
 
   return {
-    userId: data.claims.sub as string,
-    isMasterAdmin: isAdminEmail(data.claims.email as string | undefined),
+    userId: claims.sub as string,
+    isMasterAdmin: isAdminEmail(claims.email as string | undefined),
   };
 }
 
 export async function getForumSections(): Promise<ForumSection[]> {
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data, error } = await supabase
     .from("forum_sections")
     .select("id, slug, name, sort_order")
@@ -128,7 +127,7 @@ export async function getForumSections(): Promise<ForumSection[]> {
 }
 
 export async function getForumCategories(): Promise<ForumCategoryOverview[]> {
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data, error } = await supabase
     .from("forum_category_overview")
     .select(
@@ -195,7 +194,7 @@ export function groupForumCategories(
 export async function getForumCategory(
   slug: string,
 ): Promise<ForumCategory | null> {
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data, error } = await supabase
     .from("forum_categories")
     .select(
@@ -231,7 +230,7 @@ export async function getCategoryThreads(
   category: ForumCategory,
   page = 1,
 ): Promise<CategoryThreadsResult> {
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const currentPage = Math.max(1, page);
   const from = (currentPage - 1) * THREADS_PER_PAGE;
 
@@ -263,7 +262,7 @@ async function fetchReactionSummaries(
   const summaries = new Map<string, ForumReactionSummary[]>();
   if (postIds.length === 0) return summaries;
 
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data, error } = await supabase
     .from("forum_reactions")
     .select("post_id, user_id, emoji")
@@ -274,23 +273,29 @@ async function fetchReactionSummaries(
     return summaries;
   }
 
+  // Aggregate with O(1) lookups: `${postId}:${emoji}` → summary entry.
+  const byKey = new Map<string, ForumReactionSummary>();
   for (const row of data ?? []) {
     const emoji = row.emoji as string;
     if (!isForumReactionKey(emoji)) continue;
 
-    const existing = summaries.get(row.post_id as string) ?? [];
-    const entry = existing.find((summary) => summary.key === emoji);
+    const postId = row.post_id as string;
+    const mapKey = `${postId}:${emoji}`;
+    const entry = byKey.get(mapKey);
     if (entry) {
       entry.count += 1;
       entry.reactedByCurrentUser ||= row.user_id === currentUserId;
     } else {
-      existing.push({
+      const created: ForumReactionSummary = {
         key: emoji,
         count: 1,
         reactedByCurrentUser: row.user_id === currentUserId,
-      });
+      };
+      byKey.set(mapKey, created);
+      const list = summaries.get(postId) ?? [];
+      list.push(created);
+      summaries.set(postId, list);
     }
-    summaries.set(row.post_id as string, existing);
   }
 
   return summaries;
@@ -301,7 +306,7 @@ export async function getForumThread(
   page = 1,
   currentUserId: string | null = null,
 ): Promise<ForumThreadPage | null> {
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
 
   const { data: threadRow, error: threadError } = await supabase
     .from("forum_threads")
@@ -370,7 +375,7 @@ export async function getPostPage(
   threadId: string,
   postId: string,
 ): Promise<number> {
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
 
   const { data: post } = await supabase
     .from("forum_posts")
@@ -389,28 +394,28 @@ export async function getPostPage(
   return Math.floor((count ?? 0) / POSTS_PER_PAGE) + 1;
 }
 
-export async function getUnreadNotificationCount(
-  userId: string,
-): Promise<number> {
-  const supabase = createClient(await cookies());
-  const { count, error } = await supabase
-    .from("forum_notifications")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .is("read_at", null);
+export const getUnreadNotificationCount = cache(
+  async (userId: string): Promise<number> => {
+    const supabase = await getServerSupabase();
+    const { count, error } = await supabase
+      .from("forum_notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .is("read_at", null);
 
-  if (error) {
-    console.error("getUnreadNotificationCount:", error);
-    return 0;
-  }
+    if (error) {
+      console.error("getUnreadNotificationCount:", error);
+      return 0;
+    }
 
-  return count ?? 0;
-}
+    return count ?? 0;
+  },
+);
 
 export async function getForumNotifications(
   userId: string,
 ): Promise<ForumNotification[]> {
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data, error } = await supabase
     .from("forum_notifications")
     .select(
@@ -464,7 +469,7 @@ function excerptBody(body: string, limit = 100) {
 
 /** Recent posts and threads for the board-index right rail. */
 export async function getForumSidebarFeed(): Promise<ForumSidebarFeed> {
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   // Pull a few extras so soft-deleted threads filtered client-side still leave
   // a full sidebar page.
   const fetchLimit = SIDEBAR_FEED_LIMIT + 8;
@@ -543,7 +548,7 @@ export async function getForumSidebarFeed(): Promise<ForumSidebarFeed> {
 export async function getForumProfileActivity(
   userId: string,
 ): Promise<ForumProfileActivity> {
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
 
   const [threadsResult, postsResult] = await Promise.all([
     supabase

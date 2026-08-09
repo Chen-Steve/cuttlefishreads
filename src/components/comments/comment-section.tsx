@@ -31,15 +31,19 @@ export async function CommentSection({
   /** When provided, skips a redundant chapter-summaries fetch. */
   chapterTitles?: Record<number, string>;
 }) {
-  const isLoggedIn = await isUserAuthenticated();
-  const chapterTitles =
-    chapterTitlesProp ??
-    titlesFromSummaries(await getChapterSummaries(novelSlug));
-
   if (mode === "chapter") {
     if (chapterNumber == null) return null;
 
-    const comments = await getChapterComments(novelSlug, chapterNumber);
+    const [isLoggedIn, comments, summaries] = await Promise.all([
+      isUserAuthenticated(),
+      getChapterComments(novelSlug, chapterNumber),
+      chapterTitlesProp
+        ? Promise.resolve(null)
+        : getChapterSummaries(novelSlug),
+    ]);
+
+    const chapterTitles =
+      chapterTitlesProp ?? titlesFromSummaries(summaries ?? []);
 
     return (
       <CommentsPanel
@@ -55,18 +59,26 @@ export async function CommentSection({
     );
   }
 
-  const [{ comments, hasMore }, readableChapters] = await Promise.all([
-    getNovelComments(novelSlug),
-    getReadableChapters(novelSlug),
-  ]);
+  const [isLoggedIn, commentsResult, readableChapters, summaries] =
+    await Promise.all([
+      isUserAuthenticated(),
+      getNovelComments(novelSlug),
+      getReadableChapters(novelSlug),
+      chapterTitlesProp
+        ? Promise.resolve(null)
+        : getChapterSummaries(novelSlug),
+    ]);
+
+  const chapterTitles =
+    chapterTitlesProp ?? titlesFromSummaries(summaries ?? []);
 
   return (
     <CommentsPanel
       key={novelSlug}
       mode="novel"
       novelSlug={novelSlug}
-      initialComments={comments}
-      initialHasMore={hasMore}
+      initialComments={commentsResult.comments}
+      initialHasMore={commentsResult.hasMore}
       isLoggedIn={isLoggedIn}
       readableChapters={readableChapters}
       chapterTitles={chapterTitles}

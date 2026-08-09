@@ -65,19 +65,18 @@ export default async function OriginalsSeriesPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [novel, chapters, bookmarked, isLoggedIn] = await Promise.all([
-    getNovel(slug),
-    getChapterListItems(slug),
-    isNovelBookmarked(slug),
-    isUserAuthenticated(),
-  ]);
+  const [novel, chapters, bookmarked, isLoggedIn, engagement, rating] =
+    await Promise.all([
+      getNovel(slug),
+      getChapterListItems(slug),
+      isNovelBookmarked(slug),
+      isUserAuthenticated(),
+      getNovelEngagementStats(slug),
+      getNovelRatingSummary(slug),
+    ]);
 
   if (!novel || !isOriginalNovel(novel)) notFound();
 
-  const [engagement, rating] = await Promise.all([
-    getNovelEngagementStats(slug),
-    getNovelRatingSummary(slug),
-  ]);
   const firstChapter = chapters[0];
 
   const ratingDisplay =

@@ -81,13 +81,16 @@ export default async function NovelDetailPage({
   params,
 }: PageProps<"/novels/[slug]">) {
   const { slug } = await params;
-  const [novel, chapters, bookmarked, isLoggedIn, userCoins] = await Promise.all([
-    getNovel(slug),
-    getChapterListItems(slug),
-    isNovelBookmarked(slug),
-    isUserAuthenticated(),
-    getUserCoins(),
-  ]);
+  const [novel, chapters, bookmarked, isLoggedIn, userCoins, viewCount, rating] =
+    await Promise.all([
+      getNovel(slug),
+      getChapterListItems(slug),
+      isNovelBookmarked(slug),
+      isUserAuthenticated(),
+      getUserCoins(),
+      getNovelPageViews(slug),
+      getNovelRatingSummary(slug),
+    ]);
 
   if (!novel) {
     notFound();
@@ -95,11 +98,6 @@ export default async function NovelDetailPage({
   if (isOriginalNovel(novel)) {
     permanentRedirect(originalsPublicUrl(`/series/${novel.slug}`));
   }
-
-  const [viewCount, rating] = await Promise.all([
-    getNovelPageViews(slug),
-    getNovelRatingSummary(slug),
-  ]);
 
   const firstChapter = chapters[0];
   const bulkBuy = getBulkBuyState(chapters);

@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { PageContainer } from "@/components/page-container";
-import { createClient } from "@/utils/supabase/server";
 import { COIN_PACKAGES } from "@/lib/coin-packages";
 import { SITE } from "@/lib/constants";
 import { isStripeConfigured } from "@/lib/stripe";
+import { getAuthClaims } from "@/utils/supabase/auth";
 import { CoinPackages } from "./_components/coin-packages";
 
 export const metadata: Metadata = {
@@ -16,10 +15,8 @@ export const metadata: Metadata = {
 };
 
 export default async function ShopPage() {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-
-  if (!data?.claims) redirect("/login");
+  const claims = await getAuthClaims();
+  if (!claims) redirect("/login");
 
   const paypalClientId = process.env.PAYPAL_CLIENT_ID;
   const stripeEnabled = isStripeConfigured();

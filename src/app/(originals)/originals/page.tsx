@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { Feather } from "lucide-react";
 import { HomeSection } from "@/components/home-section";
 import {
@@ -14,7 +13,7 @@ import { getNovelRatingSummariesBySlug } from "@/lib/data";
 import { originalsPublicUrl } from "@/lib/hosts";
 import { getOriginalsHomeData } from "@/lib/originals-data";
 import { originalsPageMetadata } from "@/lib/seo";
-import { createClient } from "@/utils/supabase/server";
+import { getAuthClaims } from "@/utils/supabase/auth";
 
 export const metadata: Metadata = originalsPageMetadata({
   title: ORIGINALS.name,
@@ -25,9 +24,8 @@ export const metadata: Metadata = originalsPageMetadata({
 export default async function OriginalsHomePage() {
   const workspaceHref = "/workspace";
   const signupHref = `/signup?redirect=${encodeURIComponent(workspaceHref)}`;
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-  const isAuthenticated = Boolean(data?.claims);
+  const claims = await getAuthClaims();
+  const isAuthenticated = Boolean(claims);
 
   const { featured, newlyAdded, recentlyUpdated, completed, catalog } =
     await getOriginalsHomeData();

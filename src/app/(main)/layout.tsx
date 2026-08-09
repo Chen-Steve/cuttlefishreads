@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getUnreadNotificationCount } from "@/lib/notifications/data";
-import { getAuthClaims } from "@/utils/supabase/auth";
-import { createClient } from "@/utils/supabase/server";
+import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 import { isAdminEmail } from "@/lib/admin";
 import { SITE } from "@/lib/constants";
 import { ensureOAuthProfile } from "@/lib/profile";
@@ -39,7 +37,7 @@ export default async function MainLayout({
   let isMasterAdmin = false;
   let unreadNotifications = 0;
   if (claims) {
-    const supabase = createClient(await cookies());
+    const supabase = await getServerSupabase();
     const [{ data: profile }, unreadCount] = await Promise.all([
       supabase
         .from("profiles")

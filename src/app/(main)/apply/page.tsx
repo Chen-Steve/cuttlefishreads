@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cookies } from "next/headers";
 
 import { PageContainer } from "@/components/page-container";
 import { originalsPublicUrl } from "@/lib/hosts";
 import { hasProfileRole, parseProfileRoles } from "@/lib/roles";
-import { createClient } from "@/utils/supabase/server";
+import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 import { ApplyForm } from "./apply-form";
 
 export const metadata: Metadata = {
@@ -39,10 +38,9 @@ const STATUS_COPY: Record<
 };
 
 export default async function ApplyPage() {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
+  const claims = await getAuthClaims();
 
-  if (!data?.claims) {
+  if (!claims) {
     return (
       <PageContainer as="section" width="narrow">
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
@@ -91,8 +89,9 @@ export default async function ApplyPage() {
     );
   }
 
-  const userId = data.claims.sub as string;
-  const email = (data.claims.email as string | undefined) ?? "";
+  const userId = claims.sub as string;
+  const email = (claims.email as string | undefined) ?? "";
+  const supabase = await getServerSupabase();
 
   const [{ data: profile }, { data: application }] = await Promise.all([
     supabase

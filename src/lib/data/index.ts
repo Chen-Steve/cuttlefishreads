@@ -1,6 +1,5 @@
 import { cache } from "react";
 import { unstable_cache, revalidateTag } from "next/cache";
-import { cookies } from "next/headers";
 
 import type { Genre, Language, PublicationType } from "@/lib/constants";
 import {
@@ -19,8 +18,7 @@ import type {
   NovelRatingSummary,
   RecentlyUpdatedNovel,
 } from "@/types";
-import { getAuthClaims } from "@/utils/supabase/auth";
-import { createClient } from "@/utils/supabase/server";
+import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { isAdminEmail } from "@/lib/admin";
 import { formatRelativeDate } from "@/lib/utils";
@@ -180,7 +178,7 @@ const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   if (!claims) return null;
 
   const id = claims.sub as string;
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
@@ -205,7 +203,7 @@ const getUnlockedChapterNumbers = cache(
     const claims = await getAuthClaims();
     if (!claims) return new Set();
 
-    const supabase = createClient(await cookies());
+    const supabase = await getServerSupabase();
     const { data } = await supabase
       .from("chapter_unlocks")
       .select("chapter_number")
@@ -257,7 +255,7 @@ const fetchNovelIdBySlug = cache(
     publisher_id: string | null;
     publication_type: PublicationType;
   } | null> => {
-    const supabase = createClient(await cookies());
+    const supabase = await getServerSupabase();
     const { data } = await supabase
       .from("novels")
       .select("id, publisher_id, publication_type")
@@ -361,7 +359,7 @@ export const getNovels = cache(async (): Promise<Novel[]> => {
 
 export const getNovel = cache(
   async (slug: string): Promise<Novel | undefined> => {
-    const supabase = createClient(await cookies());
+    const supabase = await getServerSupabase();
     const { data, error } = await supabase
       .from("novels")
       .select(NOVEL_LIST_COLUMNS)
@@ -373,11 +371,7 @@ export const getNovel = cache(
     const novel = mapNovel(data as DbNovel);
 
     if (novel.publisherId) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("username, translator_note, kofi_url, patreon_url")
-        .eq("id", novel.publisherId)
-        .maybeSingle();
+      const profile = await getPublisherProfile(novel.publisherId);
       if (profile?.username) {
         novel.translatorUsername = profile.username;
       }
@@ -393,11 +387,7 @@ export const getNovel = cache(
     } else if (novel.translator) {
       // No publisher assigned — try to find a profile whose username matches
       // the translator name set by an admin so the name can still be linked.
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("username")
-        .eq("username", novel.translator)
-        .maybeSingle();
+      const profile = await getProfileByUsername(novel.translator);
       if (profile?.username) {
         novel.translatorUsername = profile.username;
       }
@@ -406,6 +396,26 @@ export const getNovel = cache(
     return novel;
   },
 );
+
+const getPublisherProfile = cache(async (publisherId: string) => {
+  const supabase = await getServerSupabase();
+  const { data } = await supabase
+    .from("profiles")
+    .select("username, translator_note, kofi_url, patreon_url")
+    .eq("id", publisherId)
+    .maybeSingle();
+  return data;
+});
+
+const getProfileByUsername = cache(async (username: string) => {
+  const supabase = await getServerSupabase();
+  const { data } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("username", username)
+    .maybeSingle();
+  return data;
+});
 
 /** Homepage featured ranking by GA4 all-time novel + chapter pageviews. */
 export async function getFeaturedNovels(
@@ -604,7 +614,7 @@ export const getBookmarkedSlugs = cache(async (): Promise<Set<string>> => {
 
   // Bookmarks are publicly readable (for /u/<username> profiles), so always
   // scope personal-library reads to the signed-in user.
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data, error } = await supabase
     .from("bookmarks")
     .select("novel_slug")
@@ -622,7 +632,7 @@ export const isNovelBookmarked = cache(
     const claims = await getAuthClaims();
     if (!claims) return false;
 
-    const supabase = createClient(await cookies());
+    const supabase = await getServerSupabase();
     const { data } = await supabase
       .from("bookmarks")
       .select("id")
@@ -656,7 +666,7 @@ export type PublicProfile = {
 export async function getPublicProfile(
   username: string,
 ): Promise<PublicProfile | null> {
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data } = await supabase
     .from("profiles")
     .select("id, username, role, avatar_url, kofi_url, patreon_url")
@@ -683,7 +693,7 @@ export async function getPublicProfile(
 export async function getUserBookmarkedNovels(
   userId: string,
 ): Promise<Novel[]> {
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data, error } = await supabase
     .from("bookmarks")
     .select("novel_slug")
@@ -876,16 +886,36 @@ export async function getClosestNovelTitleMatch(
   options?: { publicationType?: PublicationType },
 ): Promise<NovelTitleMatch | null> {
   const q = query.trim().toLowerCase();
-  if (!q) return null;
+  if (!q || q.length > 100) return null;
 
-  const novels = await getNovels();
-  const candidates = options?.publicationType
-    ? novels.filter((n) => n.publicationType === options.publicationType)
-    : novels;
-  const [match] = candidates
-    .map((novel) => ({
-      novel,
-      score: titleMatchScore(novel.title, q),
+  // Escape ILIKE wildcards so user input is treated literally.
+  const escaped = q.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+
+  const admin = createAdminClient();
+  let request = admin
+    .from("novels")
+    .select("slug, title, cover_url")
+    .ilike("title", `%${escaped}%`)
+    .limit(40);
+
+  if (options?.publicationType) {
+    request = request.eq("publication_type", options.publicationType);
+  }
+
+  const { data, error } = await request;
+  if (error) {
+    console.error("getClosestNovelTitleMatch:", error);
+    return null;
+  }
+
+  const [match] = (data ?? [])
+    .map((row) => ({
+      novel: {
+        slug: row.slug as string,
+        title: row.title as string,
+        coverUrl: (row.cover_url as string | null) ?? undefined,
+      },
+      score: titleMatchScore(row.title as string, q),
     }))
     .filter(({ score }) => Number.isFinite(score))
     .sort((a, b) => {
@@ -894,15 +924,14 @@ export async function getClosestNovelTitleMatch(
     });
 
   if (!match) return null;
-  const { slug, title, coverUrl } = match.novel;
-  return { slug, title, coverUrl };
+  return match.novel;
 }
 
 export const getUserCoins = cache(async (): Promise<number> => {
   const claims = await getAuthClaims();
   if (!claims) return 0;
 
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data } = await supabase
     .from("profiles")
     .select("coins")
@@ -946,7 +975,7 @@ async function fetchProfileUsernames(
 ): Promise<Map<string, string>> {
   if (userIds.length === 0) return new Map();
 
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data, error } = await supabase
     .from("profiles")
     .select("id, username")
@@ -1010,7 +1039,7 @@ function mapCommentRows(
 // Fetches the publisher (translator) id for a novel so replies authored by the
 // translator can be badged. Returns null when the novel or column is missing.
 async function fetchNovelPublisherId(slug: string): Promise<string | null> {
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data } = await supabase
     .from("novels")
     .select("publisher_id")
@@ -1022,7 +1051,7 @@ async function fetchNovelPublisherId(slug: string): Promise<string | null> {
 async function fetchReplyRows(parentIds: string[]): Promise<DbCommentRow[]> {
   if (parentIds.length === 0) return [];
 
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data, error } = await supabase
     .from("novel_comments")
     .select(COMMENT_COLUMNS)
@@ -1081,7 +1110,7 @@ async function assembleCommentTree(
 async function fetchCommentLikes(commentIds: string[]): Promise<DbLikeRow[]> {
   if (commentIds.length === 0) return [];
 
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data, error } = await supabase
     .from("novel_comment_likes")
     .select("comment_id, user_id")
@@ -1099,17 +1128,19 @@ export async function getChapterComments(
   slug: string,
   chapterNumber: number,
 ): Promise<NovelComment[]> {
-  const supabase = createClient(await cookies());
-  const currentUserId = await getCurrentUserId();
+  const supabase = await getServerSupabase();
+  const [currentUserId, commentsResult] = await Promise.all([
+    getCurrentUserId(),
+    supabase
+      .from("novel_comments")
+      .select(COMMENT_COLUMNS)
+      .eq("novel_slug", slug)
+      .eq("chapter_number", chapterNumber)
+      .is("parent_id", null)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  const { data, error } = await supabase
-    .from("novel_comments")
-    .select(COMMENT_COLUMNS)
-    .eq("novel_slug", slug)
-    .eq("chapter_number", chapterNumber)
-    .is("parent_id", null)
-    .order("created_at", { ascending: false });
-
+  const { data, error } = commentsResult;
   if (error) {
     console.error("getChapterComments:", error);
     return [];
@@ -1130,17 +1161,19 @@ export async function getNovelComments(
 ): Promise<NovelCommentsResult> {
   const limit = options.limit ?? 50;
   const offset = options.offset ?? 0;
-  const supabase = createClient(await cookies());
-  const currentUserId = await getCurrentUserId();
+  const supabase = await getServerSupabase();
+  const [currentUserId, commentsResult] = await Promise.all([
+    getCurrentUserId(),
+    supabase
+      .from("novel_comments")
+      .select(COMMENT_COLUMNS)
+      .eq("novel_slug", slug)
+      .is("parent_id", null)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit),
+  ]);
 
-  const { data, error } = await supabase
-    .from("novel_comments")
-    .select(COMMENT_COLUMNS)
-    .eq("novel_slug", slug)
-    .is("parent_id", null)
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit);
-
+  const { data, error } = commentsResult;
   if (error) {
     console.error("getNovelComments:", error);
     return { comments: [], hasMore: false };
@@ -1176,15 +1209,18 @@ export type AccountComment = {
 
 export async function getUserComments(
   userId: string,
+  options: { limit?: number } = {},
 ): Promise<AccountComment[]> {
-  const supabase = createClient(await cookies());
+  const limit = options.limit ?? 50;
+  const supabase = await getServerSupabase();
 
   const { data, error } = await supabase
     .from("novel_comments")
     .select(COMMENT_COLUMNS)
     .eq("user_id", userId)
     .is("parent_id", null)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(limit);
 
   if (error) {
     console.error("getUserComments:", error);
@@ -1269,7 +1305,7 @@ export async function getReadableChapters(
 export async function getNovelEngagementStats(
   slug: string,
 ): Promise<NovelEngagementStats> {
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data, error } = await supabase
     .from("novels")
     .select("view_count, reader_count, library_add_count")
@@ -1295,7 +1331,7 @@ export async function getInHouseViewsBySlug(
   const unique = [...new Set(slugs.filter(Boolean))];
   if (unique.length === 0) return {};
 
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data, error } = await supabase
     .from("novels")
     .select("slug, view_count")
@@ -1369,7 +1405,7 @@ export async function getNovelRatingSummariesBySlug(
   const unique = [...new Set(slugs.filter(Boolean))];
   if (unique.length === 0) return {};
 
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data, error } = await supabase
     .from("novel_comments")
     .select("novel_slug, rating")

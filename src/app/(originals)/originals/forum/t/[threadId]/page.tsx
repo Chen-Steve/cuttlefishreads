@@ -46,13 +46,14 @@ export default async function ForumThreadPage({
   searchParams,
 }: PageProps<"/originals/forum/t/[threadId]">) {
   const [{ threadId }, query] = await Promise.all([params, searchParams]);
-  const viewer = await getForumViewer();
-
-  // Inbox links point at a post rather than a page number.
   const targetPost = firstValue(query.post);
-  const requestedPage = targetPost
-    ? await getPostPage(threadId, targetPost)
-    : parsePage(query.page);
+
+  const [viewer, requestedPage] = await Promise.all([
+    getForumViewer(),
+    targetPost
+      ? getPostPage(threadId, targetPost)
+      : Promise.resolve(parsePage(query.page)),
+  ]);
 
   const result = await getForumThread(
     threadId,

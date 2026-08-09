@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Cookie, ExternalLink } from "lucide-react";
 
 import { PageContainer } from "@/components/page-container";
-import { createClient } from "@/utils/supabase/server";
 import { getUserComments } from "@/lib/data";
+import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 import { signOut } from "@/app/(auth)/actions";
 import { AccountActivity } from "./_components/account-activity";
 import { AccountSection } from "./_components/account-section";
@@ -19,14 +18,14 @@ export const metadata: Metadata = {
 };
 
 export default async function AccountPage() {
-  const supabase = createClient(await cookies());
-
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     redirect("/login");
   }
 
-  const { sub: userId, email } = data.claims;
+  const userId = claims.sub as string;
+  const email = claims.email as string | undefined;
+  const supabase = await getServerSupabase();
 
   const [{ data: profile }, { data: purchases }, { data: unlocks }, comments] =
     await Promise.all([
@@ -44,8 +43,9 @@ export default async function AccountPage() {
         .from("chapter_unlocks")
         .select("id, novel_slug, chapter_number, coins_spent, created_at")
         .eq("user_id", userId)
-        .order("created_at", { ascending: false }),
-      getUserComments(userId as string),
+        .order("created_at", { ascending: false })
+        .limit(100),
+      getUserComments(userId),
     ]);
 
   const uniqueSlugs = [...new Set((unlocks ?? []).map((u) => u.novel_slug))];

@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 
-import { createClient } from "@/utils/supabase/server";
+import { getAuthClaims } from "@/utils/supabase/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { computeOrder, CUSTOM_PACKAGE_ID } from "@/lib/coin-packages";
 import { capturePayPalOrder } from "@/lib/paypal";
 
 export async function POST(request: NextRequest) {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const userId = data.claims.sub;
+  const userId = claims.sub;
 
   const body = await request.json().catch(() => null);
   const orderId = body?.orderId ? String(body.orderId) : null;

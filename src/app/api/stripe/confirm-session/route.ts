@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 
-import { createClient } from "@/utils/supabase/server";
+import { getAuthClaims } from "@/utils/supabase/auth";
 import { creditStripeCheckoutSession } from "@/lib/credit-stripe-purchase";
 import { getStripe } from "@/lib/stripe";
 
@@ -11,12 +10,11 @@ import { getStripe } from "@/lib/stripe";
  * (idempotent via credit_coins).
  */
 export async function POST(request: NextRequest) {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const userId = data.claims.sub;
+  const userId = claims.sub;
 
   const body = await request.json().catch(() => null);
   const sessionId = body?.sessionId ? String(body.sessionId) : null;

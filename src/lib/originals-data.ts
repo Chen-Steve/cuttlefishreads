@@ -7,6 +7,7 @@ import {
   getUserCreatedNovels,
 } from "@/lib/data";
 import type { Novel } from "@/types";
+import { createAdminClient } from "@/utils/supabase/admin";
 
 const TRENDING_LIMIT = 7;
 
@@ -18,6 +19,24 @@ export async function getOriginalsCatalog(): Promise<Novel[]> {
   const novels = await getNovels();
   return novels.filter(isOriginalNovel);
 }
+
+/** Whether the user publishes at least one original series (layout badge). */
+export const userHasOriginalSeries = cache(async function (
+  userId: string,
+): Promise<boolean> {
+  const admin = createAdminClient();
+  const { count, error } = await admin
+    .from("novels")
+    .select("id", { count: "exact", head: true })
+    .eq("publisher_id", userId)
+    .eq("publication_type", "original");
+
+  if (error) {
+    console.error("userHasOriginalSeries:", error);
+    return false;
+  }
+  return (count ?? 0) > 0;
+});
 
 /** Public original-series records owned by a user. */
 export const getUserOriginalSeries = cache(async function (

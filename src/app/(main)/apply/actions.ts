@@ -1,9 +1,8 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { createClient } from "@/utils/supabase/server";
+import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 
 export type ApplyState = { error?: string; success?: boolean };
 
@@ -11,14 +10,14 @@ export async function submitTranslatorApplication(
   _prev: ApplyState,
   formData: FormData,
 ): Promise<ApplyState> {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     return { error: "You must be signed in to apply." };
   }
 
-  const userId = data.claims.sub as string;
-  const email = (data.claims.email as string | undefined) ?? "";
+  const supabase = await getServerSupabase();
+  const userId = claims.sub as string;
+  const email = (claims.email as string | undefined) ?? "";
 
   const discord = String(formData.get("discord") ?? "").trim();
   const message = String(formData.get("message") ?? "").trim();

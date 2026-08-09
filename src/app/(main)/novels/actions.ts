@@ -1,12 +1,11 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 import { notifyComment } from "@/lib/notifications/data";
 import { getNovelComments, isChapterReadable } from "@/lib/data";
 import type { NovelComment } from "@/types";
-import { createClient } from "@/utils/supabase/server";
+import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 const MAX_COMMENT_LENGTH = 2000;
@@ -39,12 +38,11 @@ export async function unlockChapter(
   novelSlug: string,
   chapterNumber: number,
 ): Promise<UnlockState> {
-  const supabase = createClient(await cookies());
-
-  const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     return { error: "Please sign in to unlock this chapter." };
   }
+  const supabase = await getServerSupabase();
 
   const { data, error } = await supabase.rpc("unlock_chapter", {
     p_novel_slug: novelSlug,
@@ -70,12 +68,11 @@ export type BulkUnlockState = {
 export async function bulkUnlockChapters(
   novelSlug: string,
 ): Promise<BulkUnlockState> {
-  const supabase = createClient(await cookies());
-
-  const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     return { error: "Please sign in to unlock chapters." };
   }
+  const supabase = await getServerSupabase();
 
   const { data, error } = await supabase.rpc("bulk_unlock_chapters", {
     p_novel_slug: novelSlug,
@@ -101,12 +98,11 @@ export type BookmarkState = { error?: string; bookmarked?: boolean };
 export async function toggleBookmark(
   novelSlug: string,
 ): Promise<BookmarkState> {
-  const supabase = createClient(await cookies());
-
-  const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     return { error: "Please sign in to bookmark novels." };
   }
+  const supabase = await getServerSupabase();
 
   const { data: novel, error: novelError } = await supabase
     .from("novels")
@@ -118,7 +114,7 @@ export async function toggleBookmark(
     return { error: "Novel not found." };
   }
 
-  const userId = auth.claims.sub;
+  const userId = claims.sub;
 
   // Bookmarks are publicly readable for profiles — always scope by user_id
   // so we never toggle another reader's bookmark for the same novel.
@@ -160,12 +156,11 @@ export type RemoveBookmarksState = { error?: string; removed?: number };
 export async function removeBookmarks(
   novelSlugs: string[],
 ): Promise<RemoveBookmarksState> {
-  const supabase = createClient(await cookies());
-
-  const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     return { error: "Please sign in to manage your library." };
   }
+  const supabase = await getServerSupabase();
 
   const slugs = [...new Set(novelSlugs.map((slug) => slug.trim()).filter(Boolean))];
   if (slugs.length === 0) {
@@ -175,7 +170,7 @@ export async function removeBookmarks(
   const { error } = await supabase
     .from("bookmarks")
     .delete()
-    .eq("user_id", auth.claims.sub)
+    .eq("user_id", claims.sub)
     .in("novel_slug", slugs);
 
   if (error) return { error: error.message };
@@ -203,12 +198,11 @@ export async function createComment(
   chapterNumber?: number | null,
   rating?: number | null,
 ): Promise<CommentState> {
-  const supabase = createClient(await cookies());
-
-  const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     return { error: "Please sign in to comment." };
   }
+  const supabase = await getServerSupabase();
 
   const bodyError = validateCommentBody(body);
   if (bodyError) return { error: bodyError };
@@ -241,7 +235,7 @@ export async function createComment(
   const { data: inserted, error } = await supabase
     .from("novel_comments")
     .insert({
-      user_id: auth.claims.sub,
+      user_id: claims.sub,
       novel_id: novel.id,
       novel_slug: novelSlug,
       chapter_number: chapterNumber ?? null,
@@ -260,7 +254,7 @@ export async function createComment(
   const { data: profile } = await supabase
     .from("profiles")
     .select("username")
-    .eq("id", auth.claims.sub)
+    .eq("id", claims.sub)
     .maybeSingle();
 
   revalidateCommentPaths(novelSlug, chapterNumber);
@@ -290,12 +284,11 @@ export async function replyToComment(
   parentId: string,
   body: string,
 ): Promise<CommentState> {
-  const supabase = createClient(await cookies());
-
-  const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     return { error: "Please sign in to reply." };
   }
+  const supabase = await getServerSupabase();
 
   const bodyError = validateCommentBody(body);
   if (bodyError) return { error: bodyError };
@@ -324,7 +317,7 @@ export async function replyToComment(
     }
   }
 
-  const userId = auth.claims.sub as string;
+  const userId = claims.sub as string;
 
   const { data: inserted, error } = await supabase
     .from("novel_comments")
@@ -394,12 +387,11 @@ export async function updateComment(
   commentId: string,
   body: string,
 ): Promise<CommentState> {
-  const supabase = createClient(await cookies());
-
-  const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     return { error: "Please sign in to edit comments." };
   }
+  const supabase = await getServerSupabase();
 
   const bodyError = validateCommentBody(body);
   if (bodyError) return { error: bodyError };
@@ -408,7 +400,7 @@ export async function updateComment(
     .from("novel_comments")
     .select("novel_slug, chapter_number")
     .eq("id", commentId)
-    .eq("user_id", auth.claims.sub)
+    .eq("user_id", claims.sub)
     .maybeSingle();
 
   if (fetchError || !existing) {
@@ -422,7 +414,7 @@ export async function updateComment(
       updated_at: new Date().toISOString(),
     })
     .eq("id", commentId)
-    .eq("user_id", auth.claims.sub);
+    .eq("user_id", claims.sub);
 
   if (error) return { error: error.message };
 
@@ -431,18 +423,17 @@ export async function updateComment(
 }
 
 export async function deleteComment(commentId: string): Promise<CommentState> {
-  const supabase = createClient(await cookies());
-
-  const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     return { error: "Please sign in to delete comments." };
   }
+  const supabase = await getServerSupabase();
 
   const { data: existing, error: fetchError } = await supabase
     .from("novel_comments")
     .select("novel_slug, chapter_number")
     .eq("id", commentId)
-    .eq("user_id", auth.claims.sub)
+    .eq("user_id", claims.sub)
     .maybeSingle();
 
   if (fetchError || !existing) {
@@ -453,7 +444,7 @@ export async function deleteComment(commentId: string): Promise<CommentState> {
     .from("novel_comments")
     .delete()
     .eq("id", commentId)
-    .eq("user_id", auth.claims.sub);
+    .eq("user_id", claims.sub);
 
   if (error) return { error: error.message };
 
@@ -464,12 +455,11 @@ export async function deleteComment(commentId: string): Promise<CommentState> {
 export type LikeState = { error?: string; liked?: boolean };
 
 export async function toggleCommentLike(commentId: string): Promise<LikeState> {
-  const supabase = createClient(await cookies());
-
-  const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     return { error: "Please sign in to like comments." };
   }
+  const supabase = await getServerSupabase();
 
   const { data: comment, error: commentError } = await supabase
     .from("novel_comments")
@@ -481,7 +471,7 @@ export async function toggleCommentLike(commentId: string): Promise<LikeState> {
     return { error: "Comment not found." };
   }
 
-  const userId = auth.claims.sub as string;
+  const userId = claims.sub as string;
 
   const { data: existing } = await supabase
     .from("novel_comment_likes")
@@ -572,9 +562,9 @@ export async function reportChapterEngagement(
     return { error: "Invalid chapter." };
   }
 
-  const supabase = createClient(await cookies());
-  const { data: auth } = await supabase.auth.getClaims();
-  if (!auth?.claims) return { error: "Sign in required." };
+  const claims = await getAuthClaims();
+  if (!claims) return { error: "Sign in required." };
+  const supabase = await getServerSupabase();
 
   const { data, error } = await supabase.rpc("report_chapter_engagement", {
     p_novel_slug: slug,

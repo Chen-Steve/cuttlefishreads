@@ -1,12 +1,11 @@
 import { cache } from "react";
-import { cookies } from "next/headers";
 
 import {
   type AppNotification,
   type NotificationType,
 } from "@/lib/notifications/types";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { createClient } from "@/utils/supabase/server";
+import { getServerSupabase } from "@/utils/supabase/auth";
 
 export type {
   AppNotification,
@@ -169,7 +168,7 @@ async function materializeDueChapterReleases(userId: string): Promise<number> {
 /** Unread badge count only — no write-on-read materialization. */
 export const getUnreadNotificationCount = cache(
   async (userId: string): Promise<number> => {
-    const supabase = createClient(await cookies());
+    const supabase = await getServerSupabase();
     const { count, error } = await supabase
       .from("notifications")
       .select("id", { count: "exact", head: true })
@@ -194,7 +193,7 @@ export async function getNotifications(
 ): Promise<AppNotification[]> {
   await materializeDueChapterReleases(userId);
 
-  const supabase = createClient(await cookies());
+  const supabase = await getServerSupabase();
   const { data, error } = await supabase
     .from("notifications")
     .select(

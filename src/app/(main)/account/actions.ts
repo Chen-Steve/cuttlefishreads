@@ -1,9 +1,8 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { createClient } from "@/utils/supabase/server";
+import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 import {
   USERNAME_MAX,
@@ -75,16 +74,16 @@ export async function updateUsername(
     return { error: "Username can only contain letters, numbers, and underscores." };
   }
 
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     return { error: "You must be logged in." };
   }
+  const supabase = await getServerSupabase();
 
   const { error } = await supabase
     .from("profiles")
     .update({ username })
-    .eq("id", data.claims.sub);
+    .eq("id", claims.sub);
 
   if (error) {
     if (error.code === "23505") {
@@ -106,9 +105,8 @@ export async function updateAvatar(
   _prev: AvatarState,
   formData: FormData,
 ): Promise<AvatarState> {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     return { error: "You must be logged in." };
   }
 
@@ -120,7 +118,7 @@ export async function updateAvatar(
   const validationError = validateAvatarFile(file);
   if (validationError) return { error: validationError };
 
-  const userId = data.claims.sub as string;
+  const userId = claims.sub as string;
   const admin = createAdminClient();
 
   const { data: existing } = await admin
@@ -189,11 +187,11 @@ export async function updatePassword(
     return { error: "Passwords do not match." };
   }
 
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     return { error: "You must be logged in." };
   }
+  const supabase = await getServerSupabase();
 
   const { error } = await supabase.auth.updateUser({ password });
 
@@ -205,13 +203,12 @@ export async function updatePassword(
 }
 
 export async function removeAvatar(): Promise<AvatarState> {
-  const supabase = createClient(await cookies());
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     return { error: "You must be logged in." };
   }
 
-  const userId = data.claims.sub as string;
+  const userId = claims.sub as string;
   const admin = createAdminClient();
 
   const { data: existing } = await admin

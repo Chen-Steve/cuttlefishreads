@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { OriginalsFooter } from "@/components/originals/originals-footer";
 import { OriginalsHeader } from "@/components/originals/originals-header";
 import { isAdminEmail } from "@/lib/admin";
@@ -7,9 +6,8 @@ import { ORIGINALS } from "@/lib/constants";
 import { getUnreadNotificationCount } from "@/lib/forum/data";
 import { originalsPublicOrigin, originalsPublicUrl } from "@/lib/hosts";
 import { ensureOAuthProfile } from "@/lib/profile";
-import { getUserOriginalSeries } from "@/lib/originals-data";
-import { getAuthClaims } from "@/utils/supabase/auth";
-import { createClient } from "@/utils/supabase/server";
+import { userHasOriginalSeries } from "@/lib/originals-data";
+import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 
 export const metadata: Metadata = {
   metadataBase: new URL(originalsPublicOrigin()),
@@ -67,14 +65,14 @@ export default async function OriginalsLayout({
   let unreadNotifications = 0;
 
   if (claims) {
-    const supabase = createClient(await cookies());
-    const [{ data: profile }, originalSeries, unreadCount] = await Promise.all([
+    const supabase = await getServerSupabase();
+    const [{ data: profile }, hasSeries, unreadCount] = await Promise.all([
       supabase
         .from("profiles")
         .select("username, avatar_url")
         .eq("id", claims.sub)
         .maybeSingle(),
-      getUserOriginalSeries(claims.sub),
+      userHasOriginalSeries(claims.sub),
       getUnreadNotificationCount(claims.sub),
     ]);
     username = profile?.username ?? null;
@@ -92,7 +90,7 @@ export default async function OriginalsLayout({
     }
     avatarUrl = profile?.avatar_url ?? null;
     isMasterAdmin = isAdminEmail(claims.email as string | undefined);
-    hasCreatorSubdomain = originalSeries.length > 0;
+    hasCreatorSubdomain = hasSeries;
     unreadNotifications = unreadCount;
   }
 

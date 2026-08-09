@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 
 import { PageContainer } from "@/components/page-container";
 import { creatorPublicOrigin, originalsPublicUrl } from "@/lib/hosts";
 import { getUserOriginalSeries } from "@/lib/originals-data";
-import { createClient } from "@/utils/supabase/server";
+import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 import { signOut } from "@/app/(auth)/actions";
 import { AccountSection } from "@/app/(main)/account/_components/account-section";
 import { AvatarForm } from "@/app/(main)/account/_components/avatar-form";
@@ -23,14 +22,14 @@ export const metadata: Metadata = {
 };
 
 export default async function OriginalsAccountPage() {
-  const supabase = createClient(await cookies());
-
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) {
+  const claims = await getAuthClaims();
+  if (!claims) {
     redirect("/login?redirect=/account");
   }
 
-  const { sub: userId, email } = data.claims;
+  const userId = claims.sub as string;
+  const email = claims.email as string | undefined;
+  const supabase = await getServerSupabase();
 
   const [{ data: profile }, originalSeries] = await Promise.all([
     supabase
