@@ -74,14 +74,6 @@ export function authCookieOptionsForHost(
   };
 }
 
-/** Browser-side cookie options from the current hostname. */
-export function authCookieOptionsBrowser(): CookieOptions {
-  if (typeof window === "undefined") {
-    return authCookieOptionsForHost(null);
-  }
-  return authCookieOptionsForHost(window.location.host);
-}
-
 export function mergeAuthCookieOptions(
   options: CookieOptions | undefined,
   hostHeader: string | null | undefined,
