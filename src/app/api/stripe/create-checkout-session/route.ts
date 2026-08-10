@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getAuthClaims } from "@/utils/supabase/auth";
 import { computeOrder, CURRENCY, type OrderInput } from "@/lib/coin-packages";
+import { safeReturnPath } from "@/lib/safe-return-path";
 import { getStripe, shopReturnUrl } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
@@ -32,12 +33,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const returnPath = safeReturnPath(
+    typeof body?.returnPath === "string" ? body.returnPath : undefined,
+  );
+
   try {
     const stripe = getStripe();
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      success_url: `${shopReturnUrl("success")}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: shopReturnUrl("cancel"),
+      success_url: `${shopReturnUrl("success", returnPath)}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: shopReturnUrl("cancel", returnPath),
       line_items: [
         {
           quantity: 1,

@@ -25,7 +25,7 @@ export type ChapterReaderNavConfig = {
   chapters: ChapterSummary[];
   currentChapter: number;
   catalogBase?: CatalogBase;
-  /** Bottom prev/next bar; omit on locked chapters. Default true. */
+  /** Bottom prev/next bar. Default true. */
   showBottomNav?: boolean;
 };
 
@@ -105,6 +105,7 @@ export function ImmersiveChapterShell({
               currentChapter={nav.currentChapter}
               showSettings
               catalogBase={nav.catalogBase}
+              enableKeyboard
             />
           ) : null}
         </div>

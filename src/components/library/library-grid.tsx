@@ -14,8 +14,10 @@ import {
 import {
   clearReadingProgress,
   listReadingProgress,
+  readReadingProgress,
   recordReadingProgress,
   type ReadingProgressEntry,
+  type ReadingProgressMap,
 } from "@/lib/reading-progress";
 import {
   chapterPublicHref,
@@ -38,6 +40,20 @@ type ViewedItem = {
   novel: Novel;
   chapterNumber: number;
 };
+
+function bookmarkResumeHref(
+  novel: Novel,
+  progress: ReadingProgressMap,
+): string {
+  const entry = progress[novel.slug];
+  if (entry && novel.chapterCount >= 1) {
+    return chapterPublicHref(
+      novel,
+      Math.min(entry.chapterNumber, novel.chapterCount),
+    );
+  }
+  return novelPublicHref(novel);
+}
 
 function LibraryRow({
   novel,
@@ -87,9 +103,14 @@ function LibraryRow({
   );
 }
 
-function bookmarkMeta(novel: Novel): string {
+function bookmarkMeta(novel: Novel, progress: ReadingProgressMap): string {
+  const entry = progress[novel.slug];
   const cardGenres = genresExcludingCoverBadges(novel.genres);
-  const parts = [statusLabel[novel.status]];
+  const parts: string[] = [];
+  if (entry && novel.chapterCount >= 1) {
+    parts.push(`Ch. ${Math.min(entry.chapterNumber, novel.chapterCount)}`);
+  }
+  parts.push(statusLabel[novel.status]);
   if (cardGenres[0]) parts.push(cardGenres[0]);
   return parts.join(" · ");
 }
@@ -126,6 +147,7 @@ export function LibraryGrid({
   const [mode, setMode] = useState<LibraryMode>("bookmarked");
   const [items, setItems] = useState(bookmarked);
   const [viewed, setViewed] = useState<ViewedItem[]>([]);
+  const [progress, setProgress] = useState<ReadingProgressMap>({});
   const [removingSlug, setRemovingSlug] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const baseId = useId();
@@ -148,16 +170,17 @@ export function LibraryGrid({
   }, []);
 
   useEffect(() => {
-    function syncViewed() {
+    function syncProgress() {
+      setProgress(readReadingProgress());
       setViewed(resolveViewedItems(catalog, listReadingProgress()));
     }
 
-    syncViewed();
-    window.addEventListener("storage", syncViewed);
-    window.addEventListener("cf-reading-progress", syncViewed);
+    syncProgress();
+    window.addEventListener("storage", syncProgress);
+    window.addEventListener("cf-reading-progress", syncProgress);
     return () => {
-      window.removeEventListener("storage", syncViewed);
-      window.removeEventListener("cf-reading-progress", syncViewed);
+      window.removeEventListener("storage", syncProgress);
+      window.removeEventListener("cf-reading-progress", syncProgress);
     };
   }, [catalog]);
 
@@ -322,8 +345,8 @@ export function LibraryGrid({
               <LibraryRow
                 key={novel.id}
                 novel={novel}
-                href={novelPublicHref(novel)}
-                meta={bookmarkMeta(novel)}
+                href={bookmarkResumeHref(novel, progress)}
+                meta={bookmarkMeta(novel, progress)}
                 onRemove={() => handleRemoveBookmark(novel)}
                 removing={pending && removingSlug === novel.slug}
                 removeLabel={`Remove ${novel.title} from library`}

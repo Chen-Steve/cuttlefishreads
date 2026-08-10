@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
 import { COIN_PACKAGES } from "@/lib/coin-packages";
 import { SITE } from "@/lib/constants";
+import { loginHref, safeReturnPath, shopHref } from "@/lib/safe-return-path";
 import { isStripeConfigured } from "@/lib/stripe";
 import { getAuthClaims } from "@/utils/supabase/auth";
 import { CoinPackages } from "./_components/coin-packages";
@@ -14,9 +15,17 @@ export const metadata: Metadata = {
   title: "Shop",
 };
 
-export default async function ShopPage() {
+export default async function ShopPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ return?: string }>;
+}) {
+  const { return: returnParam } = await searchParams;
+  const returnPath = safeReturnPath(returnParam);
   const claims = await getAuthClaims();
-  if (!claims) redirect("/login");
+  if (!claims) {
+    redirect(loginHref(shopHref(returnPath)));
+  }
 
   const paypalClientId = process.env.PAYPAL_CLIENT_ID;
   const stripeEnabled = isStripeConfigured();

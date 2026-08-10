@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
-import { BookOpen, Coffee, Eye, Heart } from "lucide-react";
+import { Coffee, Eye, Heart } from "lucide-react";
 import { CommentSection, CommentsFallback } from "@/components/comments";
 import {
   BookmarkButton,
@@ -12,6 +12,7 @@ import {
   NovelCover,
   NovelDescription,
   ScrollingTags,
+  StartReadingButton,
 } from "@/components/novel";
 import { getBulkBuyState } from "@/lib/bulk-buy";
 import { PageContainer } from "@/components/page-container";
@@ -170,13 +171,11 @@ export default async function NovelDetailPage({
   const actionButtons = (
     <>
       {firstChapter ? (
-        <Link
-          href={`/novels/${novel.slug}/${firstChapter.number}`}
-          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        >
-          <BookOpen className="size-4" strokeWidth={1.75} aria-hidden />
-          Start reading
-        </Link>
+        <StartReadingButton
+          slug={novel.slug}
+          firstChapterNumber={firstChapter.number}
+          chapterCount={novel.chapterCount}
+        />
       ) : null}
       <BookmarkButton
         novelSlug={novel.slug}

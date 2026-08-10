@@ -136,7 +136,6 @@ export default async function ChapterReaderPage({
           next,
           chapters,
           currentChapter: chapterNumber,
-          showBottomNav: !current.locked,
         }}
         content={
           current.locked ? (

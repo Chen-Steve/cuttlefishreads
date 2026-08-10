@@ -54,6 +54,7 @@ export async function unlockChapter(
   }
 
   revalidatePath(`/novels/${novelSlug}/${chapterNumber}`);
+  revalidatePath(`/novels/${novelSlug}`);
   return { unlocked: data === true };
 }
 

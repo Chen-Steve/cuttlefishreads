@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Cookie } from "lucide-react";
+import { ArrowLeft, Cookie } from "lucide-react";
 
 import {
   type CoinPackage,
@@ -12,6 +13,7 @@ import {
   CENTS_PER_COIN,
   centsToAmountString,
 } from "@/lib/coin-packages";
+import { safeReturnPath, shopHref } from "@/lib/safe-return-path";
 import { usePayPal } from "./use-paypal";
 import { PayPalPayButton } from "./paypal-pay-button";
 import { StripePayButton } from "./stripe-pay-button";
@@ -27,6 +29,7 @@ export function CoinPackages({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const returnPath = safeReturnPath(searchParams.get("return"));
   const { ready, startPurchase } = usePayPal(clientId);
 
   const [customCoins, setCustomCoins] = useState<number | "">(MIN_COINS);
@@ -48,6 +51,7 @@ export function CoinPackages({
   const paypalReady = Boolean(clientId) && ready;
   const anyPaymentMethod = paypalReady || stripeEnabled;
   const busy = pendingId !== null || stripePendingId !== null;
+  const shopPath = shopHref(returnPath);
 
   useEffect(() => {
     const status = searchParams.get("stripe");
@@ -57,7 +61,7 @@ export function CoinPackages({
 
     if (status === "cancel") {
       setError("Stripe checkout was canceled.");
-      router.replace("/shop", { scroll: false });
+      router.replace(shopPath, { scroll: false });
       return;
     }
 
@@ -79,30 +83,36 @@ export function CoinPackages({
             setSuccess(`Success! ${data.coins} cookies added to your balance.`);
           } else {
             setSuccess(
-              "Payment received. Cookies will appear in your balance shortly."
+              "Payment received. Cookies will appear in your balance shortly.",
             );
           }
         } else {
           setSuccess(
-            "Payment received. Cookies will appear in your balance shortly."
+            "Payment received. Cookies will appear in your balance shortly.",
           );
         }
         router.refresh();
+        if (returnPath) {
+          router.replace(returnPath);
+          return;
+        }
       } catch {
         if (!cancelled) {
           setSuccess(
-            "Payment received. Cookies will appear in your balance shortly."
+            "Payment received. Cookies will appear in your balance shortly.",
           );
         }
       } finally {
-        if (!cancelled) router.replace("/shop", { scroll: false });
+        if (!cancelled && !returnPath) {
+          router.replace("/shop", { scroll: false });
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [searchParams, router]);
+  }, [searchParams, router, returnPath, shopPath]);
 
   async function buyWithPayPal(input: OrderInput, id: string) {
     if (!paypalReady || busy) return;
@@ -135,6 +145,9 @@ export function CoinPackages({
           }
           setSuccess(`Success! ${result.coins} cookies added to your balance.`);
           router.refresh();
+          if (returnPath) {
+            router.push(returnPath);
+          }
         },
         onCancel: () => setPendingId(null),
         onError: () => {
@@ -159,7 +172,7 @@ export function CoinPackages({
       const res = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
+        body: JSON.stringify({ ...input, returnPath }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -180,6 +193,16 @@ export function CoinPackages({
 
   return (
     <>
+      {returnPath ? (
+        <Link
+          href={returnPath}
+          className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          <ArrowLeft className="size-3.5" strokeWidth={2} aria-hidden />
+          Back to reading
+        </Link>
+      ) : null}
+
       {/* Status banners */}
       {error && (
         <p

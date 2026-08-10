@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Bookmark, BookmarkCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { toggleBookmark } from "@/app/(main)/novels/actions";
+import { loginHref } from "@/lib/safe-return-path";
 
 export function BookmarkButton({
   novelSlug,
@@ -17,16 +18,18 @@ export function BookmarkButton({
   isLoggedIn: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [bookmarked, setBookmarked] = useState(initialBookmarked);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function handleClick() {
     if (!isLoggedIn) {
+      const returnPath = pathname || `/novels/${novelSlug}`;
       toast("Sign in to add to library", {
         action: {
           label: "Sign in",
-          onClick: () => router.push("/login"),
+          onClick: () => router.push(loginHref(returnPath)),
         },
       });
       return;

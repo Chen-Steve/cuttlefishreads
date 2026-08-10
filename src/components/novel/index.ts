@@ -14,3 +14,4 @@ export { AdultContentWarning } from "./adult-content-warning";
 export { ChapterList, ChapterOrderToggle } from "./chapter-list";
 export { BookmarkButton } from "./bookmark-button";
 export { BulkBuyChapters } from "./bulk-buy-chapters";
+export { StartReadingButton } from "./start-reading-button";

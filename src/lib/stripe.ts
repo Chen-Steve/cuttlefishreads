@@ -22,6 +22,13 @@ export function isStripeConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY);
 }
 
-export function shopReturnUrl(status: "success" | "cancel") {
-  return absoluteUrl(`/shop?stripe=${status}`);
+export function shopReturnUrl(
+  status: "success" | "cancel",
+  returnPath?: string,
+) {
+  const url = new URL(absoluteUrl(`/shop?stripe=${status}`));
+  if (returnPath) {
+    url.searchParams.set("return", returnPath);
+  }
+  return url.toString();
 }
