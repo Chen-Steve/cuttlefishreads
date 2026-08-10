@@ -18,7 +18,7 @@ import { ReaderNav } from "./reader-nav";
 
 const CHAPTER_PATH = /^\/(?:novels|series)\/[^/]+\/(?:chapter\/)?\d+\/?$/;
 
-export type ChapterReaderNavConfig = {
+type ChapterReaderNavConfig = {
   slug: string;
   previous?: Pick<Chapter, "number">;
   next?: Pick<Chapter, "number">;

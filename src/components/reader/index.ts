@@ -7,7 +7,6 @@ export { ReadingEngagementTracker } from "./reading-engagement-tracker";
 export {
   ImmersiveChapterShell,
   useImmersiveHidesSiteHeader,
-  type ChapterReaderNavConfig,
 } from "./immersive-chapter-shell";
 export { ReaderNav } from "./reader-nav";
 export { ReaderSettingsPanel } from "./reader-settings-panel";

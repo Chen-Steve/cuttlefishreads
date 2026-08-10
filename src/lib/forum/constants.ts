@@ -25,10 +25,6 @@ export function forumReactionSymbol(key: ForumReactionKey): string {
   return FORUM_REACTIONS.find((reaction) => reaction.key === key)?.symbol ?? "";
 }
 
-export function forumReactionLabel(key: ForumReactionKey): string {
-  return FORUM_REACTIONS.find((reaction) => reaction.key === key)?.label ?? key;
-}
-
 export const MAX_THREAD_TITLE_LENGTH = 160;
 export const MAX_POST_LENGTH = 10_000;
 export const MAX_SECTION_NAME_LENGTH = 60;

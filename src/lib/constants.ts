@@ -32,11 +32,6 @@ export const PUBLICATION_TYPES = ["original", "translation"] as const;
 
 export type PublicationType = (typeof PUBLICATION_TYPES)[number];
 
-export const PUBLICATION_TYPE_LABELS: Record<PublicationType, string> = {
-  original: "Original",
-  translation: "Translation",
-};
-
 export const COPYRIGHT_TYPES = [
   "all_rights_reserved",
   "public_domain",
@@ -50,12 +45,6 @@ export const COPYRIGHT_TYPE_LABELS: Record<CopyrightType, string> = {
   public_domain: "Public domain",
   creative_commons: "Creative commons",
 };
-
-/** Feature flag for public Originals surfaces. */
-export function originalsEnabled(): boolean {
-  if (process.env.NEXT_PUBLIC_ORIGINALS_ENABLED === "0") return false;
-  return true;
-}
 
 export const GENRES = [
   "Action",

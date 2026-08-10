@@ -29,7 +29,7 @@ function initials(title: string) {
 const COVER_GENRE_BADGES = ["BL", "GL"] as const;
 type CoverGenreBadge = (typeof COVER_GENRE_BADGES)[number];
 
-export function getCoverGenreBadges(
+function getCoverGenreBadges(
   genres: readonly string[],
 ): CoverGenreBadge[] {
   return COVER_GENRE_BADGES.filter((genre) => genres.includes(genre));

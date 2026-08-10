@@ -100,8 +100,3 @@ export async function deleteAllNotifications(): Promise<NotificationActionState>
   revalidatePath("/", "layout");
   return {};
 }
-
-/** @deprecated Use markNotificationRead */
-export const markCommentNotificationRead = markNotificationRead;
-/** @deprecated Use markAllNotificationsRead */
-export const markAllCommentNotificationsRead = markAllNotificationsRead;

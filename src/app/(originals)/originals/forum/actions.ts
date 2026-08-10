@@ -281,29 +281,6 @@ export async function deletePost(postId: string): Promise<ForumActionState> {
   return {};
 }
 
-export async function updateThreadTitle(
-  threadId: string,
-  title: string,
-): Promise<ForumActionState> {
-  const viewer = await getForumViewer();
-  if (!viewer) return { error: "Please sign in to rename your thread." };
-
-  const titleError = validateTitle(title);
-  if (titleError) return { error: titleError };
-
-  const supabase = createClient(await cookies());
-  const { error } = await supabase
-    .from("forum_threads")
-    .update({ title: title.trim(), updated_at: new Date().toISOString() })
-    .eq("id", threadId)
-    .eq("author_id", viewer.userId);
-
-  if (error) return { error: error.message };
-
-  revalidateBoard();
-  return {};
-}
-
 export async function setReaction(
   postId: string,
   emoji: string,

@@ -7,9 +7,7 @@
  * The legacy profiles.roles array is ignored.
  */
 
-export const PROFILE_ROLES = ["translator"] as const;
-
-export type ProfileRole = (typeof PROFILE_ROLES)[number];
+export type ProfileRole = "translator";
 
 export type StoredProfileRole = "user" | "translator";
 

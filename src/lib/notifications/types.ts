@@ -24,11 +24,6 @@ export type AppNotification = {
   createdAt: string;
 };
 
-/** @deprecated Use AppNotification */
-export type CommentNotification = AppNotification;
-/** @deprecated Use NotificationType */
-export type CommentNotificationType = NotificationType;
-
 export function notificationHref(notification: {
   type: NotificationType;
   novelSlug: string;
@@ -55,6 +50,3 @@ export function notificationHref(notification: {
       : `/novels/${notification.novelSlug}`;
   return anchor ? `${path}#comment-${anchor}` : path;
 }
-
-/** @deprecated Use notificationHref */
-export const commentNotificationHref = notificationHref;

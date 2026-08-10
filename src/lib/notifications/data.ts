@@ -11,14 +11,7 @@ export type {
   AppNotification,
   NotificationType,
 } from "@/lib/notifications/types";
-export {
-  notificationHref,
-  commentNotificationHref,
-} from "@/lib/notifications/types";
-export type {
-  CommentNotification,
-  CommentNotificationType,
-} from "@/lib/notifications/types";
+export { notificationHref } from "@/lib/notifications/types";
 
 export const NOTIFICATIONS_PER_PAGE = 50;
 
@@ -185,9 +178,6 @@ export const getUnreadNotificationCount = cache(
   },
 );
 
-/** @deprecated Use getUnreadNotificationCount */
-export const getUnreadCommentNotificationCount = getUnreadNotificationCount;
-
 export async function getNotifications(
   userId: string,
 ): Promise<AppNotification[]> {
@@ -308,6 +298,3 @@ export async function getNotifications(
     };
   });
 }
-
-/** @deprecated Use getNotifications */
-export const getCommentNotifications = getNotifications;

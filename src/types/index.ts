@@ -76,13 +76,6 @@ export interface ChapterSummary {
 /** Chapter metadata for lists/TOC — no body content. */
 export type ChapterListItem = Omit<Chapter, "content">;
 
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  library: string[];
-}
-
 export interface NovelComment {
   id: string;
   novelSlug: string;

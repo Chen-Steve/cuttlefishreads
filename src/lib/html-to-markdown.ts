@@ -231,7 +231,7 @@ export function domToMarkdown(root: Element): string {
  * Convert an HTML clipboard fragment into Markdown.
  * Returns null when the HTML has no useful content.
  */
-export function htmlToMarkdown(html: string): string | null {
+function htmlToMarkdown(html: string): string | null {
   const trimmed = html.trim();
   if (!trimmed) return null;
 

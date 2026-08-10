@@ -271,24 +271,6 @@ const fetchNovelIdBySlug = cache(
   },
 );
 
-async function fetchDbChapters(novelId: string): Promise<DbChapter[]> {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("chapters")
-    .select(
-      "id, number, title, content, translator_note, use_global_translator_note, is_free, coin_cost, unlock_at, published_at",
-    )
-    .eq("novel_id", novelId)
-    .eq("is_published", true)
-    .order("number", { ascending: true });
-
-  if (error) {
-    console.error("fetchDbChapters:", error);
-    return [];
-  }
-  return (data ?? []) as DbChapter[];
-}
-
 async function fetchDbChapterMetas(novelId: string): Promise<DbChapterMeta[]> {
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -729,26 +711,6 @@ export async function getUserCreatedNovels(userId: string): Promise<Novel[]> {
   return ((data ?? []) as DbNovel[]).map(mapNovel);
 }
 
-export const getChapters = cache(async (slug: string): Promise<Chapter[]> => {
-  const novel = await fetchNovelIdBySlug(slug);
-  if (!novel) return [];
-
-  const currentUser = await getCurrentUser();
-  const isPublisher =
-    novel.publisher_id !== null && currentUser?.id === novel.publisher_id;
-  const bypassLock = currentUser?.isAdmin === true || isPublisher;
-
-  const [rows, unlocked] = await Promise.all([
-    fetchDbChapters(novel.id),
-    getUnlockedChapterNumbers(slug),
-  ]);
-
-  const allowLockedContent = novel.publication_type === "original";
-  return rows.map((row) =>
-    mapChapter(slug, row, unlocked, bypassLock, allowLockedContent),
-  );
-});
-
 /** Chapter list/TOC metadata without body content. */
 export const getChapterListItems = cache(
   async (slug: string): Promise<ChapterListItem[]> => {
@@ -823,24 +785,6 @@ export const getChapter = cache(
     );
   },
 );
-
-export async function getAdjacentChapters(
-  slug: string,
-  chapterNumber: number,
-): Promise<{
-  previous?: Pick<ChapterSummary, "number">;
-  next?: Pick<ChapterSummary, "number">;
-}> {
-  const list = await getChapterSummaries(slug);
-  const index = list.findIndex((c) => c.number === chapterNumber);
-  return {
-    previous: index > 0 ? { number: list[index - 1]!.number } : undefined,
-    next:
-      index >= 0 && index < list.length - 1
-        ? { number: list[index + 1]!.number }
-        : undefined,
-  };
-}
 
 export async function searchNovels(query: string): Promise<Novel[]> {
   const q = query.trim().toLowerCase();
@@ -1322,69 +1266,6 @@ export async function getNovelEngagementStats(
     readers: Number(data.reader_count ?? 0),
     libraryAdds: Number(data.library_add_count ?? 0),
   };
-}
-
-/** Map of slug → in-house view totals for rankings / browse sort. */
-export async function getInHouseViewsBySlug(
-  slugs: string[],
-): Promise<Record<string, number>> {
-  const unique = [...new Set(slugs.filter(Boolean))];
-  if (unique.length === 0) return {};
-
-  const supabase = await getServerSupabase();
-  const { data, error } = await supabase
-    .from("novels")
-    .select("slug, view_count")
-    .in("slug", unique);
-
-  if (error || !data) {
-    if (error) console.error("getInHouseViewsBySlug:", error);
-    return Object.fromEntries(unique.map((s) => [s, 0]));
-  }
-
-  const result: Record<string, number> = {};
-  for (const row of data as { slug: string; view_count: number | null }[]) {
-    result[row.slug] = Number(row.view_count ?? 0);
-  }
-  for (const slug of unique) {
-    if (result[slug] == null) result[slug] = 0;
-  }
-  return result;
-}
-
-export async function getEngagementStatsByNovelIds(
-  novelIds: string[],
-): Promise<
-  Record<string, NovelEngagementStats & { chapters?: number }>
-> {
-  const unique = [...new Set(novelIds.filter(Boolean))];
-  if (unique.length === 0) return {};
-
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("novels")
-    .select("id, view_count, reader_count, library_add_count")
-    .in("id", unique);
-
-  if (error || !data) {
-    if (error) console.error("getEngagementStatsByNovelIds:", error);
-    return {};
-  }
-
-  const result: Record<string, NovelEngagementStats> = {};
-  for (const row of data as {
-    id: string;
-    view_count: number | null;
-    reader_count: number | null;
-    library_add_count: number | null;
-  }[]) {
-    result[row.id] = {
-      views: Number(row.view_count ?? 0),
-      readers: Number(row.reader_count ?? 0),
-      libraryAdds: Number(row.library_add_count ?? 0),
-    };
-  }
-  return result;
 }
 
 // -----------------------------------------------------------------------------
