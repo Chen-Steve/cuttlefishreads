@@ -8,7 +8,8 @@ export { PaginatedRecentlyUpdatedList } from "./paginated-recently-updated-list"
 export { NovelsBrowser } from "./novels-browser";
 export { NovelCover } from "./novel-cover";
 export { NovelDescription } from "./novel-description";
-export { ScrollingTags } from "./scrolling-tags";
+export { MobileNovelTitle } from "./mobile-novel-title";
+export { NovelTags } from "./novel-tags";
 export { AdultContentWarning } from "./adult-content-warning";
 export { ChapterList, ChapterOrderToggle } from "./chapter-list";
 export { BookmarkButton } from "./bookmark-button";

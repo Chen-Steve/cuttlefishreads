@@ -9,8 +9,9 @@ import {
   ChapterList,
   ChapterOrderToggle,
   NovelCover,
+  MobileNovelTitle,
   NovelDescription,
-  ScrollingTags,
+  NovelTags,
   StartReadingButton,
 } from "@/components/novel";
 import { PageContainer } from "@/components/page-container";
@@ -206,9 +207,7 @@ export default async function OriginalsSeriesPage({
         }}
       />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
-        <h1 className="text-xl font-bold tracking-tight text-balance text-foreground sm:hidden">
-          {novel.title}
-        </h1>
+        <MobileNovelTitle title={novel.title} />
 
         <div className="flex flex-col gap-2 sm:w-40 sm:shrink-0 sm:gap-2">
           <div className="flex items-start gap-4 sm:flex-col sm:gap-2">
@@ -225,7 +224,6 @@ export default async function OriginalsSeriesPage({
               {metricsDisplay}
             </div>
           </div>
-          <ScrollingTags tags={novel.tags} />
           <div className="mt-1 hidden w-full flex-col gap-3 sm:flex">
             {actionButtons}
             {supportLinks}
@@ -242,14 +240,15 @@ export default async function OriginalsSeriesPage({
             {metricsDisplay}
           </div>
           {novel.synopsis ? <NovelDescription synopsis={novel.synopsis} /> : null}
-          <div className="mt-6 flex flex-col gap-3 sm:hidden">
+          <NovelTags tags={novel.tags} />
+          <div className="mt-3 flex flex-col gap-3 sm:hidden">
             {actionButtons}
             {supportLinks}
           </div>
         </div>
       </div>
 
-      <section className="mt-4">
+      <section className="mt-2">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold tracking-tight text-foreground">
             Chapters

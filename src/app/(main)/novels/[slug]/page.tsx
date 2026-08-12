@@ -10,8 +10,9 @@ import {
   ChapterList,
   ChapterOrderToggle,
   NovelCover,
+  MobileNovelTitle,
   NovelDescription,
-  ScrollingTags,
+  NovelTags,
   StartReadingButton,
 } from "@/components/novel";
 import { getBulkBuyState } from "@/lib/bulk-buy";
@@ -218,11 +219,9 @@ export default async function NovelDetailPage({
   return (
     <PageContainer as="article" width="prose" className="pt-4 sm:pt-6 lg:pt-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
-        <h1 className="text-xl font-bold tracking-tight text-balance text-foreground sm:hidden">
-          {novel.title}
-        </h1>
+        <MobileNovelTitle title={novel.title} />
 
-        {/* Left column: cover + tags + buttons (desktop) */}
+        {/* Left column: cover + buttons (desktop) */}
         <div className="flex flex-col gap-2 sm:w-40 sm:shrink-0 sm:gap-2">
           <div className="flex items-start gap-4 sm:flex-col sm:gap-2">
             <NovelCover
@@ -238,7 +237,6 @@ export default async function NovelDetailPage({
               {viewCountDisplay}
             </div>
           </div>
-          <ScrollingTags tags={novel.tags} />
           {/* Desktop buttons below cover */}
           <div className="mt-1 hidden w-full flex-col gap-3 sm:flex">
             {actionButtons}
@@ -259,16 +257,17 @@ export default async function NovelDetailPage({
           </div>
 
           {novel.synopsis ? <NovelDescription synopsis={novel.synopsis} /> : null}
+          <NovelTags tags={novel.tags} />
 
           {/* Mobile buttons */}
-          <div className="mt-6 flex flex-col gap-3 sm:hidden">
+          <div className="mt-3 flex flex-col gap-3 sm:hidden">
             {actionButtons}
             {supportLinks}
           </div>
         </div>
       </div>
 
-      <section className="mt-4">
+      <section className="mt-2">
         <div className="mb-3 flex flex-col gap-2">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold tracking-tight text-foreground">
