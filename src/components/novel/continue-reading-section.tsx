@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 /** Fields needed to resume reading — keep the homepage client payload small. */
 export type ContinueReadingNovel = Pick<
   Novel,
-  "id" | "slug" | "title" | "coverUrl" | "chapterCount" | "publicationType"
+  "id" | "slug" | "title" | "coverUrl" | "chapterCount"
 >;
 
 type ContinueItem = {

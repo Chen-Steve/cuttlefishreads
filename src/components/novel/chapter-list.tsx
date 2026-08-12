@@ -91,7 +91,7 @@ export function ChapterList({
   slug: string;
   chapters: ChapterListItem[];
   catalogBase?: import("@/lib/catalog-paths").CatalogBase;
-  /** Originals: all chapters free — skip lock UI. */
+  /** When true, skip lock UI on chapter rows. */
   hideLockBadges?: boolean;
 }) {
   const newestFirst = useChapterOrderPreference();
@@ -114,11 +114,7 @@ export function ChapterList({
         {rows.map((chapter) => (
           <li key={chapter.id}>
             <Link
-              href={
-                catalogBase === "series"
-                  ? `/series/${slug}/chapter/${chapter.number}`
-                  : `/novels/${slug}/${chapter.number}`
-              }
+              href={`/novels/${slug}/${chapter.number}`}
               className="group flex items-center gap-3 px-4 py-3 outline-offset-2 transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-accent"
             >
               <span className="min-w-0 flex-1">

@@ -3,14 +3,11 @@ import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
-import {
-  WORKSPACE_PUBLICATION_TYPE,
-  type WorkspaceKind,
-} from "@/lib/workspace";
+import type { WorkspaceKind } from "@/lib/workspace";
 import { ChapterForm } from "../_components/chapter-form";
 
 export async function WorkspaceChapterNewPage({
-  workspace,
+  workspace: _workspace,
   novelId,
 }: {
   workspace: WorkspaceKind;
@@ -20,15 +17,13 @@ export async function WorkspaceChapterNewPage({
   const admin = createAdminClient();
   const { data: novel } = await admin
     .from("novels")
-    .select("id, title, publisher_id, publication_type")
+    .select("id, title, publisher_id")
     .eq("id", novelId)
+    .eq("publication_type", "translation")
     .maybeSingle();
 
   if (!novel) notFound();
   if (!access || (!access.isMasterAdmin && novel.publisher_id !== access.userId)) {
-    notFound();
-  }
-  if (novel.publication_type !== WORKSPACE_PUBLICATION_TYPE[workspace]) {
     notFound();
   }
 
@@ -66,7 +61,6 @@ export async function WorkspaceChapterNewPage({
         latestChapterUnlockAt={latestUnlockRow?.unlock_at ?? null}
         defaultCoinCost={latestPaidRow?.coin_cost ?? null}
         nextChapterNumber={(lastNumberRow?.number ?? 0) + 1}
-        isOriginal={novel.publication_type === "original"}
       />
     </PageContainer>
   );

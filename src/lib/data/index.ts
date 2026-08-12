@@ -1,14 +1,13 @@
 import { cache } from "react";
 import { unstable_cache, revalidateTag } from "next/cache";
 
-import type { Genre, Language, PublicationType } from "@/lib/constants";
+import type { Genre, Language } from "@/lib/constants";
 import {
   hasProfileRole,
   parseProfileRoles,
   type ProfileRole,
 } from "@/lib/roles";
 import { getAllTimeViewsBySlug } from "@/lib/google-analytics";
-import type { NovelEngagementStats } from "@/lib/reading-engagement";
 import type {
   Chapter,
   ChapterListItem,
@@ -38,7 +37,6 @@ type DbNovel = {
   publisher_id: string | null;
   novelupdates_url: string | null;
   language: string;
-  publication_type: string | null;
   created_at: string;
   view_count?: number | null;
   reader_count?: number | null;
@@ -47,7 +45,7 @@ type DbNovel = {
 };
 
 const NOVEL_LIST_COLUMNS =
-  "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, created_at, updated_at, publisher_id, novelupdates_url, language, publication_type, view_count, reader_count, library_add_count, chapters(count)";
+  "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, created_at, updated_at, publisher_id, novelupdates_url, language, view_count, reader_count, library_add_count, chapters(count)";
 
 const NEWLY_ADDED_LIMIT = 7;
 const UNDERRATED_LIMIT = 7;
@@ -117,8 +115,6 @@ function mapNovel(row: DbNovel): Novel {
     publisherId: row.publisher_id ?? undefined,
     novelupdatesUrl: row.novelupdates_url ?? undefined,
     language: (row.language as Language) ?? "Chinese",
-    publicationType:
-      (row.publication_type as PublicationType) ?? "translation",
   };
 }
 
@@ -231,6 +227,7 @@ const fetchNovelRows = unstable_cache(
     const { data, error } = await admin
       .from("novels")
       .select(NOVEL_LIST_COLUMNS)
+      .eq("publication_type", "translation")
       .order("updated_at", { ascending: false });
 
     if (error) {
@@ -246,27 +243,25 @@ const fetchNovelRows = unstable_cache(
   },
 );
 
-/** Request-scoped novel id (+ publisher / publication type) by slug. */
+/** Request-scoped novel id (+ publisher) by slug. */
 const fetchNovelIdBySlug = cache(
   async (
     slug: string,
   ): Promise<{
     id: string;
     publisher_id: string | null;
-    publication_type: PublicationType;
   } | null> => {
     const supabase = await getServerSupabase();
     const { data } = await supabase
       .from("novels")
-      .select("id, publisher_id, publication_type")
+      .select("id, publisher_id")
       .eq("slug", slug)
+      .eq("publication_type", "translation")
       .maybeSingle();
     if (!data) return null;
     return {
       id: data.id,
       publisher_id: data.publisher_id,
-      publication_type:
-        (data.publication_type as PublicationType) ?? "translation",
     };
   },
 );
@@ -346,6 +341,7 @@ export const getNovel = cache(
       .from("novels")
       .select(NOVEL_LIST_COLUMNS)
       .eq("slug", slug)
+      .eq("publication_type", "translation")
       .maybeSingle();
 
     if (error || !data) return undefined;
@@ -581,12 +577,18 @@ const loadRecentlyUpdatedNovels = unstable_cache(
 
 export const getRecentlyUpdatedNovels = cache(
   async (): Promise<RecentlyUpdatedNovel[]> => {
-    const rows = await loadRecentlyUpdatedNovels();
+    const [rows, catalog] = await Promise.all([
+      loadRecentlyUpdatedNovels(),
+      getNovels(),
+    ]);
+    const allowed = new Set(catalog.map((novel) => novel.slug));
     // Relative labels stay request-fresh; only the RPC payload is cached.
-    return rows.map((novel) => ({
-      ...novel,
-      updatedAtLabel: formatRelativeDate(novel.updatedAt),
-    }));
+    return rows
+      .filter((novel) => allowed.has(novel.slug))
+      .map((novel) => ({
+        ...novel,
+        updatedAtLabel: formatRelativeDate(novel.updatedAt),
+      }));
   },
 );
 
@@ -701,6 +703,7 @@ export async function getUserCreatedNovels(userId: string): Promise<Novel[]> {
     .from("novels")
     .select(NOVEL_LIST_COLUMNS)
     .eq("publisher_id", userId)
+    .eq("publication_type", "translation")
     .order("updated_at", { ascending: false });
 
   if (error) {
@@ -781,7 +784,7 @@ export const getChapter = cache(
       row,
       unlocked,
       bypassLock,
-      novel.publication_type === "original",
+      false,
     );
   },
 );
@@ -827,7 +830,6 @@ function titleMatchScore(title: string, query: string): number {
 
 export async function getClosestNovelTitleMatch(
   query: string,
-  options?: { publicationType?: PublicationType },
 ): Promise<NovelTitleMatch | null> {
   const q = query.trim().toLowerCase();
   if (!q || q.length > 100) return null;
@@ -836,15 +838,12 @@ export async function getClosestNovelTitleMatch(
   const escaped = q.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
 
   const admin = createAdminClient();
-  let request = admin
+  const request = admin
     .from("novels")
     .select("slug, title, cover_url")
+    .eq("publication_type", "translation")
     .ilike("title", `%${escaped}%`)
     .limit(40);
-
-  if (options?.publicationType) {
-    request = request.eq("publication_type", options.publicationType);
-  }
 
   const { data, error } = await request;
   if (error) {
@@ -1240,32 +1239,6 @@ export async function getReadableChapters(
       number: chapter.number,
       title: chapter.title,
     }));
-}
-
-// -----------------------------------------------------------------------------
-// In-house engagement (views / readers / library adds)
-// -----------------------------------------------------------------------------
-
-export async function getNovelEngagementStats(
-  slug: string,
-): Promise<NovelEngagementStats> {
-  const supabase = await getServerSupabase();
-  const { data, error } = await supabase
-    .from("novels")
-    .select("view_count, reader_count, library_add_count")
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (error || !data) {
-    if (error) console.error("getNovelEngagementStats:", error);
-    return { views: 0, readers: 0, libraryAdds: 0 };
-  }
-
-  return {
-    views: Number(data.view_count ?? 0),
-    readers: Number(data.reader_count ?? 0),
-    libraryAdds: Number(data.library_add_count ?? 0),
-  };
 }
 
 // -----------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { notFound, permanentRedirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { Coffee, Eye, Heart } from "lucide-react";
 import { CommentSection, CommentsFallback } from "@/components/comments";
 import {
@@ -28,8 +28,6 @@ import {
   isUserAuthenticated,
 } from "@/lib/data";
 import { getNovelPageViews } from "@/lib/google-analytics";
-import { originalsPublicUrl } from "@/lib/hosts";
-import { isOriginalNovel } from "@/lib/originals-data";
 import { novelDescription } from "@/lib/seo";
 
 const statusLabel = {
@@ -49,15 +47,6 @@ export async function generateMetadata({
       robots: {
         index: false,
         follow: false,
-      },
-    };
-  }
-  if (isOriginalNovel(novel)) {
-    return {
-      title: `${novel.title} - Original Series`,
-      description: novelDescription(novel),
-      alternates: {
-        canonical: originalsPublicUrl(`/series/${novel.slug}`),
       },
     };
   }
@@ -96,9 +85,6 @@ export default async function NovelDetailPage({
 
   if (!novel) {
     notFound();
-  }
-  if (isOriginalNovel(novel)) {
-    permanentRedirect(originalsPublicUrl(`/series/${novel.slug}`));
   }
 
   const firstChapter = chapters[0];

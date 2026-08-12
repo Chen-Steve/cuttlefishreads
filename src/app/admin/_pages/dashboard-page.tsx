@@ -13,7 +13,6 @@ import {
 } from "@/lib/google-analytics";
 import {
   WORKSPACE_BASE,
-  WORKSPACE_PUBLICATION_TYPE,
   type WorkspaceKind,
 } from "@/lib/workspace";
 
@@ -49,15 +48,14 @@ export async function WorkspaceDashboardPage({
   if (!access) notFound();
 
   const base = WORKSPACE_BASE[workspace];
-  // Originals are always free to read — no purchases or cookie earnings.
-  const showEarnings = workspace === "translations";
+  const showEarnings = true;
 
   const admin = createAdminClient();
 
   let novelsQuery = admin
     .from("novels")
     .select("id, slug, title, library_add_count")
-    .eq("publication_type", WORKSPACE_PUBLICATION_TYPE[workspace])
+    .eq("publication_type", "translation")
     .order("updated_at", { ascending: false });
 
   if (!access.isMasterAdmin) {
@@ -240,14 +238,14 @@ export async function WorkspaceDashboardPage({
       <div className="mt-8 overflow-x-auto rounded-2xl border border-border bg-surface">
         {stats.length === 0 ? (
           <p className="px-4 py-12 text-center text-sm text-muted">
-            No {workspace === "originals" ? "series" : "novels"} yet.
+            No novels yet.
           </p>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs text-muted">
                 <th className="px-4 py-3 font-medium">
-                  {workspace === "originals" ? "Series" : "Novel"}
+                  Novel
                 </th>
                 <th className="px-4 py-3 text-right font-medium">Views</th>
                 <th className="px-4 py-3 text-right font-medium">Bookmarks</th>

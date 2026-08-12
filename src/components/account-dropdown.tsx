@@ -6,7 +6,6 @@ import {
   Bookmark,
   ChevronDown,
   Cookie,
-  Feather,
   Bell,
   LogOut,
   PenLine,
@@ -16,7 +15,6 @@ import {
 
 import { signOut } from "@/app/(auth)/actions";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { originalsPublicUrl } from "@/lib/hosts";
 import { cn } from "@/lib/utils";
 
 function AccountAvatar({
@@ -75,24 +73,11 @@ export function AccountDropdown({
   showCoins = true,
   /** Show the translator workspace link (/admin). */
   showTranslatorWorkspace = false,
-  /** Show the author workspace link on the Originals subdomain. */
-  showAuthorWorkspace = false,
-  /**
-   * Originals “Write” destination. When set, replaces the separate
-   * author-workspace row with a Write entry.
-   */
-  writeHref,
-  writeLabel = "Write",
-  /** Override public profile URL (e.g. `/profiles/name` on Originals). */
-  publicProfileHref,
   showPublicProfile = true,
-  /** Override account settings URL (e.g. `/account` on Originals). */
   accountHref = "/account",
-  /** Notifications inbox URL (main site `/notifications`). */
+  /** Notifications inbox URL. */
   notificationsHref = "/notifications",
-  /** Library / bookmarks URL (e.g. Originals `/library`). */
   libraryHref,
-  /** Show theme toggle inside the menu (e.g. Originals header). */
   showThemeToggle = false,
   /** Unread comment notification count for the avatar badge. */
   unreadNotifications = 0,
@@ -103,10 +88,6 @@ export function AccountDropdown({
   isMasterAdmin?: boolean;
   showCoins?: boolean;
   showTranslatorWorkspace?: boolean;
-  showAuthorWorkspace?: boolean;
-  writeHref?: string;
-  writeLabel?: string;
-  publicProfileHref?: string;
   showPublicProfile?: boolean;
   accountHref?: string;
   notificationsHref?: string;
@@ -251,27 +232,13 @@ export function AccountDropdown({
           ) : null}
 
           {username && showPublicProfile ? (
-            <MenuLink
-              href={publicProfileHref ?? `/u/${username}`}
-              onClick={close}
-            >
+            <MenuLink href={`/u/${username}`} onClick={close}>
               <User
                 className="size-4 shrink-0 text-muted"
                 strokeWidth={1.75}
                 aria-hidden
               />
               Public profile
-            </MenuLink>
-          ) : null}
-
-          {writeHref ? (
-            <MenuLink href={writeHref} onClick={close}>
-              <Feather
-                className="size-4 shrink-0 text-muted"
-                strokeWidth={1.75}
-                aria-hidden
-              />
-              {writeLabel}
             </MenuLink>
           ) : null}
 
@@ -291,17 +258,6 @@ export function AccountDropdown({
                 />
               )}
               {isMasterAdmin ? "Admin" : "Workspace"}
-            </MenuLink>
-          ) : null}
-
-          {!writeHref && showAuthorWorkspace ? (
-            <MenuLink href={originalsPublicUrl("/workspace")} onClick={close}>
-              <PenLine
-                className="size-4 shrink-0 text-muted"
-                strokeWidth={1.75}
-                aria-hidden
-              />
-              Author workspace
             </MenuLink>
           ) : null}
 

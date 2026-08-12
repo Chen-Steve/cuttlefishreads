@@ -7,8 +7,6 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
 import {
   WORKSPACE_BASE,
-  WORKSPACE_LABELS,
-  WORKSPACE_PUBLICATION_TYPE,
   type WorkspaceKind,
 } from "@/lib/workspace";
 import {
@@ -41,15 +39,13 @@ export async function WorkspaceChaptersPage({
   const admin = createAdminClient();
   const { data: novel } = await admin
     .from("novels")
-    .select("id, title, publisher_id, publication_type")
+    .select("id, title, publisher_id")
     .eq("id", novelId)
+    .eq("publication_type", "translation")
     .maybeSingle();
 
   if (!novel) notFound();
   if (!access || (!access.isMasterAdmin && novel.publisher_id !== access.userId)) {
-    notFound();
-  }
-  if (novel.publication_type !== WORKSPACE_PUBLICATION_TYPE[workspace]) {
     notFound();
   }
 
@@ -78,7 +74,7 @@ export async function WorkspaceChaptersPage({
               className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
-              Back to {WORKSPACE_LABELS[workspace].noun === "series" ? "series" : "novels"}
+              Back to novels
             </Link>
             <h1
               className="text-xl font-semibold tracking-tight sm:text-2xl"

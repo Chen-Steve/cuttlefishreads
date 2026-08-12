@@ -6,33 +6,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Home } from "lucide-react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
-import {
-  mainPublicOrigin,
-  originalsPublicUrl,
-} from "@/lib/hosts";
 import { cn } from "@/lib/utils";
 import {
   WORKSPACE_BASE,
   WORKSPACE_LABELS,
   workspaceKindFromPathname,
-  type WorkspaceKind,
 } from "@/lib/workspace";
 
 type NavLink = { href: string; label: string };
-
-const WORKSPACE_SWITCH: Record<
-  WorkspaceKind,
-  { href: string; label: string }
-> = {
-  translations: {
-    href: originalsPublicUrl(WORKSPACE_BASE.originals),
-    label: "Originals workspace",
-  },
-  originals: {
-    href: `${mainPublicOrigin()}${WORKSPACE_BASE.translations}`,
-    label: "Translator workspace",
-  },
-};
 
 function ScrollArrow({
   direction,
@@ -67,34 +48,20 @@ function ScrollArrow({
   );
 }
 
-export function AdminNav({
-  isMasterAdmin,
-  canSwitchWorkspace = false,
-}: {
-  isMasterAdmin: boolean;
-  /** Translators (and master admins) can jump between the two workspaces. */
-  canSwitchWorkspace?: boolean;
-}) {
+export function AdminNav({ isMasterAdmin }: { isMasterAdmin: boolean }) {
   const pathname = usePathname();
   const kind = workspaceKindFromPathname(pathname);
   const base = WORKSPACE_BASE[kind];
-  const switchTo = canSwitchWorkspace ? WORKSPACE_SWITCH[kind] : null;
 
   const baseLinks: NavLink[] = [
     { href: base, label: WORKSPACE_LABELS[kind].novels },
-    ...(kind === "translations"
-      ? [{ href: `${base}/dashboard`, label: "Stats" }]
-      : []),
-    // Launch Kit stays implemented under /workspace/launch-kit but is hidden
-    // from authors until the feature is ready to ship.
+    { href: `${base}/dashboard`, label: "Stats" },
     { href: `${base}/comments`, label: "Comments" },
     { href: `${base}/settings`, label: "Settings" },
   ];
-  // Application review lives in the translator workspace only.
-  const links =
-    isMasterAdmin && kind === "translations"
-      ? [...baseLinks, { href: "/admin/applications", label: "Applications" }]
-      : baseLinks;
+  const links = isMasterAdmin
+    ? [...baseLinks, { href: "/admin/applications", label: "Applications" }]
+    : baseLinks;
   const homeHref = "/";
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -196,17 +163,6 @@ export function AdminNav({
         </div>
 
         <div className="flex shrink-0 items-center gap-1 pl-2">
-          {switchTo ? (
-            <Link
-              href={switchTo.href}
-              className="rounded-lg px-2 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-background hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:px-2.5"
-            >
-              <span className="sm:hidden">
-                {kind === "translations" ? "Originals" : "Translations"}
-              </span>
-              <span className="hidden sm:inline">{switchTo.label}</span>
-            </Link>
-          ) : null}
           <ThemeToggle />
         </div>
       </div>

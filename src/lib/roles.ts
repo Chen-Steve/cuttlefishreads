@@ -1,6 +1,5 @@
 /**
  * Profile role: translators (main catalog) are application-gated.
- * Originals publishing is open to any signed-in user — no stored author role.
  * Master admin stays an env allowlist, not a stored role.
  *
  * Source of truth is profiles.role ('user' | 'translator').

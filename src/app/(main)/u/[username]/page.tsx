@@ -67,12 +67,8 @@ export default async function PublicProfilePage({
     getUserCreatedNovels(profile.id),
     getUserBookmarkedNovels(profile.id),
   ]);
-  const translations = createdNovels.filter(
-    (novel) => novel.publicationType !== "original",
-  );
-  const translationBookmarks = bookmarkedNovels.filter(
-    (novel) => novel.publicationType !== "original",
-  );
+  const translations = createdNovels;
+  const translationBookmarks = bookmarkedNovels;
 
   return (
     <PageContainer

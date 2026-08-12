@@ -44,7 +44,6 @@ export function ChapterForm({
   latestChapterUnlockAt = null,
   defaultCoinCost = null,
   nextChapterNumber = null,
-  isOriginal = false,
 }: {
   novelId: string;
   initial?: ChapterFormInitial;
@@ -53,8 +52,6 @@ export function ChapterForm({
   defaultCoinCost?: number | null;
   /** Next chapter number for new chapters, shown instead of "Auto". */
   nextChapterNumber?: number | null;
-  /** Original works: chapters are always free, so paid options are hidden. */
-  isOriginal?: boolean;
 }) {
   const isEdit = Boolean(initial);
   const pathname = usePathname();
@@ -260,8 +257,7 @@ export function ChapterForm({
             )}
           </div>
 
-          {!isOriginal ? (
-            <fieldset className="flex flex-col gap-2">
+          <fieldset className="flex flex-col gap-2">
               <legend className={labelClass}>Access</legend>
               <div className="flex flex-wrap gap-2">
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2 text-sm font-medium text-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent/10 has-[:checked]:text-accent">
@@ -288,9 +284,8 @@ export function ChapterForm({
                 </label>
               </div>
             </fieldset>
-          ) : null}
 
-          {!isOriginal && access === "paid" && (
+          {access === "paid" && (
             <>
               <input type="hidden" name="unlockAt" value={unlockAtIso} />
               <div className="flex flex-col gap-1.5">
@@ -350,7 +345,7 @@ export function ChapterForm({
 
           <fieldset className="flex flex-col gap-2">
             <legend className={labelClass}>
-              {isOriginal ? "Author's note" : "Translator's note"}
+              Translator&apos;s note
               <span className="ml-1 font-normal opacity-60">(optional)</span>
             </legend>
             <div className="flex flex-col gap-2">

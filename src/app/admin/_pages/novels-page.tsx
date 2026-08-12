@@ -7,7 +7,6 @@ import { getAdminAccess } from "@/lib/access";
 import {
   WORKSPACE_BASE,
   WORKSPACE_LABELS,
-  WORKSPACE_PUBLICATION_TYPE,
   type WorkspaceKind,
 } from "@/lib/workspace";
 import {
@@ -61,8 +60,8 @@ export async function WorkspaceNovelsPage({
     .select(
       "id, title, slug, status, cover_url, genres, updated_at, publisher_id, translator, view_count, reader_count, library_add_count, chapters(count)",
     )
-    // Each workspace only manages its own publication type.
-    .eq("publication_type", WORKSPACE_PUBLICATION_TYPE[workspace])
+    // Catalog novels only (legacy original rows stay out of this workspace).
+    .eq("publication_type", "translation")
     .order("updated_at", { ascending: false });
 
   // Non-masters only see novels they own; master admins see everything.
@@ -117,8 +116,8 @@ export async function WorkspaceNovelsPage({
 
   const countLabel =
     novels.length === 0
-      ? `No ${labels.noun === "series" ? "series" : "novels"} yet`
-      : `${novels.length} ${labels.noun === "series" ? "series" : `novel${novels.length !== 1 ? "s" : ""}`}`;
+      ? "No novels yet"
+      : `${novels.length} novel${novels.length !== 1 ? "s" : ""}`;
 
   return (
     <PageContainer as="div">

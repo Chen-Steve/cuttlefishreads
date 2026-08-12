@@ -3,7 +3,6 @@ import { NovelsBrowser } from "@/components/novel";
 import { PageContainer } from "@/components/page-container";
 import { getNovels } from "@/lib/data";
 import { getAllTimeViewsBySlug } from "@/lib/google-analytics";
-import { isOriginalNovel } from "@/lib/originals-data";
 import { publicPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = publicPageMetadata({
@@ -14,7 +13,7 @@ export const metadata: Metadata = publicPageMetadata({
 });
 
 export default async function NovelsPage() {
-  const novels = (await getNovels()).filter((novel) => !isOriginalNovel(novel));
+  const novels = await getNovels();
   const viewsBySlug = await getAllTimeViewsBySlug(novels.map((novel) => novel.slug));
 
   return (

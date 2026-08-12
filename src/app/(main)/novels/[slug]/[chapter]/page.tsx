@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { notFound, permanentRedirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { CommentSection, CommentsFallback } from "@/components/comments";
 import { PageContainer } from "@/components/page-container";
 import {
@@ -18,8 +18,6 @@ import {
   getUserCoins,
   isUserAuthenticated,
 } from "@/lib/data";
-import { originalsPublicUrl } from "@/lib/hosts";
-import { isOriginalNovel } from "@/lib/originals-data";
 import { novelDescription } from "@/lib/seo";
 
 export async function generateMetadata({
@@ -36,20 +34,6 @@ export async function generateMetadata({
       robots: {
         index: false,
         follow: false,
-      },
-    };
-  }
-  if (isOriginalNovel(novel)) {
-    const chapterLabel = current.title
-      ? `Chapter ${current.number}: ${current.title}`
-      : `Chapter ${current.number}`;
-    return {
-      title: `${novel.title} - ${chapterLabel}`,
-      description: `Read ${novel.title} ${chapterLabel} on Cuttlefish Originals. ${novelDescription(novel)}`,
-      alternates: {
-        canonical: originalsPublicUrl(
-          `/series/${novel.slug}/chapter/${current.number}`,
-        ),
       },
     };
   }
@@ -90,11 +74,6 @@ export default async function ChapterReaderPage({
 
   if (!novel || !current || Number.isNaN(chapterNumber)) {
     notFound();
-  }
-  if (isOriginalNovel(novel)) {
-    permanentRedirect(
-      originalsPublicUrl(`/series/${novel.slug}/chapter/${chapterNumber}`),
-    );
   }
 
   const index = chapters.findIndex((c) => c.number === chapterNumber);

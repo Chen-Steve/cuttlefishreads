@@ -21,7 +21,6 @@ import {
   getUnderratedNovels,
 } from "@/lib/data";
 import { SITE } from "@/lib/constants";
-import { isOriginalNovel } from "@/lib/originals-data";
 import { publicPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = publicPageMetadata({
@@ -31,15 +30,10 @@ export const metadata: Metadata = publicPageMetadata({
 });
 
 export default async function Home() {
-  const [allNovels, allRecentlyUpdated] = await Promise.all([
+  const [catalog, recentlyUpdated] = await Promise.all([
     getNovels(),
     getRecentlyUpdatedNovels(),
   ]);
-  const catalog = allNovels.filter((novel) => !isOriginalNovel(novel));
-  const translationSlugs = new Set(catalog.map((novel) => novel.slug));
-  const recentlyUpdated = allRecentlyUpdated.filter((novel) =>
-    translationSlugs.has(novel.slug),
-  );
 
   // Section sorts are in-memory once the catalog is loaded.
   const [featured, newlyAdded, completed] = await Promise.all([
@@ -62,7 +56,6 @@ export default async function Home() {
     title: novel.title,
     coverUrl: novel.coverUrl,
     chapterCount: novel.chapterCount,
-    publicationType: novel.publicationType,
   }));
 
   return (

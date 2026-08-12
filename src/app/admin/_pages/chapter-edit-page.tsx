@@ -3,10 +3,7 @@ import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
-import {
-  WORKSPACE_PUBLICATION_TYPE,
-  type WorkspaceKind,
-} from "@/lib/workspace";
+import type { WorkspaceKind } from "@/lib/workspace";
 import { ChapterForm } from "../_components/chapter-form";
 
 type ChapterRow = {
@@ -22,7 +19,7 @@ type ChapterRow = {
 };
 
 export async function WorkspaceChapterEditPage({
-  workspace,
+  workspace: _workspace,
   novelId,
   chapterId,
 }: {
@@ -37,8 +34,9 @@ export async function WorkspaceChapterEditPage({
     await Promise.all([
       admin
         .from("novels")
-        .select("id, title, publisher_id, publication_type")
+        .select("id, title, publisher_id")
         .eq("id", novelId)
+        .eq("publication_type", "translation")
         .maybeSingle(),
       admin
         .from("chapters")
@@ -63,9 +61,6 @@ export async function WorkspaceChapterEditPage({
   if (!access || (!access.isMasterAdmin && novel.publisher_id !== access.userId)) {
     notFound();
   }
-  if (novel.publication_type !== WORKSPACE_PUBLICATION_TYPE[workspace]) {
-    notFound();
-  }
 
   const row = chapter as ChapterRow;
 
@@ -74,7 +69,6 @@ export async function WorkspaceChapterEditPage({
       <ChapterForm
         novelId={novel.id}
         latestChapterUnlockAt={latestUnlockRow?.unlock_at ?? null}
-        isOriginal={novel.publication_type === "original"}
         initial={{
           chapterId: row.id,
           number: row.number,

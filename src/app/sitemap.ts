@@ -1,67 +1,56 @@
 import type { MetadataRoute } from "next";
 import { getChapterSummaries, getNovels } from "@/lib/data";
-import { originalsPublicUrl } from "@/lib/hosts";
-import { isOriginalNovel } from "@/lib/originals-data";
+import { mainPublicOrigin } from "@/lib/hosts";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const novels = await getNovels();
-  const originals = novels.filter(isOriginalNovel);
+  const origin = mainPublicOrigin();
   const now = new Date();
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {
-      url: originalsPublicUrl("/"),
+      url: `${origin}/`,
       lastModified: now,
       changeFrequency: "daily",
       priority: 1,
     },
     {
-      url: originalsPublicUrl("/browse"),
+      url: `${origin}/novels`,
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.9,
     },
     {
-      url: originalsPublicUrl("/latest"),
+      url: `${origin}/search`,
       lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.8,
-    },
-    {
-      url: originalsPublicUrl("/forum"),
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.6,
+      changeFrequency: "weekly",
+      priority: 0.5,
     },
   ];
 
-  const originalRoutes: MetadataRoute.Sitemap = originals.map((novel) => ({
-    url: originalsPublicUrl(`/series/${novel.slug}`),
+  const novelRoutes: MetadataRoute.Sitemap = novels.map((novel) => ({
+    url: `${origin}/novels/${novel.slug}`,
     lastModified: new Date(novel.updatedAt),
     changeFrequency: "weekly",
     priority: 0.8,
   }));
 
-  const originalChapterRoutes = (
+  const chapterRoutes = (
     await Promise.all(
-      originals.map(async (novel) => {
+      novels.map(async (novel) => {
         const chapters = await getChapterSummaries(novel.slug);
 
-        return chapters.map((chapter) => ({
-          url: originalsPublicUrl(
-            `/series/${novel.slug}/chapter/${chapter.number}`,
-          ),
-          lastModified: new Date(novel.updatedAt),
-          changeFrequency: "monthly" as const,
-          priority: 0.6,
-        }));
+        return chapters
+          .filter((chapter) => !chapter.locked)
+          .map((chapter) => ({
+            url: `${origin}/novels/${novel.slug}/${chapter.number}`,
+            lastModified: new Date(novel.updatedAt),
+            changeFrequency: "monthly" as const,
+            priority: 0.6,
+          }));
       }),
     )
   ).flat();
 
-  return [
-    ...staticRoutes,
-    ...originalRoutes,
-    ...originalChapterRoutes,
-  ];
+  return [...staticRoutes, ...novelRoutes, ...chapterRoutes];
 }

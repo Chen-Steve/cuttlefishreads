@@ -85,8 +85,7 @@ export default async function ApplicationsPage() {
         Applications
       </h1>
       <p className="mt-0.5 text-sm text-muted">
-        Translator applications for the main catalog. Originals publishing is
-        open — no author application required.
+        Translator applications for the main catalog.
       </p>
       <p className="mt-1 text-sm text-muted">
         {pending.length === 0

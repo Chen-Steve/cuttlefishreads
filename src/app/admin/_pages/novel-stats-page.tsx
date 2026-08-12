@@ -13,8 +13,6 @@ import {
 } from "@/lib/view-series";
 import {
   WORKSPACE_BASE,
-  WORKSPACE_LABELS,
-  WORKSPACE_PUBLICATION_TYPE,
   type WorkspaceKind,
 } from "@/lib/workspace";
 
@@ -84,15 +82,13 @@ export async function WorkspaceNovelStatsPage({
 
   const { data: novel } = await admin
     .from("novels")
-    .select("id, title, slug, publisher_id, publication_type, view_count")
+    .select("id, title, slug, publisher_id, view_count")
     .eq("id", novelId)
+    .eq("publication_type", "translation")
     .maybeSingle();
 
   if (!novel) notFound();
   if (!access || (!access.isMasterAdmin && novel.publisher_id !== access.userId)) {
-    notFound();
-  }
-  if (novel.publication_type !== WORKSPACE_PUBLICATION_TYPE[workspace]) {
     notFound();
   }
 
@@ -125,7 +121,7 @@ export async function WorkspaceNovelStatsPage({
         >
           <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
           Back to{" "}
-          {WORKSPACE_LABELS[workspace].noun === "series" ? "series" : "novels"}
+          novels
         </Link>
         <div className="min-w-0">
           <h1

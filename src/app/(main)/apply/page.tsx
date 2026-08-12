@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PageContainer } from "@/components/page-container";
-import { originalsPublicUrl } from "@/lib/hosts";
 import { hasProfileRole, parseProfileRoles } from "@/lib/roles";
 import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 import { ApplyForm } from "./apply-form";
@@ -50,16 +49,6 @@ export default async function ApplyPage() {
           Want to bring novels to Cuttlefish Reads? Approved translators get
           their own workspace to upload and manage translations, plus a stats
           dashboard.
-        </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
-          Writing original fiction? Anyone can start on{" "}
-          <Link
-            href={originalsPublicUrl("/workspace")}
-            className="font-medium text-accent underline underline-offset-2 hover:text-accent-hover"
-          >
-            Cuttlefish Originals
-          </Link>
-          — no application needed.
         </p>
 
         <div className="mt-8 rounded-2xl border border-border bg-surface p-5 sm:p-6">

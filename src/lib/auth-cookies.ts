@@ -19,14 +19,10 @@ function resolveAuthHost(
 }
 
 /**
- * Shared Supabase auth cookie options so a session on the main site
- * is visible on creator subdomains (username.cuttlefishreads.com).
+ * Shared Supabase auth cookie options for the main site.
  *
- * Prod: Domain=.cuttlefishreads.com
- * Local: host-only cookies (browsers reject Domain=.localhost as a public
- *   suffix). Creator vanity *.localhost visits are redirected to the
- *   originals host so the session still applies.
- * Preview / unknown hosts: no Domain (host-only cookies)
+ * Prod: Domain=.cuttlefishreads.com when on cuttlefishreads.com hosts
+ * Local / preview: host-only cookies
  */
 export function authCookieDomainForHost(
   hostHeader: string | null | undefined,

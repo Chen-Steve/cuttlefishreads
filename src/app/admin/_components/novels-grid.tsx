@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, BookOpen, ChevronDown, Pencil, Search, User } from "lucide-react";
+import { BookOpen, ChevronDown, Pencil, Search, User } from "lucide-react";
 
 import { NovelCover } from "@/components/novel/novel-cover";
 import { cn } from "@/lib/utils";
@@ -148,15 +148,6 @@ function TranslatorFilterDropdown({
 const actionLinkClass =
   "inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:border-accent/30 hover:bg-accent/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
-function originalsCardStats(novel: NovelRow) {
-  return [
-    { value: novel.reader_count, label: "Readers" },
-    { value: novel.view_count, label: "Views" },
-    { value: novel.library_add_count, label: "Library Adds" },
-    { value: novel.chapter_count, label: "Chapters" },
-  ] as const;
-}
-
 export function NovelsGrid({
   novels,
   translatorOptions = [],
@@ -167,7 +158,6 @@ export function NovelsGrid({
   const pathname = usePathname();
   const kind = workspaceKindFromPathname(pathname);
   const base = WORKSPACE_BASE[kind];
-  const horizontal = kind === "originals";
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [translatorFilter, setTranslatorFilter] = useState("all");
@@ -240,75 +230,6 @@ export function NovelsGrid({
             ? 'No novels yet — click "Create novel" to get started.'
             : "No novels match your filters."}
         </p>
-      ) : horizontal ? (
-        <div className="mt-5 flex flex-col gap-3">
-          {filtered.map((novel) => (
-            <div
-              key={novel.id}
-              className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-3 transition-colors hover:border-accent/30 sm:flex-row sm:items-center sm:gap-4"
-            >
-              <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
-                <div className="w-14 shrink-0 sm:w-16">
-                  <NovelCover
-                    title={novel.title}
-                    slug={novel.slug}
-                    coverUrl={novel.cover_url ?? undefined}
-                  />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                    <p className="truncate text-sm font-semibold leading-snug text-foreground sm:text-base">
-                      {novel.title}
-                    </p>
-                    <span className="shrink-0 text-xs capitalize text-muted">
-                      {novel.status}
-                    </span>
-                  </div>
-
-                  <dl className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5 sm:gap-x-4">
-                    {originalsCardStats(novel).map((stat) => (
-                      <div
-                        key={stat.label}
-                        className="flex items-baseline gap-1"
-                      >
-                        <dt className="sr-only">{stat.label}</dt>
-                        <dd className="text-xs font-semibold tabular-nums text-foreground">
-                          {stat.value.toLocaleString()}
-                        </dd>
-                        <span className="text-[11px] text-muted">{stat.label}</span>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              </div>
-
-              <div className="flex shrink-0 gap-2 sm:flex-col lg:flex-row">
-                <Link
-                  href={`${base}/novels/${novel.id}/chapters`}
-                  className={cn(actionLinkClass, "flex-1 sm:flex-none")}
-                >
-                  <BookOpen className="size-3.5" strokeWidth={1.75} aria-hidden />
-                  Chapters
-                </Link>
-                <Link
-                  href={`${base}/novels/${novel.id}/stats`}
-                  className={cn(actionLinkClass, "flex-1 sm:flex-none")}
-                >
-                  <BarChart3 className="size-3.5" strokeWidth={1.75} aria-hidden />
-                  Stats
-                </Link>
-                <Link
-                  href={`${base}/novels/${novel.id}/edit`}
-                  className={cn(actionLinkClass, "flex-1 sm:flex-none")}
-                >
-                  <Pencil className="size-3.5" strokeWidth={1.75} aria-hidden />
-                  Edit
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
       ) : (
         <div className="mt-5 grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-4 xl:grid-cols-5">
           {filtered.map((novel) => (

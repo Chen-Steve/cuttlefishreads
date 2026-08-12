@@ -11,7 +11,7 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 /**
  * Host used for shared cookie Domain.
- * Prod SITE_URL → .cuttlefishreads.com (covers main + originals + creators).
+ * Prod SITE_URL → .cuttlefishreads.com
  */
 function defaultAuthHost(): string | null {
   if (process.env.NODE_ENV === "development") {

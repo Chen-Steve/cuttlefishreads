@@ -98,7 +98,6 @@ export async function replyToComment(
     revalidatePath(`/novels/${parent.novel_slug}/${parent.chapter_number}`);
   }
   revalidatePath("/admin/comments");
-  revalidatePath("/originals/workspace/comments");
   revalidatePath("/account");
   revalidatePath("/notifications");
   revalidatePath("/", "layout");

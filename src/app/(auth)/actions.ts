@@ -5,11 +5,6 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/utils/supabase/server";
-import {
-  isOriginalsDomain,
-  mainOriginFromRequestHost,
-  normalizeHost,
-} from "@/lib/hosts";
 import { absoluteUrl } from "@/lib/seo";
 import { ensureProfileWithUsername } from "@/lib/profile";
 import { generateRandomUsername } from "@/lib/username";
@@ -17,7 +12,6 @@ import { PASSWORD_RECOVERY_COOKIE } from "@/lib/password-recovery";
 
 export type AuthState = { error?: string; message?: string };
 
-/** Prefer the current request host so Originals login stays on originals. */
 async function requestOrigin(): Promise<string> {
   const headerList = await headers();
   const host = headerList.get("host");
@@ -29,22 +23,7 @@ async function requestOrigin(): Promise<string> {
   return `${proto}://${host}`;
 }
 
-/**
- * Next.js may optimize same-origin Server Action redirects into an internal
- * RSC fetch. Host-based rewrites can then resolve "/" as the main route tree.
- * Bounce Originals redirects through the main host so the browser performs a
- * full navigation; proxy.ts immediately canonicalizes it back to Originals.
- */
-async function redirectAfterAuth(path: string): Promise<never> {
-  const headerList = await headers();
-  const hostHeader = headerList.get("host");
-
-  if (isOriginalsDomain(normalizeHost(hostHeader))) {
-    const url = new URL(mainOriginFromRequestHost(hostHeader));
-    url.pathname = path === "/" ? "/originals" : `/originals${path}`;
-    redirect(url.toString());
-  }
-
+function redirectAfterAuth(path: string): never {
   redirect(path);
 }
 

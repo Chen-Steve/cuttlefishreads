@@ -1,4 +1,4 @@
-import type { Genre, Language, PublicationType } from "@/lib/constants";
+import type { Genre, Language } from "@/lib/constants";
 
 export interface Novel {
   id: string;
@@ -8,8 +8,6 @@ export interface Novel {
   originalAuthor?: string;
   translator?: string;
   language: Language;
-  /** original | translation */
-  publicationType: PublicationType;
   translatorUsername?: string;
   translatorGlobalNote?: string;
   translatorKofiUrl?: string;
@@ -21,7 +19,7 @@ export interface Novel {
   tags: string[];
   status: "ongoing" | "completed" | "hiatus";
   chapterCount: number;
-  /** In-house view total (Originals). Translations typically stay 0. */
+  /** Page view total when available. */
   viewCount?: number;
   /** Bookmark / library-add total — usable for translation popularity. */
   libraryAddCount?: number;

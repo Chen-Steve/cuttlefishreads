@@ -6,7 +6,6 @@ import { notifyComment } from "@/lib/notifications/data";
 import { getNovelComments, isChapterReadable } from "@/lib/data";
 import type { NovelComment } from "@/types";
 import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
-import { createAdminClient } from "@/utils/supabase/admin";
 
 const MAX_COMMENT_LENGTH = 2000;
 
@@ -528,52 +527,4 @@ export async function loadMoreComments(
     comments: result.comments,
     hasMore: result.hasMore,
   };
-}
-
-/** Increment in-house Views for an originals series only (chapter page open). */
-export async function recordNovelView(novelSlug: string): Promise<void> {
-  const slug = novelSlug.trim();
-  if (!slug) return;
-
-  const admin = createAdminClient();
-  const { data: novel } = await admin
-    .from("novels")
-    .select("publication_type")
-    .eq("slug", slug)
-    .maybeSingle();
-
-  // Main-domain translations use Google Analytics for views — skip in-house.
-  if (!novel || novel.publication_type !== "original") return;
-
-  await admin.rpc("record_novel_view", { p_novel_slug: slug });
-}
-
-/**
- * Upsert chapter progress and qualify the signed-in user as a unique reader
- * when active time >= 30s or scroll >= 50%.
- */
-export async function reportChapterEngagement(
-  novelSlug: string,
-  chapterNumber: number,
-  activeSeconds: number,
-  scrollPct: number,
-): Promise<{ error?: string; newlyQualified?: boolean }> {
-  const slug = novelSlug.trim();
-  if (!slug || !Number.isInteger(chapterNumber) || chapterNumber < 1) {
-    return { error: "Invalid chapter." };
-  }
-
-  const claims = await getAuthClaims();
-  if (!claims) return { error: "Sign in required." };
-  const supabase = await getServerSupabase();
-
-  const { data, error } = await supabase.rpc("report_chapter_engagement", {
-    p_novel_slug: slug,
-    p_chapter_number: chapterNumber,
-    p_active_seconds: Math.max(0, Math.floor(activeSeconds)),
-    p_scroll_pct: Math.min(100, Math.max(0, scrollPct)),
-  });
-
-  if (error) return { error: error.message };
-  return { newlyQualified: Boolean(data) };
 }

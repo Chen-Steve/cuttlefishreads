@@ -9,31 +9,21 @@ import { revalidateNovelsDataCache } from "@/lib/data";
 import { notifyBookmarkersOfChapter, notifyBookmarkersOfChapters } from "@/lib/notifications/data";
 import { slugify } from "@/lib/utils";
 import {
-  workspaceBaseForPublicationType,
+  WORKSPACE_BASE,
   workspaceInternalPath,
 } from "@/lib/workspace";
 import {
-  COPYRIGHT_TYPES,
-  type CopyrightType,
   GENRES,
   type Genre,
   LANGUAGES,
   type Language,
-  MAX_ORIGINAL_TAGS,
-  PUBLICATION_TYPES,
-  type PublicationType,
 } from "@/lib/constants";
 
-// Public pages that show a novel of the given type.
-function revalidatePublicPaths(publicationType: string | null | undefined) {
+// Public pages that show catalog novels.
+function revalidatePublicPaths() {
   revalidateNovelsDataCache();
-  if (publicationType === "original") {
-    revalidatePath("/originals", "layout");
-    revalidatePath("/series", "layout");
-  } else {
-    revalidatePath("/");
-    revalidatePath("/novels", "layout");
-  }
+  revalidatePath("/");
+  revalidatePath("/novels", "layout");
 }
 
 export type AdminState = { error?: string; success?: string };
@@ -103,9 +93,7 @@ export async function updateSupportLinks(
 
   // Global note and support links appear on chapters that use the global message.
   revalidatePath("/novels", "layout");
-  revalidatePath("/series", "layout");
   revalidatePath("/admin/settings");
-  revalidatePath("/originals/workspace/settings");
   return { message: "Settings saved." };
 }
 
@@ -114,8 +102,7 @@ type NovelStatus = (typeof NOVEL_STATUSES)[number];
 
 type WorkspaceAuth = { access?: AdminAccess; error?: string };
 
-// Allows any signed-in user (Originals is open; translations are checked
-// separately via assertCanPublish).
+// Signed-in translators / master admins may use the workspace.
 async function requireWorkspace(): Promise<WorkspaceAuth> {
   const access = await getAdminAccess();
   if (!access) {
@@ -133,58 +120,27 @@ function ownsNovel(access: AdminAccess, publisherId: string | null): boolean {
 type ChapterWithNovel = {
   id: string;
   novel_id: string;
-  novels: { publisher_id: string | null; publication_type?: string | null } | null;
+  novels: { publisher_id: string | null } | null;
 };
 
-function parsePublicationType(formData: FormData): PublicationType {
-  const raw = String(formData.get("publicationType") ?? "translation");
-  return (PUBLICATION_TYPES as readonly string[]).includes(raw)
-    ? (raw as PublicationType)
-    : "translation";
-}
-
-function assertCanPublish(
-  access: AdminAccess,
-  publicationType: PublicationType,
-): string | null {
+function assertCanPublish(access: AdminAccess): string | null {
   if (access.isMasterAdmin) return null;
-  // Originals: any signed-in user. Translations still need translator access.
-  if (publicationType === "original") return null;
-  if (publicationType === "translation" && !access.isTranslator) {
+  if (!access.isTranslator) {
     return "You need translator access to publish translations.";
   }
   return null;
 }
 
-function parseGenres(
-  formData: FormData,
-  publicationType: PublicationType,
-): Genre[] | { error: string } {
+function parseGenres(formData: FormData): Genre[] {
   const allowed = new Set<string>(GENRES);
-  const selected = formData
+  return formData
     .getAll("genres")
     .map(String)
     .filter((g) => allowed.has(g)) as Genre[];
-
-  if (publicationType === "original") {
-    const mainRaw = String(formData.get("mainGenre") ?? "").trim();
-    if (!allowed.has(mainRaw)) {
-      return {
-        error: "Please select a main genre that best describes your story.",
-      };
-    }
-    const main = mainRaw as Genre;
-    return [main, ...selected.filter((g) => g !== main)];
-  }
-
-  return selected;
 }
 
-function parseTags(
-  raw: string,
-  options?: { max?: number },
-): string[] | { error: string } {
-  const tags = Array.from(
+function parseTags(raw: string): string[] {
+  return Array.from(
     new Set(
       raw
         .split(",")
@@ -192,22 +148,6 @@ function parseTags(
         .filter(Boolean),
     ),
   );
-  if (options?.max != null && tags.length > options.max) {
-    return { error: `You can add at most ${options.max} tags.` };
-  }
-  return tags;
-}
-
-function parseCopyrightType(
-  formData: FormData,
-  publicationType: PublicationType,
-): CopyrightType | null | { error: string } {
-  if (publicationType !== "original") return null;
-  const raw = String(formData.get("copyrightType") ?? "").trim();
-  if (!(COPYRIGHT_TYPES as readonly string[]).includes(raw)) {
-    return { error: "Please select a copyright type." };
-  }
-  return raw as CopyrightType;
 }
 
 const MAX_COVER_BYTES = 5 * 1024 * 1024;
@@ -300,30 +240,14 @@ async function _createNovel(
     ? (statusRaw as NovelStatus)
     : "ongoing";
   const languageRaw = String(formData.get("language") ?? "Chinese");
-  let language: Language = (LANGUAGES as readonly string[]).includes(languageRaw)
+  const language: Language = (LANGUAGES as readonly string[]).includes(languageRaw)
     ? (languageRaw as Language)
     : "Chinese";
-  const publicationType = parsePublicationType(formData);
-  const genresResult = parseGenres(formData, publicationType);
-  if ("error" in genresResult) return genresResult;
-  const genres = genresResult;
-  const tagsResult = parseTags(String(formData.get("tags") ?? ""), {
-    max: publicationType === "original" ? MAX_ORIGINAL_TAGS : undefined,
-  });
-  if ("error" in tagsResult) return tagsResult;
-  const tags = tagsResult;
-  const copyrightResult = parseCopyrightType(formData, publicationType);
-  if (copyrightResult && typeof copyrightResult === "object" && "error" in copyrightResult) {
-    return copyrightResult;
-  }
-  const copyrightType = copyrightResult;
+  const genres = parseGenres(formData);
+  const tags = parseTags(String(formData.get("tags") ?? ""));
   const { access } = auth;
-  const publishError = assertCanPublish(access, publicationType);
+  const publishError = assertCanPublish(access);
   if (publishError) return { error: publishError };
-  // Originals are always English — ignore any submitted language value.
-  if (publicationType === "original") {
-    language = "English";
-  }
   const cover = resolveCoverFile(coverFile, formData);
   if (cover) {
     const coverError = validateCoverFile(cover);
@@ -404,19 +328,16 @@ async function _createNovel(
     language,
     publisher_id: publisherId,
     novelupdates_url: (novelupdatesUrl as string | null) ?? null,
-    publication_type: publicationType,
-    copyright_type: copyrightType,
-    ownership_confirmed_at:
-      publicationType === "original" ? new Date().toISOString() : null,
+    publication_type: "translation",
   });
 
   if (error) {
     return { error: error.message };
   }
 
-  const workspaceBase = workspaceBaseForPublicationType(publicationType);
+  const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));
-  revalidatePublicPaths(publicationType);
+  revalidatePublicPaths();
   redirect(workspaceBase);
 }
 
@@ -439,7 +360,7 @@ export async function updateNovel(
     ? (statusRaw as NovelStatus)
     : "ongoing";
   const languageRaw = String(formData.get("language") ?? "Chinese");
-  let language: Language = (LANGUAGES as readonly string[]).includes(languageRaw)
+  const language: Language = (LANGUAGES as readonly string[]).includes(languageRaw)
     ? (languageRaw as Language)
     : "Chinese";
   const cover = resolveCoverFile(coverFile, formData);
@@ -459,7 +380,7 @@ export async function updateNovel(
   const { data: existing } = await admin
     .from("novels")
     .select(
-      "id, slug, cover_url, original_author, translator, publisher_id, publication_type, ownership_confirmed_at",
+      "id, slug, cover_url, original_author, translator, publisher_id",
     )
     .eq("id", novelId)
     .maybeSingle();
@@ -469,37 +390,11 @@ export async function updateNovel(
     return { error: "You can only manage your own novels." };
   }
 
-  // The publication type is fixed at creation by the workspace it was created
-  // in — never trust the form to switch a work between the two catalogs.
-  const publicationType = (existing.publication_type ??
-    "translation") as PublicationType;
-  const genresResult = parseGenres(formData, publicationType);
-  if ("error" in genresResult) return genresResult;
-  const genres = genresResult;
-  const tagsResult = parseTags(String(formData.get("tags") ?? ""), {
-    max: publicationType === "original" ? MAX_ORIGINAL_TAGS : undefined,
-  });
-  if ("error" in tagsResult) return tagsResult;
-  const tags = tagsResult;
-  const copyrightResult = parseCopyrightType(formData, publicationType);
-  if (copyrightResult && typeof copyrightResult === "object" && "error" in copyrightResult) {
-    return copyrightResult;
-  }
-  const copyrightType = copyrightResult;
-  const publishError = assertCanPublish(access, publicationType);
+  // Keep existing catalog novels as translations.
+  const genres = parseGenres(formData);
+  const tags = parseTags(String(formData.get("tags") ?? ""));
+  const publishError = assertCanPublish(access);
   if (publishError) return { error: publishError };
-  // Originals are always English — ignore any submitted language value.
-  if (publicationType === "original") {
-    language = "English";
-  }
-  let ownershipConfirmedAt: string | null =
-    existing.ownership_confirmed_at ?? null;
-  if (publicationType === "original") {
-    ownershipConfirmedAt =
-      ownershipConfirmedAt ?? new Date().toISOString();
-  } else {
-    ownershipConfirmedAt = null;
-  }
 
   // Translators cannot change attribution or the owning publisher — those stay
   // pinned to their account. Master admins can edit everything.
@@ -562,9 +457,6 @@ export async function updateNovel(
       language,
       publisher_id: publisherId,
       novelupdates_url: (novelupdatesUrl as string | null) ?? null,
-      publication_type: publicationType,
-      copyright_type: copyrightType,
-      ownership_confirmed_at: ownershipConfirmedAt,
       updated_at: new Date().toISOString(),
     })
     .eq("id", novelId);
@@ -573,9 +465,9 @@ export async function updateNovel(
     return { error: error.message };
   }
 
-  const workspaceBase = workspaceBaseForPublicationType(publicationType);
+  const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));
-  revalidatePublicPaths(publicationType);
+  revalidatePublicPaths();
   revalidatePath(`/novels/${existing.slug}`);
   redirect(workspaceBase);
 }
@@ -588,7 +480,7 @@ export async function deleteNovel(novelId: string): Promise<AdminState> {
 
   const { data: existing } = await admin
     .from("novels")
-    .select("slug, publisher_id, publication_type")
+    .select("slug, publisher_id")
     .eq("id", novelId)
     .maybeSingle();
 
@@ -603,11 +495,9 @@ export async function deleteNovel(novelId: string): Promise<AdminState> {
     return { error: error.message };
   }
 
-  const workspaceBase = workspaceBaseForPublicationType(
-    existing.publication_type,
-  );
+  const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));
-  revalidatePublicPaths(existing.publication_type);
+  revalidatePublicPaths();
   revalidatePath(`/novels/${existing.slug}`);
   redirect(workspaceBase);
 }
@@ -653,19 +543,12 @@ export async function createChapter(
 
   const { data: novel } = await admin
     .from("novels")
-    .select("id, title, publisher_id, publication_type")
+    .select("id, title, publisher_id")
     .eq("id", novelId)
     .maybeSingle();
   if (!novel) return { error: "That novel no longer exists." };
   if (!ownsNovel(auth.access, novel.publisher_id)) {
     return { error: "You can only manage your own novels." };
-  }
-
-  // Original works are always free on-site — never trust the form for this.
-  if (novel.publication_type === "original") {
-    isFree = true;
-    coinCost = 0;
-    unlockAt = null;
   }
 
   let number = Math.floor(Number(formData.get("number") ?? 0));
@@ -713,11 +596,9 @@ export async function createChapter(
     excludeUserId: auth.access.userId,
   });
 
-  const workspaceBase = workspaceBaseForPublicationType(
-    novel.publication_type,
-  );
+  const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));
-  revalidatePublicPaths(novel.publication_type);
+  revalidatePublicPaths();
   revalidatePath("/", "layout");
   redirect(`${workspaceBase}/novels/${novelId}/chapters`);
 }
@@ -734,7 +615,7 @@ export async function setChapterPublished(
   const { data: existing } = await admin
     .from("chapters")
     .select(
-      "id, novel_id, number, is_free, unlock_at, novels(publisher_id, publication_type)",
+      "id, novel_id, number, is_free, unlock_at, novels(publisher_id)",
     )
     .eq("id", chapterId)
     .maybeSingle<
@@ -774,15 +655,13 @@ export async function setChapterPublished(
     });
   }
 
-  const workspaceBase = workspaceBaseForPublicationType(
-    existing.novels?.publication_type,
-  );
+  const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(
     workspaceInternalPath(
       `${workspaceBase}/novels/${existing.novel_id}/chapters`,
     ),
   );
-  revalidatePublicPaths(existing.novels?.publication_type);
+  revalidatePublicPaths();
   revalidatePath("/", "layout");
   return {};
 }
@@ -795,7 +674,7 @@ export async function publishAllChapters(novelId: string): Promise<AdminState> {
 
   const { data: novel } = await admin
     .from("novels")
-    .select("publisher_id, publication_type")
+    .select("publisher_id")
     .eq("id", novelId)
     .maybeSingle();
   if (!novel) return { error: "That novel no longer exists." };
@@ -837,13 +716,11 @@ export async function publishAllChapters(novelId: string): Promise<AdminState> {
     excludeUserId: auth.access.userId,
   });
 
-  const workspaceBase = workspaceBaseForPublicationType(
-    novel.publication_type,
-  );
+  const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(
     workspaceInternalPath(`${workspaceBase}/novels/${novelId}/chapters`),
   );
-  revalidatePublicPaths(novel.publication_type);
+  revalidatePublicPaths();
   revalidatePath("/", "layout");
   return {};
 }
@@ -856,7 +733,7 @@ export async function deleteChapter(chapterId: string): Promise<AdminState> {
 
   const { data: existing } = await admin
     .from("chapters")
-    .select("id, novel_id, novels(publisher_id, publication_type)")
+    .select("id, novel_id, novels(publisher_id)")
     .eq("id", chapterId)
     .maybeSingle<ChapterWithNovel>();
   if (!existing) return { error: "Chapter not found." };
@@ -872,15 +749,13 @@ export async function deleteChapter(chapterId: string): Promise<AdminState> {
     .update({ updated_at: new Date().toISOString() })
     .eq("id", existing.novel_id);
 
-  const workspaceBase = workspaceBaseForPublicationType(
-    existing.novels?.publication_type,
-  );
+  const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(
     workspaceInternalPath(
       `${workspaceBase}/novels/${existing.novel_id}/chapters`,
     ),
   );
-  revalidatePublicPaths(existing.novels?.publication_type);
+  revalidatePublicPaths();
   return {};
 }
 
@@ -925,20 +800,13 @@ export async function updateChapter(
 
   const { data: existing } = await admin
     .from("chapters")
-    .select("id, novel_id, novels(publisher_id, publication_type)")
+    .select("id, novel_id, novels(publisher_id)")
     .eq("id", chapterId)
     .maybeSingle<ChapterWithNovel>();
 
   if (!existing) return { error: "Chapter not found." };
   if (!ownsNovel(auth.access, existing.novels?.publisher_id ?? null)) {
     return { error: "You can only manage your own novels." };
-  }
-
-  // Original works are always free on-site — never trust the form for this.
-  if (existing.novels?.publication_type === "original") {
-    isFree = true;
-    coinCost = 0;
-    unlockAt = null;
   }
 
   const { error } = await admin
@@ -968,9 +836,7 @@ export async function updateChapter(
     .update({ updated_at: new Date().toISOString() })
     .eq("id", existing.novel_id);
 
-  const workspaceBase = workspaceBaseForPublicationType(
-    existing.novels?.publication_type,
-  );
+  const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));
   revalidatePath(
     workspaceInternalPath(
@@ -982,176 +848,7 @@ export async function updateChapter(
       `${workspaceBase}/novels/${existing.novel_id}/chapters/${chapterId}/edit`,
     ),
   );
-  revalidatePublicPaths(existing.novels?.publication_type);
+  revalidatePublicPaths();
   return { success: "Chapter saved." };
 }
 
-export type LaunchKitState = { error?: string; message?: string };
-
-const MAX_LAUNCH_GRAPHIC_BYTES = 5 * 1024 * 1024;
-
-function resolveLaunchGraphicFile(
-  bound: File | null | undefined,
-  formData: FormData,
-  field: string,
-): File | null {
-  if (bound instanceof File && bound.size > 0) return bound;
-  const fromForm = formData.get(field);
-  if (fromForm instanceof File && fromForm.size > 0) return fromForm;
-  return null;
-}
-
-function validateLaunchGraphic(file: File, label: string): string | null {
-  if (file.size > MAX_LAUNCH_GRAPHIC_BYTES) {
-    return `${label} is too large (max ${MAX_LAUNCH_GRAPHIC_BYTES / 1024 / 1024} MB).`;
-  }
-  if (file.type && !file.type.startsWith("image/")) {
-    return `${label} must be an image file (JPEG, PNG, WebP, or GIF).`;
-  }
-  return null;
-}
-
-async function uploadLaunchGraphic(
-  admin: ReturnType<typeof createAdminClient>,
-  novelId: string,
-  kind: "square" | "vertical",
-  file: File,
-): Promise<string> {
-  const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
-  const path = `launch-kit/${novelId}-${kind}-${Date.now()}.${ext}`;
-
-  const { error } = await admin.storage
-    .from("covers")
-    .upload(path, file, { contentType: file.type || undefined, upsert: false });
-
-  if (error) {
-    throw new Error(`${kind} graphic upload failed: ${error.message}`);
-  }
-
-  const {
-    data: { publicUrl },
-  } = admin.storage.from("covers").getPublicUrl(path);
-  return publicUrl;
-}
-
-export async function updateLaunchKit(
-  novelId: string,
-  squareFile: File | null,
-  verticalFile: File | null,
-  _prev: LaunchKitState,
-  formData: FormData,
-): Promise<LaunchKitState> {
-  try {
-    return await _updateLaunchKit(novelId, squareFile, verticalFile, formData);
-  } catch (err) {
-    console.error("[updateLaunchKit] unexpected error:", err);
-    return {
-      error:
-        err instanceof Error
-          ? err.message
-          : "An unexpected error occurred. Please try again.",
-    };
-  }
-}
-
-async function _updateLaunchKit(
-  novelId: string,
-  squareFile: File | null,
-  verticalFile: File | null,
-  formData: FormData,
-): Promise<LaunchKitState> {
-  const auth = await requireWorkspace();
-  if (!auth.access) return { error: auth.error };
-
-  const admin = createAdminClient();
-  const { data: novel } = await admin
-    .from("novels")
-    .select("id, publisher_id, publication_type")
-    .eq("id", novelId)
-    .maybeSingle();
-
-  if (!novel) return { error: "That series no longer exists." };
-  if (novel.publication_type !== "original") {
-    return { error: "Launch kits are only available for Originals series." };
-  }
-  if (!ownsNovel(auth.access, novel.publisher_id)) {
-    return { error: "You can only manage your own series." };
-  }
-
-  const shortAnnouncement = String(formData.get("shortAnnouncement") ?? "").trim();
-  const longAnnouncement = String(formData.get("longAnnouncement") ?? "").trim();
-  if (shortAnnouncement.length > 500) {
-    return { error: "Short announcement must be 500 characters or fewer." };
-  }
-  if (longAnnouncement.length > 4000) {
-    return { error: "Long announcement must be 4000 characters or fewer." };
-  }
-
-  const referral = parseSupportLink(
-    String(formData.get("referralUrl") ?? ""),
-    "Referral",
-  );
-  if (referral && typeof referral === "object") return { error: referral.error };
-
-  const launchDateRaw = String(formData.get("launchDate") ?? "").trim();
-  let launchDate: string | null = null;
-  if (launchDateRaw) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(launchDateRaw)) {
-      return { error: "Enter a valid launch date." };
-    }
-    launchDate = launchDateRaw;
-  }
-
-  const square = resolveLaunchGraphicFile(squareFile, formData, "squareGraphic");
-  if (square) {
-    const err = validateLaunchGraphic(square, "Square cover graphic");
-    if (err) return { error: err };
-  }
-  const vertical = resolveLaunchGraphicFile(
-    verticalFile,
-    formData,
-    "verticalGraphic",
-  );
-  if (vertical) {
-    const err = validateLaunchGraphic(vertical, "Vertical mobile graphic");
-    if (err) return { error: err };
-  }
-
-  const { data: existing } = await admin
-    .from("novel_launch_kits")
-    .select("square_graphic_url, vertical_graphic_url")
-    .eq("novel_id", novelId)
-    .maybeSingle();
-
-  let squareUrl = existing?.square_graphic_url ?? null;
-  let verticalUrl = existing?.vertical_graphic_url ?? null;
-  if (square) {
-    squareUrl = await uploadLaunchGraphic(admin, novelId, "square", square);
-  }
-  if (vertical) {
-    verticalUrl = await uploadLaunchGraphic(admin, novelId, "vertical", vertical);
-  }
-
-  const payload = {
-    novel_id: novelId,
-    short_announcement: shortAnnouncement || null,
-    long_announcement: longAnnouncement || null,
-    square_graphic_url: squareUrl,
-    vertical_graphic_url: verticalUrl,
-    referral_url: referral,
-    launch_date: launchDate,
-    updated_at: new Date().toISOString(),
-  };
-
-  const { error } = await admin.from("novel_launch_kits").upsert(payload, {
-    onConflict: "novel_id",
-  });
-
-  if (error) return { error: error.message };
-
-  revalidatePath(workspaceInternalPath("/workspace/launch-kit"));
-  revalidatePath(
-    workspaceInternalPath(`/workspace/novels/${novelId}/launch-kit`),
-  );
-  return { message: "Launch kit saved." };
-}

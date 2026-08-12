@@ -14,7 +14,7 @@ export async function WorkspaceSettingsPage({
   const access = await getAdminAccess();
   if (!access) notFound();
 
-  const roleNoun = workspace === "originals" ? "author" : "translator";
+  const roleNoun = "translator";
 
   const admin = createAdminClient();
   const { data: profile } = await admin
@@ -35,7 +35,7 @@ export async function WorkspaceSettingsPage({
 
       <div className="mt-6 rounded-2xl border border-border bg-surface p-5 sm:p-6">
         <h2 className="text-base font-semibold tracking-tight text-foreground">
-          {workspace === "originals" ? "Author note" : "Translator note"}
+          Translator note
         </h2>
         <p className="mb-5 mt-0.5 text-sm text-muted">
           Chapters set to &ldquo;Use global message&rdquo; show this note above

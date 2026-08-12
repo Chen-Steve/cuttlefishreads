@@ -3,10 +3,7 @@ import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
 import { getAdminAccess } from "@/lib/access";
 import { createAdminClient } from "@/utils/supabase/admin";
-import {
-  WORKSPACE_PUBLICATION_TYPE,
-  type WorkspaceKind,
-} from "@/lib/workspace";
+import type { WorkspaceKind } from "@/lib/workspace";
 import type { NovelComment } from "@/types";
 
 import {
@@ -45,7 +42,7 @@ export async function WorkspaceCommentsPage({
   let novelsQuery = admin
     .from("novels")
     .select("id, slug, title, publisher_id")
-    .eq("publication_type", WORKSPACE_PUBLICATION_TYPE[workspace])
+    .eq("publication_type", "translation")
     .order("updated_at", { ascending: false });
 
   if (!access.isMasterAdmin) {
@@ -161,7 +158,7 @@ export async function WorkspaceCommentsPage({
       </h1>
       <p className="mt-0.5 text-sm text-muted">
         Reader comments across your{" "}
-        {workspace === "originals" ? "series" : "novels"}. Reply directly to
+        novels. Reply directly to
         start a thread.
         {commentsTruncated
           ? ` Showing the ${TOP_COMMENTS_LIMIT} most recent.`
