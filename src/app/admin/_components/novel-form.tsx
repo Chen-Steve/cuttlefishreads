@@ -1,10 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { TabPanelShell } from "@/components/tab-panel-shell";
 import { GENRES, LANGUAGES } from "@/lib/constants";
-import { cn } from "@/lib/utils";
 import { createNovel, updateNovel, type AdminState } from "../actions";
 import { DeleteNovelButton } from "./delete-novel-button";
 
@@ -17,7 +19,6 @@ const STATUSES = [
 const inputClass =
   "h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25";
 const labelClass = "text-xs font-medium text-muted";
-const panelClass = "rounded-2xl border border-border bg-surface p-5 sm:p-6";
 
 export type NovelFormValues = {
   id: string;
@@ -35,10 +36,10 @@ export type NovelFormValues = {
 
 export function NovelForm({
   novel,
-  header,
+  backHref,
 }: {
   novel?: NovelFormValues;
-  header?: ReactNode;
+  backHref: string;
 }) {
   const isEdit = Boolean(novel);
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -63,129 +64,120 @@ export function NovelForm({
   );
 
   const displayCover = localCoverPreview ?? novel?.cover_url ?? null;
-
-  const submitButton = (
-    <button
-      type="submit"
-      disabled={pending}
-      className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50",
-        header ? "h-10 px-4" : "h-11 px-5 sm:w-fit",
-      )}
-    >
-      {pending
-        ? isEdit
-          ? "Saving…"
-          : "Creating…"
-        : isEdit
-          ? "Save changes"
-          : "Create novel"}
-    </button>
-  );
+  const submitLabel = pending
+    ? isEdit
+      ? "Saving…"
+      : "Creating…"
+    : isEdit
+      ? "Save changes"
+      : "Create novel";
 
   return (
-    <form
-      action={action}
-      className={cn("flex flex-col", header ? "gap-3" : "gap-5")}
-    >
-      {header ? (
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-3">
-            {header}
-          </div>
-          {submitButton}
+    <form action={action}>
+      <TabPanelShell
+        leftTab={
+          <Link
+            href={backHref}
+            className="inline-flex h-9 items-center gap-1 px-4 text-sm font-medium text-foreground transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
+            Back to novels
+          </Link>
+        }
+        rightTab={
+          <button
+            type="submit"
+            disabled={pending}
+            className="inline-flex h-9 items-center justify-center px-4 text-sm font-semibold text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitLabel}
+          </button>
+        }
+      >
+        <div className="flex min-w-0 items-center gap-3 px-4 pt-2">
+          <h1 className="shrink-0 text-sm font-semibold tracking-tight text-foreground">
+            {isEdit ? "Edit novel" : "Create novel"}
+          </h1>
+          <label htmlFor="novel-title" className="sr-only">
+            Title
+          </label>
+          <input
+            id="novel-title"
+            name="title"
+            required
+            defaultValue={novel?.title}
+            placeholder="Title"
+            className={`${inputClass} h-9 min-w-0 flex-1`}
+          />
         </div>
-      ) : null}
 
-      {state.error && (
-        <p
-          role="alert"
-          className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400"
-        >
-          {state.error}
-        </p>
-      )}
+        {state.error ? (
+          <p
+            role="alert"
+            className="mx-4 mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400"
+          >
+            {state.error}
+          </p>
+        ) : null}
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)] lg:items-start">
-        <div className={cn(panelClass, "flex flex-col gap-5")}>
-          <div className="grid gap-5 sm:grid-cols-[7.5rem_1fr] sm:items-start">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="novel-cover" className={labelClass}>
-                Cover
-              </label>
-              <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg border border-border bg-background ring-1 ring-black/5 dark:ring-white/10">
-                {displayCover ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={displayCover}
-                    alt=""
-                    className="size-full object-cover"
-                  />
-                ) : (
-                  <div className="flex size-full items-center justify-center px-2 text-center text-[0.65rem] leading-tight text-muted/70">
-                    No cover yet
-                  </div>
-                )}
+        <div className="grid items-start gap-4 px-4 pb-4 pt-2 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)]">
+          <div className="flex flex-col gap-4">
+            <div className="grid gap-4 sm:grid-cols-[7.5rem_1fr] sm:items-start">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="novel-cover" className={labelClass}>
+                  Cover
+                </label>
+                <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg border border-border bg-background ring-1 ring-black/5 dark:ring-white/10">
+                  {displayCover ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={displayCover}
+                      alt=""
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex size-full items-center justify-center px-2 text-center text-[0.65rem] leading-tight text-muted/70">
+                      No cover yet
+                    </div>
+                  )}
+                </div>
+                <input
+                  id="novel-cover"
+                  name="cover"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/*"
+                  onChange={(event) =>
+                    setCoverFile(event.target.files?.[0] ?? null)
+                  }
+                  className="block w-full text-transparent text-xs file:mr-0 file:rounded-lg file:border-0 file:bg-accent file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-accent-foreground hover:file:bg-accent-hover"
+                />
+                {coverFile ? (
+                  <span className="text-[0.7rem] leading-tight text-muted">
+                    Selected: {coverFile.name}
+                  </span>
+                ) : isEdit ? (
+                  <span className="text-[0.7rem] leading-tight text-muted">
+                    Leave empty to keep current cover.
+                  </span>
+                ) : null}
               </div>
-              <input
-                id="novel-cover"
-                name="cover"
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif,image/*"
-                onChange={(event) =>
-                  setCoverFile(event.target.files?.[0] ?? null)
-                }
-                className="block w-full text-transparent text-xs file:mr-0 file:rounded-lg file:border-0 file:bg-accent file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-accent-foreground hover:file:bg-accent-hover"
-              />
-              {coverFile ? (
-                <span className="text-[0.7rem] leading-tight text-muted">
-                  Selected: {coverFile.name}
-                </span>
-              ) : isEdit ? (
-                <span className="text-[0.7rem] leading-tight text-muted">
-                  Leave empty to keep current cover.
-                </span>
-              ) : null}
-            </div>
 
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <label htmlFor="novel-title" className={labelClass}>
-                Title
-              </label>
-              <input
-                id="novel-title"
-                name="title"
-                required
-                defaultValue={novel?.title}
-                placeholder="The Lantern of Quiet Tides"
-                className={inputClass}
-              />
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <label htmlFor="novel-description" className={labelClass}>
+                  Description
+                </label>
+                <RichTextEditor
+                  id="novel-description"
+                  name="description"
+                  defaultValue={novel?.description ?? ""}
+                  placeholder="A short synopsis…"
+                  className="min-h-[18rem] lg:min-h-[22rem]"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="novel-description" className={labelClass}>
-              Description
-            </label>
-            <RichTextEditor
-              id="novel-description"
-              name="description"
-              defaultValue={novel?.description ?? ""}
-              placeholder="A short synopsis…"
-              className="min-h-[18rem] lg:min-h-[22rem]"
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-5">
-          {isEdit && novel ? (
-            <div className={cn(panelClass, "flex items-center justify-between gap-4")}>
-              {submitButton}
-              <DeleteNovelButton novelId={novel.id} title={novel.title} />
-            </div>
-          ) : null}
-
-          <div className={cn(panelClass, "flex flex-col gap-4")}>
+          <aside className="flex flex-col gap-4 lg:sticky lg:top-6">
             <fieldset className="flex flex-col gap-2">
               <legend className={labelClass}>Genres</legend>
               <div className="flex flex-wrap gap-1.5">
@@ -272,9 +264,13 @@ export function NovelForm({
                 className={inputClass}
               />
             </div>
-          </div>
+
+            {isEdit && novel ? (
+              <DeleteNovelButton novelId={novel.id} title={novel.title} />
+            ) : null}
+          </aside>
         </div>
-      </div>
+      </TabPanelShell>
     </form>
   );
 }

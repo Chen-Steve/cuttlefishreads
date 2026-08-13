@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/page-container";
@@ -35,16 +33,7 @@ export async function WorkspaceNovelEditPage({
 
   return (
     <PageContainer as="div" width="default">
-      <Link
-        href={base}
-        className="inline-flex h-9 items-center gap-1 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-      >
-        <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
-        Back to novels
-      </Link>
-      <div className="mt-4">
-        <NovelForm novel={novel} />
-      </div>
+      <NovelForm novel={novel} backHref={base} />
     </PageContainer>
   );
 }

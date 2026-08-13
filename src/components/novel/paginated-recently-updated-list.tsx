@@ -67,72 +67,81 @@ export function PaginatedRecentlyUpdatedList({
   const pageNovels = limited.slice(start, start + pageSize);
   const pageItems = buildPageRange(safePage, totalPages);
 
-  return (
-    <div>
-      <RecentlyUpdatedList novels={pageNovels} catalogBase={catalogBase} />
-
-      {totalPages > 1 ? (
-        <nav
-          aria-label="Recently updated pagination"
-          className="mt-4 flex items-center justify-center gap-1 border-t border-border pt-4"
-        >
-          <button
-            type="button"
-            onClick={() => setPage((current) => Math.max(0, current - 1))}
-            disabled={safePage === 0}
-            aria-label="Previous page"
-            className={cn(
-              "inline-flex size-9 items-center justify-center rounded-lg border border-border bg-background text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40",
-              safePage > 0 && "hover:border-accent hover:text-accent",
-            )}
-          >
-            <ChevronLeft className="size-4" strokeWidth={2} aria-hidden />
-          </button>
-
-          {pageItems.map((item, index) =>
-            item === "ellipsis" ? (
-              <span
-                key={`ellipsis-${index}`}
-                className="inline-flex size-9 items-center justify-center text-sm text-muted"
-                aria-hidden
-              >
-                …
-              </span>
-            ) : (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setPage(item - 1)}
-                aria-label={`Page ${item}`}
-                aria-current={safePage + 1 === item ? "page" : undefined}
-                className={cn(
-                  "inline-flex size-9 items-center justify-center rounded-lg text-sm font-medium tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-                  safePage + 1 === item
-                    ? "bg-accent text-accent-foreground"
-                    : "text-foreground hover:bg-surface hover:text-accent",
-                )}
-              >
-                {item}
-              </button>
-            ),
+  const pagination =
+    totalPages > 1 ? (
+      <nav
+        aria-label="Recently updated pagination"
+        className="flex max-w-full items-center justify-center gap-1 overflow-x-auto px-2"
+      >
+        <button
+          type="button"
+          onClick={() => setPage((current) => Math.max(0, current - 1))}
+          disabled={safePage === 0}
+          aria-label="Previous page"
+          className={cn(
+            "inline-flex size-9 items-center justify-center rounded-lg text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40",
+            safePage > 0 && "hover:text-accent",
           )}
+        >
+          <ChevronLeft className="size-4" strokeWidth={2} aria-hidden />
+        </button>
 
-          <button
-            type="button"
-            onClick={() =>
-              setPage((current) => Math.min(totalPages - 1, current + 1))
-            }
-            disabled={safePage >= totalPages - 1}
-            aria-label="Next page"
-            className={cn(
-              "inline-flex size-9 items-center justify-center rounded-lg border border-border bg-background text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40",
-              safePage < totalPages - 1 && "hover:border-accent hover:text-accent",
-            )}
-          >
-            <ChevronRight className="size-4" strokeWidth={2} aria-hidden />
-          </button>
-        </nav>
-      ) : null}
-    </div>
+        {pageItems.map((item, index) =>
+          item === "ellipsis" ? (
+            <span
+              key={`ellipsis-${index}`}
+              className="inline-flex size-9 items-center justify-center text-sm text-muted"
+              aria-hidden
+            >
+              …
+            </span>
+          ) : (
+            <button
+              key={item}
+              type="button"
+              onClick={() => setPage(item - 1)}
+              aria-label={`Page ${item}`}
+              aria-current={safePage + 1 === item ? "page" : undefined}
+              className={cn(
+                "relative inline-flex size-9 items-center justify-center text-sm font-medium tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+                safePage + 1 === item
+                  ? "text-accent-foreground"
+                  : "text-foreground hover:text-accent",
+              )}
+            >
+              {safePage + 1 === item ? (
+                <span
+                  className="absolute inset-0 m-auto size-7 rounded-md bg-accent"
+                  aria-hidden
+                />
+              ) : null}
+              <span className="relative">{item}</span>
+            </button>
+          ),
+        )}
+
+        <button
+          type="button"
+          onClick={() =>
+            setPage((current) => Math.min(totalPages - 1, current + 1))
+          }
+          disabled={safePage >= totalPages - 1}
+          aria-label="Next page"
+          className={cn(
+            "inline-flex size-9 items-center justify-center rounded-lg text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40",
+            safePage < totalPages - 1 && "hover:text-accent",
+          )}
+        >
+          <ChevronRight className="size-4" strokeWidth={2} aria-hidden />
+        </button>
+      </nav>
+    ) : null;
+
+  return (
+    <RecentlyUpdatedList
+      novels={pageNovels}
+      catalogBase={catalogBase}
+      lastCardFooter={pagination}
+    />
   );
 }

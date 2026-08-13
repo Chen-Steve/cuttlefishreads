@@ -1,6 +1,3 @@
-import Link from "next/link";
-import { PlusCircle } from "lucide-react";
-
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
@@ -114,37 +111,19 @@ export async function WorkspaceNovelsPage({
     ? buildPublisherOptions(novels)
     : [];
 
-  const countLabel =
-    novels.length === 0
-      ? "No novels yet"
-      : `${novels.length} novel${novels.length !== 1 ? "s" : ""}`;
-
   return (
     <PageContainer as="div">
       <p className="mb-4 text-center text-xs text-muted sm:hidden">
         This workspace is best viewed on a desktop screen.
       </p>
 
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-            {labels.novels}
-          </h1>
-          <p className="mt-0.5 text-sm text-muted">{countLabel}</p>
-        </div>
-
-        <Link
-          href={`${base}/novels/new`}
-          className="inline-flex h-10 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        >
-          <PlusCircle className="size-4" strokeWidth={1.75} aria-hidden />
-          Create {labels.noun}
-        </Link>
-      </div>
-
-      <div className="mt-8">
-        <NovelsGrid novels={novels} translatorOptions={translatorOptions} />
-      </div>
+      <NovelsGrid
+        novels={novels}
+        translatorOptions={translatorOptions}
+        title={labels.novels}
+        createHref={`${base}/novels/new`}
+        createLabel={`Create ${labels.noun}`}
+      />
     </PageContainer>
   );
 }

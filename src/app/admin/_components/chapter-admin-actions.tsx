@@ -104,7 +104,7 @@ export function PublishAllButton({
       type="button"
       onClick={publishAll}
       disabled={pending}
-      className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+      className="inline-flex h-9 items-center gap-1.5 px-3 text-xs font-semibold text-foreground transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
     >
       {pending ? (
         <Loader2 className="size-4 animate-spin" aria-hidden />

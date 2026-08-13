@@ -3,11 +3,12 @@
 import { useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowDownUp, Pencil } from "lucide-react";
+import { ArrowDownUp, ChevronLeft, Pencil, PlusCircle } from "lucide-react";
 
+import { TabPanelShell } from "@/components/tab-panel-shell";
 import { cn } from "@/lib/utils";
 import { WORKSPACE_BASE, workspaceKindFromPathname } from "@/lib/workspace";
-import { ChapterRowActions } from "./chapter-admin-actions";
+import { ChapterRowActions, PublishAllButton } from "./chapter-admin-actions";
 
 const CHAPTER_ORDER_STORAGE_KEY = "cf-admin-chapter-order";
 
@@ -81,12 +82,17 @@ export function ChapterOrderToggle() {
       type="button"
       onClick={() => writeChapterOrderPreference(!newestFirst)}
       aria-pressed={newestFirst}
+      aria-label={
+        newestFirst
+          ? "Chapter order: newest first. Click to show oldest first."
+          : "Chapter order: oldest first. Click to show newest first."
+      }
       className={cn(
-        "inline-flex h-10 items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-        newestFirst && "border-accent/40 bg-accent/5 text-accent",
+        "inline-flex h-9 shrink-0 items-center gap-1.5 px-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+        newestFirst ? "text-accent" : "text-muted hover:text-foreground",
       )}
     >
-      <ArrowDownUp className="size-4" strokeWidth={1.75} aria-hidden />
+      <ArrowDownUp className="size-3.5" strokeWidth={1.75} aria-hidden />
       {newestFirst ? "Newest" : "Oldest"}
     </button>
   );
@@ -104,10 +110,18 @@ function unlockLabel(chapter: Pick<AdminChapterRow, "is_free" | "unlock_at">) {
 
 export function ChapterList({
   novelId,
+  novelTitle,
   chapters,
+  backHref,
+  addHref,
+  draftCount,
 }: {
   novelId: string;
+  novelTitle: string;
   chapters: AdminChapterRow[];
+  backHref: string;
+  addHref: string;
+  draftCount: number;
 }) {
   const pathname = usePathname();
   const base = WORKSPACE_BASE[workspaceKindFromPathname(pathname)];
@@ -122,69 +136,103 @@ export function ChapterList({
     return newestFirst ? sorted.reverse() : sorted;
   }, [chapters, newestFirst]);
 
-  if (chapters.length === 0) {
-    return (
-      <p className="rounded-2xl border border-dashed border-border px-4 py-12 text-center text-sm text-muted">
-        No chapters yet — click &quot;Add chapter&quot; to get started.
-      </p>
-    );
-  }
+  const hasChapters = chapters.length > 0;
 
   return (
-    <div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
-        {rows.map((chapter) => (
-          <div
-            key={chapter.id}
-            className="flex items-center gap-4 px-4 py-3.5"
+    <TabPanelShell
+      leftTab={
+        <Link
+          href={backHref}
+          className="inline-flex h-9 items-center gap-1 px-4 text-sm font-medium text-foreground transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
+          Back to novels
+        </Link>
+      }
+      rightTab={
+        <div className="flex items-stretch">
+          <PublishAllButton novelId={novelId} draftCount={draftCount} />
+          {hasChapters ? <ChapterOrderToggle /> : null}
+          <Link
+            href={addHref}
+            className="inline-flex h-9 items-center justify-center gap-1.5 px-4 text-sm font-semibold text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
-            <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
-                <span className="truncate">
-                  {chapter.title
-                    ? `Chapter ${chapter.number}: ${chapter.title}`
-                    : `Chapter ${chapter.number}`}
-                </span>
-                {chapter.is_published ? (
-                  <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
-                    Published
+            <PlusCircle className="size-4" strokeWidth={1.75} aria-hidden />
+            Add chapter
+          </Link>
+        </div>
+      }
+    >
+      <h1
+        className="px-4 pt-3 text-sm font-semibold tracking-tight text-foreground"
+        title={novelTitle}
+      >
+        {novelTitle.length > 50 ? `${novelTitle.slice(0, 50)}...` : novelTitle}
+        <span className="ml-1.5 text-xs font-normal text-muted">
+          {chapters.length}
+        </span>
+      </h1>
+      {hasChapters ? (
+        <div className="mt-2 flex flex-col divide-y divide-border">
+          {rows.map((chapter) => (
+            <div
+              key={chapter.id}
+              className="flex items-center gap-4 px-4 py-3.5"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
+                  <span className="truncate">
+                    {chapter.title
+                      ? `Chapter ${chapter.number}: ${chapter.title}`
+                      : `Chapter ${chapter.number}`}
                   </span>
-                ) : (
-                  <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
-                    Draft
+                  {chapter.is_published ? (
+                    <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+                      Published
+                    </span>
+                  ) : (
+                    <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                      Draft
+                    </span>
+                  )}
+                </p>
+                <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted">
+                  <span>{unlockLabel(chapter)}</span>
+                  <span aria-hidden>·</span>
+                  {chapter.is_free ? (
+                    <span className="text-emerald-600 dark:text-emerald-400">Free</span>
+                  ) : (
+                    <span>{chapter.coin_cost} cookies</span>
+                  )}
+                  <span aria-hidden>·</span>
+                  <span className="tabular-nums">
+                    {chapter.word_count.toLocaleString()} word
+                    {chapter.word_count === 1 ? "" : "s"}
                   </span>
-                )}
-              </p>
-              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted">
-                <span>{unlockLabel(chapter)}</span>
-                <span aria-hidden>·</span>
-                {chapter.is_free ? (
-                  <span className="text-emerald-600 dark:text-emerald-400">Free</span>
-                ) : (
-                  <span>{chapter.coin_cost} cookies</span>
-                )}
-                <span aria-hidden>·</span>
-                <span className="tabular-nums">
-                  {chapter.word_count.toLocaleString()} word
-                  {chapter.word_count === 1 ? "" : "s"}
-                </span>
-              </p>
-            </div>
+                </p>
+              </div>
 
-            <div className="flex shrink-0 items-center gap-2">
-              <Link
-                href={`${base}/novels/${novelId}/chapters/${chapter.id}/edit`}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-              >
-                <Pencil className="size-3.5" strokeWidth={1.75} aria-hidden />
-                <span className="hidden sm:inline">Edit</span>
-              </Link>
-              <ChapterRowActions
-                chapterId={chapter.id}
-                isPublished={chapter.is_published}
-              />
+              <div className="flex shrink-0 items-center gap-2">
+                <Link
+                  href={`${base}/novels/${novelId}/chapters/${chapter.id}/edit`}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                >
+                  <Pencil className="size-3.5" strokeWidth={1.75} aria-hidden />
+                  <span className="hidden sm:inline">Edit</span>
+                </Link>
+                <ChapterRowActions
+                  chapterId={chapter.id}
+                  isPublished={chapter.is_published}
+                />
+              </div>
             </div>
-          </div>
-        ))}
-    </div>
+          ))}
+        </div>
+      ) : (
+        <p className="px-4 py-8 text-center text-sm text-muted">
+          No chapters yet — click &quot;Add chapter&quot; to get started.
+        </p>
+      )}
+    </TabPanelShell>
   );
 }

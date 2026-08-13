@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronDown, LogIn, MessageSquare, Star } from "lucide-react";
+import { Check, ChevronDown, LogIn, Star } from "lucide-react";
 
 import { createComment } from "@/app/(main)/novels/actions";
+import { TabPanelShell } from "@/components/tab-panel-shell";
 import { cn } from "@/lib/utils";
 import type { ReadableChapter } from "@/lib/data";
 import type { NovelComment } from "@/types";
@@ -33,7 +34,23 @@ export function CommentForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const chapterMenuRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [menuHeight, setMenuHeight] = useState(0);
   const canRate = mode === "novel" && !selectedChapter;
+
+  useLayoutEffect(() => {
+    const form = formRef.current;
+    const tab = chapterMenuRef.current;
+    if (!form) return;
+    const measure = () => {
+      setMenuHeight(Math.max(0, form.offsetHeight - (tab?.offsetHeight ?? 0)));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(form);
+    if (tab) ro.observe(tab);
+    return () => ro.disconnect();
+  }, [isLoggedIn, mode, readableChapters.length]);
 
   useEffect(() => {
     if (!chapterMenuOpen) return;
@@ -87,156 +104,178 @@ export function CommentForm({
     });
   }
 
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-xl border border-border bg-surface p-4"
+  const titleTab = (
+    <h2 className="flex h-9 items-center px-4 text-sm font-semibold tracking-tight text-foreground">
+      Post comment
+    </h2>
+  );
+
+  const postTab = isLoggedIn ? (
+    <button
+      type="submit"
+      disabled={pending || !body.trim()}
+      className="inline-flex h-9 items-center justify-center px-4 text-sm font-semibold text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
     >
-      <label htmlFor="comment-body" className="sr-only">
-        Write a comment
-      </label>
-      <textarea
-        id="comment-body"
-        value={body}
-        onChange={(event) => setBody(event.target.value)}
-        placeholder={
-          isLoggedIn ? "Share your thoughts…" : "Sign in to leave a comment"
-        }
-        rows={3}
-        maxLength={MAX_COMMENT_LENGTH}
-        disabled={!isLoggedIn || pending}
-        className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
-      />
+      {pending ? "Posting…" : "Post"}
+    </button>
+  ) : (
+    <Link
+      href="/login"
+      className="inline-flex h-9 items-center justify-center gap-2 px-4 text-sm font-semibold text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+    >
+      <LogIn className="size-4" strokeWidth={1.75} aria-hidden />
+      Sign in to comment
+    </Link>
+  );
 
-      {isLoggedIn && canRate ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-muted">Rating (optional)</span>
-          <div
-            className="flex items-center gap-0.5"
-            role="radiogroup"
-            aria-label="Optional rating"
-          >
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                key={star}
-                type="button"
-                role="radio"
-                aria-checked={rating === star}
-                aria-label={`${star} star${star === 1 ? "" : "s"}`}
-                disabled={pending}
-                onClick={() => setRating((current) => (current === star ? null : star))}
-                className="rounded p-0.5 transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
-              >
-                <Star
-                  className={
-                    rating != null && star <= rating
-                      ? "size-4 fill-amber-500 text-amber-500"
-                      : "size-4 text-border"
-                  }
-                  strokeWidth={1.75}
-                  aria-hidden
-                />
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0 flex flex-col gap-2 sm:flex-row sm:items-center">
-          {isLoggedIn && mode === "novel" && readableChapters.length > 0 ? (
-            <div className="flex min-w-0 items-center gap-2 text-sm text-muted">
-              <div ref={chapterMenuRef} className="relative">
-                <button
-                  type="button"
-                  onClick={() => setChapterMenuOpen((open) => !open)}
-                  disabled={pending}
-                  aria-haspopup="menu"
-                  aria-expanded={chapterMenuOpen}
-                  aria-label="Comment scope"
-                  className="inline-flex h-9 w-24 max-w-full items-center justify-between gap-1 rounded-xl px-2 text-sm font-medium leading-none text-muted transition-colors hover:bg-background hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
-                >
-                  <span className="truncate">
-                    {selectedChapter ? selectedChapter : "General"}
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      "size-3.5 shrink-0 transition-transform duration-150",
-                      chapterMenuOpen && "rotate-180",
-                    )}
-                    strokeWidth={1.75}
-                    aria-hidden
-                  />
-                </button>
-
-                {chapterMenuOpen ? (
-                  <div
-                    role="menu"
-                    className="absolute left-0 top-full z-30 mt-1.5 max-h-64 w-24 overflow-y-auto rounded-xl border border-border bg-surface shadow-md"
-                  >
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setSelectedChapter("");
-                        setChapterMenuOpen(false);
-                      }}
-                      className="flex w-full items-center px-2.5 py-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-background"
-                    >
-                      General
-                    </button>
-                    {readableChapters.map((chapter) => (
-                      <button
-                        key={chapter.number}
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setSelectedChapter(String(chapter.number));
-                          setRating(null);
-                          setChapterMenuOpen(false);
-                        }}
-                        className="flex w-full items-center px-2.5 py-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-background"
-                      >
-                        {chapter.number}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-          {isLoggedIn ? (
-            <span className="text-xs text-muted">
-              {body.length}/{MAX_COMMENT_LENGTH}
-            </span>
-          ) : null}
-        </div>
-
-        {isLoggedIn ? (
+  const ratingTab =
+    isLoggedIn && canRate ? (
+      <div
+        className="flex h-9 items-center gap-0.5 px-3"
+        role="radiogroup"
+        aria-label="Optional rating"
+      >
+        {[1, 2, 3, 4, 5].map((star) => (
           <button
-            type="submit"
-            disabled={pending || !body.trim()}
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
+            key={star}
+            type="button"
+            role="radio"
+            aria-checked={rating === star}
+            aria-label={`${star} star${star === 1 ? "" : "s"}`}
+            disabled={pending}
+            onClick={() =>
+              setRating((current) => (current === star ? null : star))
+            }
+            className="rounded p-0.5 transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
           >
-            <MessageSquare className="size-4" strokeWidth={1.75} aria-hidden />
-            {pending ? "Posting…" : "Post comment"}
+            <Star
+              className={
+                rating != null && star <= rating
+                  ? "size-4 fill-amber-500 text-amber-500"
+                  : "size-4 text-border"
+              }
+              strokeWidth={1.75}
+              aria-hidden
+            />
           </button>
-        ) : (
-          <Link
-            href="/login"
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            <LogIn className="size-4" strokeWidth={1.75} aria-hidden />
-            Sign in to comment
-          </Link>
-        )}
+        ))}
       </div>
+    ) : undefined;
 
-      {error ? (
-        <p role="alert" className="mt-2 text-xs text-red-600 dark:text-red-400">
-          {error}
-        </p>
+  const showChapterSelector =
+    isLoggedIn && mode === "novel" && readableChapters.length > 0;
+  const scopeLabel = selectedChapter ? `Ch. ${selectedChapter}` : "General";
+
+  const chapterSelector = showChapterSelector ? (
+    <div ref={chapterMenuRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setChapterMenuOpen((open) => !open)}
+        disabled={pending}
+        aria-haspopup="menu"
+        aria-expanded={chapterMenuOpen}
+        aria-label={`Commenting on ${scopeLabel}`}
+        className="inline-flex h-9 max-w-full items-center gap-1.5 px-3.5 text-sm font-medium leading-none text-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+      >
+        <span className="truncate">{scopeLabel}</span>
+        <ChevronDown
+          className={cn(
+            "size-3.5 shrink-0 text-muted transition-transform duration-150",
+            chapterMenuOpen && "rotate-180",
+          )}
+          strokeWidth={1.75}
+          aria-hidden
+        />
+      </button>
+
+      {chapterMenuOpen ? (
+        <div
+          role="menu"
+          style={menuHeight ? { height: menuHeight } : undefined}
+          className="absolute bottom-full left-0 z-30 w-full overflow-y-auto overflow-x-hidden rounded-xl border border-border bg-surface shadow-md [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setSelectedChapter("");
+              setChapterMenuOpen(false);
+            }}
+            className="flex w-full items-center justify-between gap-1.5 px-3 py-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-background"
+          >
+            <span className="min-w-0 truncate">General</span>
+            {!selectedChapter ? (
+              <Check className="size-3.5 shrink-0 text-accent" strokeWidth={2} aria-hidden />
+            ) : null}
+          </button>
+          {readableChapters.map((chapter) => {
+            const isSelected = selectedChapter === String(chapter.number);
+            return (
+              <button
+                key={chapter.number}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setSelectedChapter(String(chapter.number));
+                  setRating(null);
+                  setChapterMenuOpen(false);
+                }}
+                className="flex w-full items-center justify-between gap-1.5 px-3 py-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-background"
+              >
+                <span className="min-w-0 truncate">Ch. {chapter.number}</span>
+                {isSelected ? (
+                  <Check className="size-3.5 shrink-0 text-accent" strokeWidth={2} aria-hidden />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
       ) : null}
+    </div>
+  ) : null;
+
+  return (
+    <form ref={formRef} onSubmit={handleSubmit}>
+      <TabPanelShell
+        leftTab={titleTab}
+        rightTab={ratingTab}
+        bottomLeftTab={chapterSelector ?? undefined}
+        bottomRightTab={postTab}
+      >
+        <div className="px-4 pb-4 pt-3">
+          <label htmlFor="comment-body" className="sr-only">
+            Write a comment
+          </label>
+          <div className="relative">
+            <textarea
+              id="comment-body"
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+              placeholder={
+                isLoggedIn ? "Share your thoughts…" : "Sign in to leave a comment"
+              }
+              rows={3}
+              maxLength={MAX_COMMENT_LENGTH}
+              disabled={!isLoggedIn || pending}
+              className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 pb-6 text-sm text-foreground placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
+            />
+            {isLoggedIn ? (
+              <span className="pointer-events-none absolute right-3 bottom-2 text-xs text-muted">
+                {body.length}/{MAX_COMMENT_LENGTH}
+              </span>
+            ) : null}
+          </div>
+
+          {error ? (
+            <p
+              role="alert"
+              className="mt-2 text-xs text-red-600 dark:text-red-400"
+            >
+              {error}
+            </p>
+          ) : null}
+        </div>
+      </TabPanelShell>
     </form>
   );
 }

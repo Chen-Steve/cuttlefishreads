@@ -8,7 +8,6 @@ import {
   BookmarkButton,
   BulkBuyChapters,
   ChapterList,
-  ChapterOrderToggle,
   NovelCover,
   MobileNovelTitle,
   NovelDescription,
@@ -254,46 +253,20 @@ export default async function NovelDetailPage({
       </div>
 
       <section className="mt-2">
-        <div className="mb-3 flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold tracking-tight text-foreground">
-              Chapters:
-              <span className="ml-2 text-sm font-normal text-muted">
-                {chapters.length}
-              </span>
-            </h2>
-            <div className="flex shrink-0 items-center gap-2">
-              {bulkBuy.eligible ? (
-                <div className="hidden sm:contents">
-                  <BulkBuyChapters
-                    novelSlug={novel.slug}
-                    chapters={chapters}
-                    userCoins={userCoins}
-                    isLoggedIn={isLoggedIn}
-                  />
-                </div>
-              ) : null}
-              {chapters.length > 0 ? <ChapterOrderToggle /> : null}
-            </div>
+        {bulkBuy.eligible ? (
+          <div className="mb-2 flex justify-end">
+            <BulkBuyChapters
+              novelSlug={novel.slug}
+              chapters={chapters}
+              userCoins={userCoins}
+              isLoggedIn={isLoggedIn}
+            />
           </div>
-          {bulkBuy.eligible ? (
-            <div className="flex justify-end sm:hidden">
-              <BulkBuyChapters
-                novelSlug={novel.slug}
-                chapters={chapters}
-                userCoins={userCoins}
-                isLoggedIn={isLoggedIn}
-              />
-            </div>
-          ) : null}
-        </div>
+        ) : null}
         <ChapterList slug={novel.slug} chapters={chapters} />
       </section>
 
-      <section className="mt-10">
-        <h2 className="mb-4 text-lg font-semibold tracking-tight text-foreground">
-          Comments
-        </h2>
+      <section className="mt-4" aria-label="Comments">
         <Suspense fallback={<CommentsFallback />}>
           <CommentSection
             mode="novel"

@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { ChevronLeft, PlusCircle } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/page-container";
@@ -9,11 +7,7 @@ import {
   WORKSPACE_BASE,
   type WorkspaceKind,
 } from "@/lib/workspace";
-import {
-  ChapterList,
-  ChapterOrderToggle,
-} from "../_components/chapter-list";
-import { PublishAllButton } from "../_components/chapter-admin-actions";
+import { ChapterList } from "../_components/chapter-list";
 
 type ChapterRow = {
   id: string;
@@ -66,43 +60,14 @@ export async function WorkspaceChaptersPage({
 
   return (
     <PageContainer as="div">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex min-w-0 flex-wrap items-center gap-3">
-            <Link
-              href={base}
-              className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            >
-              <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
-              Back to novels
-            </Link>
-            <h1
-              className="text-xl font-semibold tracking-tight sm:text-2xl"
-              title={novel.title}
-            >
-              {novel.title.length > 50
-                ? `${novel.title.slice(0, 50)}...`
-                : novel.title}
-            </h1>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <PublishAllButton novelId={novelId} draftCount={draftCount} />
-          <ChapterOrderToggle />
-          <Link
-            href={`${base}/novels/${novelId}/chapters/new`}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            <PlusCircle className="size-4" strokeWidth={1.75} aria-hidden />
-            Add chapter
-          </Link>
-        </div>
-      </div>
-
-      <div className="mt-3">
-        <ChapterList novelId={novelId} chapters={rows} />
-      </div>
+      <ChapterList
+        novelId={novelId}
+        novelTitle={novel.title}
+        chapters={rows}
+        backHref={base}
+        addHref={`${base}/novels/${novelId}/chapters/new`}
+        draftCount={draftCount}
+      />
     </PageContainer>
   );
 }

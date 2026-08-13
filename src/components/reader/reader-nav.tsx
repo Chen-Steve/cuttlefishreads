@@ -28,6 +28,7 @@ export function ReaderNav({
   showSettings = false,
   catalogBase = "novels",
   enableKeyboard = false,
+  framed = true,
 }: {
   slug: string;
   previous?: Pick<Chapter, "number">;
@@ -39,6 +40,8 @@ export function ReaderNav({
   catalogBase?: CatalogBase;
   /** Only one nav instance should own keyboard shortcuts. */
   enableKeyboard?: boolean;
+  /** Standalone pill. False when the nav hangs off TabPanelShell. */
+  framed?: boolean;
 }) {
   const navRef = useRef<HTMLElement>(null);
   const router = useRouter();
@@ -75,7 +78,12 @@ export function ReaderNav({
     <nav
       ref={navRef}
       aria-label="Chapter navigation"
-      className="mx-auto flex w-full max-w-md items-center gap-0.5 rounded-2xl border border-border/80 bg-surface/90 p-1 shadow-sm"
+      className={cn(
+        "flex items-center gap-0.5",
+        framed
+          ? "mx-auto w-full max-w-md rounded-2xl border border-border/80 bg-surface/90 p-1 shadow-sm"
+          : "h-10 w-full px-3 sm:px-4",
+      )}
     >
       <ReaderLink
         href={previousHref}

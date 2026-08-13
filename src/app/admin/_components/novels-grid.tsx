@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, ChevronDown, Pencil, Search, User } from "lucide-react";
+import { BookOpen, ChevronDown, Pencil, PlusCircle, Search, User } from "lucide-react";
 
+import { TabPanelShell } from "@/components/tab-panel-shell";
 import { NovelCover } from "@/components/novel/novel-cover";
 import { cn } from "@/lib/utils";
 import { WORKSPACE_BASE, workspaceKindFromPathname } from "@/lib/workspace";
@@ -84,7 +85,7 @@ function TranslatorFilterDropdown({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Filter by translator"
-        className="inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium leading-none text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:px-3"
+        className="inline-flex h-9 items-center gap-1.5 px-2.5 text-sm font-medium leading-none text-muted transition-colors hover:bg-background hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:px-3"
       >
         <User className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
         <span className="max-w-36 truncate">{selectedLabel}</span>
@@ -151,9 +152,15 @@ const actionLinkClass =
 export function NovelsGrid({
   novels,
   translatorOptions = [],
+  title,
+  createHref,
+  createLabel,
 }: {
   novels: NovelRow[];
   translatorOptions?: TranslatorOption[];
+  title: string;
+  createHref: string;
+  createLabel: string;
 }) {
   const pathname = usePathname();
   const kind = workspaceKindFromPathname(pathname);
@@ -177,61 +184,81 @@ export function NovelsGrid({
 
   return (
     <div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <div className="flex flex-wrap gap-1.5">
-            {STATUS_FILTERS.map((f) => (
-              <button
-                key={f.value}
-                type="button"
-                onClick={() => setStatusFilter(f.value)}
-                className={cn(
-                  "rounded-lg px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors",
-                  statusFilter === f.value
-                    ? "bg-accent text-accent-foreground"
-                    : "bg-surface text-muted hover:text-foreground",
-                )}
-              >
-                {f.label}
-                {f.value !== "all" && (
-                  <span className="ml-1.5 tabular-nums opacity-60">
-                    {novels.filter((n) => n.status === f.value).length}
-                  </span>
-                )}
-              </button>
-            ))}
+      <TabPanelShell
+        leftTab={
+          <h1 className="flex h-9 items-center px-4 text-sm font-semibold tracking-tight text-foreground">
+            {title}
+            <span className="ml-1.5 text-xs font-normal text-muted">
+              {novels.length}
+            </span>
+          </h1>
+        }
+        rightTab={
+          <Link
+            href={createHref}
+            className="inline-flex h-9 items-center justify-center gap-1.5 px-4 text-sm font-semibold text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            <PlusCircle className="size-4" strokeWidth={1.75} aria-hidden />
+            {createLabel}
+          </Link>
+        }
+      >
+        <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex flex-wrap gap-1.5">
+              {STATUS_FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  type="button"
+                  onClick={() => setStatusFilter(f.value)}
+                  className={cn(
+                    "rounded-lg px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors",
+                    statusFilter === f.value
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-background text-muted hover:text-foreground",
+                  )}
+                >
+                  {f.label}
+                  {f.value !== "all" && (
+                    <span className="ml-1.5 tabular-nums opacity-60">
+                      {novels.filter((n) => n.status === f.value).length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {translatorOptions.length > 1 ? (
+              <TranslatorFilterDropdown
+                options={translatorOptions}
+                value={translatorFilter}
+                totalCount={novels.length}
+                onChange={setTranslatorFilter}
+              />
+            ) : null}
           </div>
 
-          {translatorOptions.length > 1 ? (
-            <TranslatorFilterDropdown
-              options={translatorOptions}
-              value={translatorFilter}
-              totalCount={novels.length}
-              onChange={setTranslatorFilter}
+          <label className="flex h-9 items-center gap-2 rounded-lg border border-border bg-background pl-3 pr-3.5 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25 sm:w-60">
+            <Search className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
+            <input
+              type="search"
+              placeholder="Search titles…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted/70"
             />
-          ) : null}
+          </label>
         </div>
-
-        <label className="flex h-9 items-center gap-2 rounded-xl border border-border bg-surface pl-3 pr-3.5 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25 sm:w-60">
-          <Search className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />
-          <input
-            type="search"
-            placeholder="Search titles…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted/70"
-          />
-        </label>
-      </div>
+      </TabPanelShell>
 
       {filtered.length === 0 ? (
-        <p className="mt-6 rounded-2xl border border-dashed border-border px-4 py-12 text-center text-sm text-muted">
+        <p className="mt-3 rounded-2xl border border-dashed border-border px-4 py-12 text-center text-sm text-muted">
           {novels.length === 0
             ? 'No novels yet — click "Create novel" to get started.'
             : "No novels match your filters."}
         </p>
       ) : (
-        <div className="mt-5 grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-4 xl:grid-cols-5">
           {filtered.map((novel) => (
             <div
               key={novel.id}

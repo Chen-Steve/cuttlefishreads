@@ -125,7 +125,7 @@ export function ChapterContentsDropdown({
           role="listbox"
           aria-label="Chapters"
           style={panelStyle}
-          className="fixed z-30 max-h-72 overflow-y-auto rounded-2xl border border-border bg-surface shadow-lg"
+          className="fixed z-30 max-h-72 overflow-y-auto rounded-2xl border border-border bg-surface shadow-lg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         >
           {chapters.map((chapter) => {
             const isCurrent = chapter.number === currentChapter;

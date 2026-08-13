@@ -9,8 +9,10 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 
+import { TabRail } from "@/components/tab-panel-shell";
 import { useReaderSettings } from "@/hooks/use-reader-settings";
 import type { CatalogBase } from "@/lib/catalog-paths";
+import { readerContentStyle } from "@/lib/reader-settings";
 import { cn } from "@/lib/utils";
 import type { Chapter, ChapterSummary } from "@/types";
 
@@ -57,6 +59,11 @@ export function ImmersiveChapterShell({
 }) {
   const { settings } = useReaderSettings();
   const immersive = settings.immersive;
+  const chapterBackground = readerContentStyle(settings).backgroundColor;
+  const tabFill =
+    chapterBackground && chapterBackground !== "transparent"
+      ? chapterBackground
+      : "var(--background)";
   const [showChrome, setShowChrome] = useState(true);
   const immersiveEnabledRef = useRef(false);
   const showBottomNav = Boolean(nav && nav.showBottomNav !== false);
@@ -78,14 +85,51 @@ export function ImmersiveChapterShell({
 
   const chromeHidden = immersive && !showChrome;
 
+  const topNav = nav ? (
+    <ReaderNav
+      slug={nav.slug}
+      previous={nav.previous}
+      next={nav.next}
+      chapters={nav.chapters}
+      currentChapter={nav.currentChapter}
+      showSettings
+      catalogBase={nav.catalogBase}
+      enableKeyboard
+      framed={immersive}
+    />
+  ) : null;
+
+  const bottomNav =
+    showBottomNav && nav ? (
+      <ReaderNav
+        slug={nav.slug}
+        previous={nav.previous}
+        next={nav.next}
+        chapters={nav.chapters}
+        currentChapter={nav.currentChapter}
+        menuPlacement="up"
+        catalogBase={nav.catalogBase}
+        framed={immersive}
+      />
+    ) : null;
+
+  const chapterBody = (
+    <div
+      className={cn(!immersive && "py-5 sm:py-6")}
+      onClick={onContentClick}
+    >
+      {content}
+    </div>
+  );
+
   return (
     <>
       <header
         data-reader-chrome={immersive ? "" : undefined}
         className={cn(
-          "mb-5",
-          immersive &&
-            "fixed inset-x-0 top-0 z-40 border-b border-border/70 bg-background/90 px-4 py-3 backdrop-blur-md transition-transform duration-200 sm:px-6",
+          immersive
+            ? "fixed inset-x-0 top-0 z-40 border-b border-border/70 bg-background/90 px-4 py-3 backdrop-blur-md transition-transform duration-200 sm:px-6"
+            : "mb-3",
           chromeHidden && "pointer-events-none -translate-y-full",
         )}
       >
@@ -96,46 +140,35 @@ export function ImmersiveChapterShell({
           )}
         >
           {header}
-          {nav ? (
-            <ReaderNav
-              slug={nav.slug}
-              previous={nav.previous}
-              next={nav.next}
-              chapters={nav.chapters}
-              currentChapter={nav.currentChapter}
-              showSettings
-              catalogBase={nav.catalogBase}
-              enableKeyboard
-            />
-          ) : null}
+          {immersive ? topNav : null}
         </div>
       </header>
 
       {immersive && showChrome ? <div className="h-36 sm:h-40" aria-hidden /> : null}
 
-      <div onClick={onContentClick}>{content}</div>
+      {immersive || !nav ? (
+        chapterBody
+      ) : (
+        <>
+          {topNav ? (
+            <TabRail position="top" tab={topNav} fill={tabFill} />
+          ) : null}
+          {chapterBody}
+          {bottomNav ? (
+            <TabRail position="bottom" tab={bottomNav} fill={tabFill} />
+          ) : null}
+        </>
+      )}
 
-      {showBottomNav && nav ? (
+      {immersive && bottomNav ? (
         <div
-          data-reader-chrome={immersive ? "" : undefined}
+          data-reader-chrome=""
           className={cn(
-            "mt-8",
-            immersive &&
-              "fixed inset-x-0 bottom-0 z-40 mt-0 border-t border-border/70 bg-background/90 px-4 py-3 backdrop-blur-md transition-transform duration-200 sm:px-6",
+            "fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/90 px-4 py-3 backdrop-blur-md transition-transform duration-200 sm:px-6",
             chromeHidden && "pointer-events-none translate-y-full",
           )}
         >
-          <div className={cn(immersive && "mx-auto w-full max-w-2xl")}>
-            <ReaderNav
-              slug={nav.slug}
-              previous={nav.previous}
-              next={nav.next}
-              chapters={nav.chapters}
-              currentChapter={nav.currentChapter}
-              menuPlacement="up"
-              catalogBase={nav.catalogBase}
-            />
-          </div>
+          <div className="mx-auto w-full max-w-2xl">{bottomNav}</div>
         </div>
       ) : null}
 

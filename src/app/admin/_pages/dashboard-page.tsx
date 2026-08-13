@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Bookmark, Cookie, Eye, ShoppingCart } from "lucide-react";
 
 import { PageContainer } from "@/components/page-container";
+import { TabPanelShell } from "@/components/tab-panel-shell";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
 import {
@@ -205,27 +206,29 @@ export async function WorkspaceDashboardPage({
 
   return (
     <PageContainer as="div">
-      <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-        Stats
-      </h1>
-      <p className="mt-0.5 text-sm text-muted">
-        {showEarnings
-          ? "Views, bookmarks, and chapter purchases across your novels."
-          : "Views and bookmarks across your series."}
-      </p>
-
-      <div
-        className={`mt-6 grid grid-cols-2 gap-3 ${showEarnings ? "sm:grid-cols-4" : ""}`}
+      <TabPanelShell
+        leftTab={
+          <h1 className="flex h-9 items-center px-4 text-sm font-semibold tracking-tight text-foreground">
+            Stats
+            <span className="ml-1.5 text-xs font-normal text-muted">
+              {stats.length}
+            </span>
+          </h1>
+        }
       >
-        <SummaryCard icon={<Eye className="size-4" />} label={viewsLabel} value={totalViews} />
-        <SummaryCard icon={<Bookmark className="size-4" />} label="Bookmarks" value={totals.bookmarks} />
-        {showEarnings ? (
-          <>
-            <SummaryCard icon={<ShoppingCart className="size-4" />} label="Purchases" value={totals.purchases} />
-            <SummaryCard icon={<Cookie className="size-4" />} label="Cookies earned" value={totals.coinsEarned} />
-          </>
-        ) : null}
-      </div>
+        <div
+          className={`grid grid-cols-2 gap-3 px-4 py-3 ${showEarnings ? "sm:grid-cols-4" : ""}`}
+        >
+          <SummaryCard icon={<Eye className="size-4" />} label={viewsLabel} value={totalViews} />
+          <SummaryCard icon={<Bookmark className="size-4" />} label="Bookmarks" value={totals.bookmarks} />
+          {showEarnings ? (
+            <>
+              <SummaryCard icon={<ShoppingCart className="size-4" />} label="Purchases" value={totals.purchases} />
+              <SummaryCard icon={<Cookie className="size-4" />} label="Cookies earned" value={totals.coinsEarned} />
+            </>
+          ) : null}
+        </div>
+      </TabPanelShell>
 
       <GoogleAnalyticsSection
         analytics={googleAnalytics}
@@ -385,7 +388,7 @@ function SummaryCard({
   value: number;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-surface p-4">
+    <div className="rounded-xl border border-border bg-background p-4">
       <div className="flex items-center gap-1.5 text-muted">
         {icon}
         <span className="text-xs font-medium">{label}</span>
@@ -412,7 +415,7 @@ function GoogleAnalyticsSection({
 }) {
   if (!analytics.configured) {
     return (
-      <section className="mt-8 rounded-2xl border border-dashed border-border px-4 py-8 text-center">
+      <section className="mt-3 rounded-2xl border border-dashed border-border px-4 py-8 text-center">
         <h2 className="text-sm font-semibold text-foreground">
           Connect Google Analytics
         </h2>
@@ -426,7 +429,7 @@ function GoogleAnalyticsSection({
 
   if (analytics.error) {
     return (
-      <section className="mt-8 rounded-2xl border border-red-500/30 bg-red-500/5 px-4 py-6">
+      <section className="mt-3 rounded-2xl border border-red-500/30 bg-red-500/5 px-4 py-6">
         <h2 className="text-sm font-semibold text-red-600 dark:text-red-400">
           Google Analytics is unavailable
         </h2>
@@ -439,24 +442,28 @@ function GoogleAnalyticsSection({
   }
 
   return (
-    <section className="mt-8">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">Views</h2>
-          <p className="mt-0.5 text-sm text-muted">
+    <section className="mt-3">
+      <TabPanelShell
+        leftTab={
+          <h2 className="flex h-9 items-center px-4 text-sm font-semibold tracking-tight text-foreground">
+            Views
+          </h2>
+        }
+        rightTab={<ViewToggle active={mode} base={base} />}
+      >
+        <div className="px-4 pb-4 pt-3">
+          <p className="text-sm text-muted">
             Each novel&apos;s total combines its novel page and all chapter
             page views.
           </p>
+          <ViewsChart
+            analytics={analytics}
+            allTimeViewsBySlug={allTimeViewsBySlug}
+            novels={novels}
+            mode={mode}
+          />
         </div>
-        <ViewToggle active={mode} base={base} />
-      </div>
-
-      <ViewsChart
-        analytics={analytics}
-        allTimeViewsBySlug={allTimeViewsBySlug}
-        novels={novels}
-        mode={mode}
-      />
+      </TabPanelShell>
     </section>
   );
 }
@@ -477,20 +484,20 @@ function ViewToggle({ active, base }: { active: ViewsMode; base: string }) {
     {
       mode: "monthly",
       href: `${base}/dashboard?view=monthly`,
-      label: "By month",
+      label: "This Year",
     },
     { mode: "all", href: `${base}/dashboard?view=all`, label: "All time" },
   ];
 
   return (
-    <div className="flex items-center rounded-lg border border-border bg-surface p-0.5 text-xs font-medium">
+    <div className="flex items-stretch">
       {options.map((option) => (
         <a
           key={option.mode}
           href={option.href}
-          className={`rounded-md px-3 py-1.5 transition-colors ${
+          className={`inline-flex h-9 items-center px-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
             active === option.mode
-              ? "bg-foreground text-background"
+              ? "text-accent"
               : "text-muted hover:text-foreground"
           }`}
         >
@@ -797,7 +804,7 @@ function ViewsChart({
   );
 
   return (
-    <div className="mt-4 rounded-2xl border border-border bg-surface p-5">
+    <div className="mt-3">
       <div className="flex items-baseline justify-between gap-4">
         <p className="text-xs font-medium text-muted">{periodLabel}</p>
         <p className="text-sm font-semibold tabular-nums text-foreground">

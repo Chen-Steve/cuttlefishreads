@@ -148,12 +148,7 @@ export default async function ChapterReaderPage({
             patreonUrl={novel.translatorPatreonUrl}
           />
 
-          <hr className="my-6 border-border" />
-
-          <section className="mb-10">
-            <h2 className="mb-4 text-lg font-semibold tracking-tight text-foreground">
-              Comments
-            </h2>
+          <section className="mt-6 mb-10" aria-label="Comments">
             <Suspense fallback={<CommentsFallback />}>
               <CommentSection
                 mode="chapter"

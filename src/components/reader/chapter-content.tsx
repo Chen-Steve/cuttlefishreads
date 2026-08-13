@@ -30,8 +30,8 @@ export function ChapterContent({ paragraphs }: { paragraphs: string[] }) {
   return (
     <div
       className={cn(
-        "flex flex-col select-none rounded-xl",
-        padded && "px-4 py-5 sm:px-6 sm:py-6",
+        "flex flex-col select-none",
+        padded && "rounded-xl px-4 py-5 sm:px-6 sm:py-6",
       )}
       style={style}
       onCopy={preventCopy}

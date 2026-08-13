@@ -4,6 +4,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { ArrowDownUp, ChevronRight, ShieldCheck } from "lucide-react";
 
+import { TabPanelShell } from "@/components/tab-panel-shell";
 import { isScheduledUnlock } from "@/lib/unlock-countdown";
 import { cn } from "@/lib/utils";
 import type { ChapterListItem } from "@/types";
@@ -58,7 +59,7 @@ function useChapterOrderPreference() {
   );
 }
 
-export function ChapterOrderToggle() {
+export function ChapterOrderToggle({ className }: { className?: string }) {
   const newestFirst = useChapterOrderPreference();
 
   return (
@@ -72,8 +73,9 @@ export function ChapterOrderToggle() {
           : "Chapter order: oldest first. Click to show newest first."
       }
       className={cn(
-        "inline-flex h-8 items-center gap-1 rounded-lg border border-border bg-background px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-        newestFirst && "border-accent/40 bg-accent/5 text-accent",
+        "inline-flex h-9 shrink-0 items-center gap-1.5 px-3 text-xs font-semibold text-foreground transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+        newestFirst && "text-accent",
+        className,
       )}
     >
       <ArrowDownUp className="size-3.5" strokeWidth={1.75} aria-hidden />
@@ -101,54 +103,66 @@ export function ChapterList({
     return newestFirst ? sorted.reverse() : sorted;
   }, [chapters, newestFirst]);
 
-  if (chapters.length === 0) {
-    return (
-      <p className="rounded-xl border border-dashed border-border bg-surface px-4 py-8 text-center text-sm text-muted">
-        No chapters published yet.
-      </p>
-    );
-  }
+  const hasChapters = chapters.length > 0;
 
   return (
-    <ol className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
-        {rows.map((chapter) => (
-          <li key={chapter.id}>
-            <Link
-              href={`/novels/${slug}/${chapter.number}`}
-              className="group flex items-center gap-3 px-4 py-3 outline-offset-2 transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-accent"
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-foreground">
-                  Chapter {chapter.number}
-                  {chapter.title ? (
-                    <span className="font-normal text-muted">
-                      {" "}
-                      · {chapter.title}
+    <TabPanelShell
+      leftTab={
+        <h2 className="flex h-9 items-center px-4 text-sm font-semibold tracking-tight text-foreground">
+          Chapters:
+          <span className="ml-1.5 text-xs font-normal text-muted">
+            {chapters.length}
+          </span>
+        </h2>
+      }
+      rightTab={hasChapters ? <ChapterOrderToggle /> : undefined}
+    >
+      {hasChapters ? (
+        <ol className="divide-y divide-border overflow-hidden rounded-b-xl">
+          {rows.map((chapter) => (
+            <li key={chapter.id}>
+              <Link
+                href={`/novels/${slug}/${chapter.number}`}
+                className="group flex items-center gap-3 px-4 py-3 outline-offset-2 transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-accent"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-foreground">
+                    Chapter {chapter.number}
+                    {chapter.title ? (
+                      <span className="font-normal text-muted">
+                        {" "}
+                        · {chapter.title}
+                      </span>
+                    ) : null}
+                  </span>
+                  {!(chapter.locked && isScheduledUnlock(chapter.unlockAt)) ? (
+                    <span className="block text-xs text-muted">
+                      {chapter.publishedAt}
                     </span>
                   ) : null}
                 </span>
-                {!(chapter.locked && isScheduledUnlock(chapter.unlockAt)) ? (
-                  <span className="block text-xs text-muted">
-                    {chapter.publishedAt}
+                {chapter.adminAccess ? (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-400">
+                    <ShieldCheck className="size-3" strokeWidth={2} aria-hidden />
+                    Admin access
                   </span>
+                ) : !hideLockBadges && chapter.locked ? (
+                  <ChapterLockBadge chapter={chapter} />
                 ) : null}
-              </span>
-              {chapter.adminAccess ? (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-400">
-                  <ShieldCheck className="size-3" strokeWidth={2} aria-hidden />
-                  Admin access
-                </span>
-              ) : !hideLockBadges && chapter.locked ? (
-                <ChapterLockBadge chapter={chapter} />
-              ) : null}
-              <ChevronRight
-                className="size-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5"
-                strokeWidth={1.75}
-                aria-hidden
-              />
-            </Link>
-          </li>
-        ))}
-    </ol>
+                <ChevronRight
+                  className="size-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5"
+                  strokeWidth={1.75}
+                  aria-hidden
+                />
+              </Link>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="px-4 py-8 text-center text-sm text-muted">
+          No chapters published yet.
+        </p>
+      )}
+    </TabPanelShell>
   );
 }

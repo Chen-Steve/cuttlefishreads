@@ -7,6 +7,7 @@ import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { TabPanelShell } from "@/components/tab-panel-shell";
 import {
   formatSuggestedUnlockPreview,
   getSuggestedUnlockAt,
@@ -141,102 +142,77 @@ export function ChapterForm({
   const submitButtonClass =
     "inline-flex h-11 shrink-0 items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50";
 
-  const cardClass =
-    "flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5 sm:p-6";
+  const cardClass = "flex flex-col gap-4";
 
   return (
-    <form action={action} className="flex flex-col gap-4">
-      {isEdit ? (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-3">
-            <Link
-              href={`${base}/novels/${novelId}/chapters`}
-              className="inline-flex h-11 shrink-0 items-center gap-1 rounded-xl border border-border bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            >
-              <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
-              Back to chapters
-            </Link>
-            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-              Edit chapter {initial!.number}
-            </h1>
-          </div>
+    <form action={action}>
+      <TabPanelShell
+        leftTab={
+          <Link
+            href={`${base}/novels/${novelId}/chapters`}
+            className="inline-flex h-9 items-center gap-1 px-4 text-sm font-medium text-foreground transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
+            Back to chapters
+          </Link>
+        }
+        rightTab={
           <button
             type="submit"
             disabled={pending}
-            className={submitButtonClass}
+            className="inline-flex h-9 items-center justify-center px-4 text-sm font-semibold text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitLabel}
           </button>
+        }
+      >
+        <div className="flex min-w-0 items-center gap-3 px-4 pt-2">
+          <h1 className="shrink-0 text-sm font-semibold tracking-tight text-foreground">
+            {isEdit ? `Edit chapter ${initial!.number}` : "Add chapter"}
+          </h1>
+          <label htmlFor="chapter-title" className="sr-only">
+            Chapter title (optional)
+          </label>
+          <input
+            id="chapter-title"
+            name="title"
+            defaultValue={initial?.title ?? ""}
+            placeholder="Chapter title (optional)"
+            className={`${inputClass} h-9 min-w-0 flex-1`}
+          />
         </div>
-      ) : (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-3">
-            <Link
-              href={`${base}/novels/${novelId}/chapters`}
-              className="inline-flex h-11 shrink-0 items-center gap-1 rounded-xl border border-border bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            >
-              <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
-              Back to chapters
-            </Link>
-            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-              Add chapter
-            </h1>
-          </div>
-          <button
-            type="submit"
-            disabled={pending}
-            className={submitButtonClass}
+
+        {!isEdit && state.error ? (
+          <p
+            role="alert"
+            className="mx-4 mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400"
           >
-            {submitLabel}
-          </button>
-        </div>
-      )}
+            {state.error}
+          </p>
+        ) : null}
 
-      {!isEdit && state.error && (
-        <p
-          role="alert"
-          className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400"
-        >
-          {state.error}
-        </p>
-      )}
+        <input type="hidden" name="novelId" value={novelId} />
 
-      <input type="hidden" name="novelId" value={novelId} />
-
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
-        {/* Main column: writing */}
-        <div className={cardClass}>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="chapter-title" className={labelClass}>
-              Chapter title
-              <span className="ml-1 font-normal opacity-60">(optional)</span>
-            </label>
-            <input
-              id="chapter-title"
-              name="title"
-              defaultValue={initial?.title ?? ""}
-              placeholder="Salt and Lamplight"
-              className={inputClass}
-            />
+        <div className="grid items-start gap-4 px-4 pb-4 pt-2 lg:grid-cols-[minmax(0,1fr)_19rem]">
+          {/* Main column: writing */}
+          <div className={cardClass}>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="chapter-content" className={labelClass}>
+                Content
+              </label>
+              <RichTextEditor
+                id="chapter-content"
+                name="content"
+                defaultValue={initial?.content ?? ""}
+                placeholder="Write the chapter here."
+                className="min-h-[24rem]"
+                enableFootnotes
+              />
+            </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="chapter-content" className={labelClass}>
-              Content
-            </label>
-            <RichTextEditor
-              id="chapter-content"
-              name="content"
-              defaultValue={initial?.content ?? ""}
-              placeholder="Write the chapter here."
-              className="min-h-[24rem]"
-              enableFootnotes
-            />
-          </div>
-        </div>
-
-        {/* Sidebar: publishing options, sticky so they're always in reach */}
-        <aside className={`${cardClass} lg:sticky lg:top-6`}>
+          {/* Sidebar: publishing options, sticky so they're always in reach */}
+          <aside className={`${cardClass} lg:sticky lg:top-6`}>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="chapter-number" className={labelClass}>
               Chapter #
@@ -401,7 +377,8 @@ export function ChapterForm({
             {submitLabel}
           </button>
         </aside>
-      </div>
+        </div>
+      </TabPanelShell>
     </form>
   );
 }
