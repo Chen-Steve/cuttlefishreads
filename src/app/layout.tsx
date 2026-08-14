@@ -1,17 +1,32 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { CookieConsentBanner } from "@/components/cookie-consent-banner";
 import { GoogleAnalyticsPageViews } from "@/components/google-analytics-page-views";
 import { InlineScript } from "@/components/inline-script";
 import { Toaster } from "@/components/ui/sonner";
 import { analyticsConsentInitScript } from "@/lib/analytics-consent";
+import { SITE } from "@/lib/constants";
 import { nationalPark } from "@/lib/fonts";
 import { readerFontVariables } from "@/lib/reader-fonts";
 import { GA_MEASUREMENT_ID } from "@/lib/google-analytics-id";
+import { siteUrl } from "@/lib/seo";
 import { themeInitScript } from "@/lib/theme";
 import "./globals.css";
 
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#faf7f2" },
+    { media: "(prefers-color-scheme: dark)", color: "#1c1916" },
+  ],
+};
+
 export const metadata: Metadata = {
+  metadataBase: siteUrl,
+  title: {
+    default: SITE.name,
+    template: `%s | ${SITE.name}`,
+  },
+  description: SITE.seoDescription,
   icons: {
     icon: "/cuttle.ico",
     apple: "/cuttle.png",

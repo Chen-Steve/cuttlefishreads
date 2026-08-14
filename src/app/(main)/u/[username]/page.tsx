@@ -12,13 +12,26 @@ import {
   getUserCreatedNovels,
 } from "@/lib/data";
 import type { Novel } from "@/types";
+import { SITE } from "@/lib/constants";
+import { publicPageMetadata } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
 }: PageProps<"/u/[username]">): Promise<Metadata> {
   const { username } = await params;
   const profile = await getPublicProfile(username);
-  return { title: profile ? `${profile.username}'s profile` : "Profile not found" };
+  if (!profile) {
+    return {
+      title: "Profile not found",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  return publicPageMetadata({
+    title: `${profile.username}'s profile`,
+    description: `Novels and reading activity from ${profile.username} on ${SITE.name}.`,
+    path: `/u/${profile.username}`,
+  });
 }
 
 function ProfileSection({

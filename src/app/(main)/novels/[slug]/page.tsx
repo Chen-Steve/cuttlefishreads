@@ -27,7 +27,7 @@ import {
   isUserAuthenticated,
 } from "@/lib/data";
 import { getNovelPageViews } from "@/lib/google-analytics";
-import { novelDescription } from "@/lib/seo";
+import { publicPageMetadata, novelDescription } from "@/lib/seo";
 
 const statusLabel = {
   ongoing: "Ongoing",
@@ -54,8 +54,11 @@ export async function generateMetadata({
   const path = `/novels/${novel.slug}`;
 
   return {
-    title: `${novel.title} - Read Chapters Online`,
-    description,
+    ...publicPageMetadata({
+      title: `${novel.title} - Read Chapters Online`,
+      description,
+      path,
+    }),
     alternates: {
       canonical: path,
       types: {

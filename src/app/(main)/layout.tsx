@@ -4,12 +4,11 @@ import { SiteHeader } from "@/components/site-header";
 import { getUnreadNotificationCount } from "@/lib/notifications/data";
 import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 import { isAdminEmail } from "@/lib/admin";
-import { SITE } from "@/lib/constants";
 import { ensureOAuthProfile } from "@/lib/profile";
 import { hasProfileRole, parseProfileRoles } from "@/lib/roles";
 
+/** Private routes inherit this. Public pages opt in via `publicPageMetadata`. */
 export const metadata: Metadata = {
-  title: SITE.name,
   robots: {
     index: false,
     follow: false,

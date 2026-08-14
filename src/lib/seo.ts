@@ -37,18 +37,25 @@ export function publicPageMetadata({
   title,
   description = SITE.seoDescription,
   path,
+  index = true,
 }: {
   title: string;
   description?: string;
   path: string;
+  index?: boolean;
 }): Metadata {
   const canonical = canonicalPath(path);
+  const isHome = canonical === "/";
 
   return {
-    title,
+    title: isHome ? { absolute: SITE.name } : title,
     description,
     alternates: {
       canonical,
+    },
+    robots: {
+      index,
+      follow: true,
     },
   };
 }

@@ -18,7 +18,7 @@ import {
   getUserCoins,
   isUserAuthenticated,
 } from "@/lib/data";
-import { novelDescription } from "@/lib/seo";
+import { publicPageMetadata, novelDescription } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -48,15 +48,12 @@ export async function generateMetadata({
   const path = `/novels/${novel.slug}/${current.number}`;
 
   return {
-    title,
-    description,
-    alternates: {
-      canonical: path,
-    },
-    robots: {
+    ...publicPageMetadata({
+      title,
+      description,
+      path,
       index: !current.locked,
-      follow: true,
-    },
+    }),
   };
 }
 

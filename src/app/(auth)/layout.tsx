@@ -1,7 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SITE } from "@/lib/constants";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default function AuthLayout({
   children,

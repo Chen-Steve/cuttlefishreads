@@ -3,10 +3,14 @@ import { Search } from "lucide-react";
 import { NovelGrid } from "@/components/novel";
 import { PageContainer } from "@/components/page-container";
 import { searchNovels } from "@/lib/data";
+import { SITE } from "@/lib/constants";
+import { publicPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = publicPageMetadata({
   title: "Search",
-};
+  description: `Search novels on ${SITE.name}.`,
+  path: "/search",
+});
 
 export default async function SearchPage({
   searchParams,
