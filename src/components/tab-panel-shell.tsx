@@ -513,7 +513,16 @@ type RailMetrics = {
   width: number;
   height: number;
   tabWidth: number;
+  leftTabWidth: number;
+  rightTabWidth: number;
 };
+
+type RailPaths = {
+  stroke: string;
+  fills: string[];
+};
+
+const EMPTY_RAIL: RailPaths = { stroke: "", fills: [] };
 
 function railGeometry({ width, height, tabWidth }: RailMetrics) {
   const inset = 0.5;
@@ -540,21 +549,27 @@ function railGeometry({ width, height, tabWidth }: RailMetrics) {
   return { x0, y0, x1, y1, or, ko, tabLeft, tabRight, sr, ks };
 }
 
-function buildTopRailPaths(metrics: RailMetrics) {
-  if (metrics.width < 8 || metrics.height < 8) return { stroke: "", fill: "" };
+function pathHelpers(p: string[]) {
+  return {
+    M: (x: number, y: number) => p.push(`M${x} ${y}`),
+    L: (x: number, y: number) => p.push(`L${x} ${y}`),
+    C: (
+      c1x: number,
+      c1y: number,
+      c2x: number,
+      c2y: number,
+      x: number,
+      y: number,
+    ) => p.push(`C${c1x} ${c1y} ${c2x} ${c2y} ${x} ${y}`),
+  };
+}
+
+function buildTopRailPaths(metrics: RailMetrics): RailPaths {
+  if (metrics.width < 8 || metrics.height < 8) return EMPTY_RAIL;
   const { x0, y0, x1, y1, or, ko, tabLeft, tabRight, sr, ks } =
     railGeometry(metrics);
   const p: string[] = [];
-  const M = (x: number, y: number) => p.push(`M${x} ${y}`);
-  const L = (x: number, y: number) => p.push(`L${x} ${y}`);
-  const C = (
-    c1x: number,
-    c1y: number,
-    c2x: number,
-    c2y: number,
-    x: number,
-    y: number,
-  ) => p.push(`C${c1x} ${c1y} ${c2x} ${c2y} ${x} ${y}`);
+  const { M, L, C } = pathHelpers(p);
 
   M(x0, y1);
   if (sr >= 1) {
@@ -594,24 +609,15 @@ function buildTopRailPaths(metrics: RailMetrics) {
     L(tabRight, y1);
   }
   p.push("Z");
-  return { stroke, fill: p.join(" ") };
+  return { stroke, fills: [p.join(" ")] };
 }
 
-function buildBottomRailPaths(metrics: RailMetrics) {
-  if (metrics.width < 8 || metrics.height < 8) return { stroke: "", fill: "" };
+function buildBottomRailPaths(metrics: RailMetrics): RailPaths {
+  if (metrics.width < 8 || metrics.height < 8) return EMPTY_RAIL;
   const { x0, y0, x1, y1, or, ko, tabLeft, tabRight, sr, ks } =
     railGeometry(metrics);
   const p: string[] = [];
-  const M = (x: number, y: number) => p.push(`M${x} ${y}`);
-  const L = (x: number, y: number) => p.push(`L${x} ${y}`);
-  const C = (
-    c1x: number,
-    c1y: number,
-    c2x: number,
-    c2y: number,
-    x: number,
-    y: number,
-  ) => p.push(`C${c1x} ${c1y} ${c2x} ${c2y} ${x} ${y}`);
+  const { M, L, C } = pathHelpers(p);
 
   M(x0, y0);
   if (sr >= 1) {
@@ -651,28 +657,166 @@ function buildBottomRailPaths(metrics: RailMetrics) {
     L(tabRight, y0);
   }
   p.push("Z");
-  return { stroke, fill: p.join(" ") };
+  return { stroke, fills: [p.join(" ")] };
+}
+
+/** Left/right tabs sitting on a full-width line (the "border below"). */
+function buildTopEdgeRailPaths(metrics: RailMetrics): RailPaths {
+  if (metrics.width < 8 || metrics.height < 8) return EMPTY_RAIL;
+
+  const inset = 0.5;
+  const x0 = inset;
+  const y0 = inset;
+  const x1 = widthInset(metrics.width);
+  const y1 = metrics.height - inset;
+  const or = OUTER_R;
+  const ko = KAPPA * or;
+  const hasLeft = metrics.leftTabWidth > 0;
+  const hasRight = metrics.rightTabWidth > 0;
+  const leftW = hasLeft ? Math.max(metrics.leftTabWidth, or * 2 + 8) : 0;
+  const rightW = hasRight ? Math.max(metrics.rightTabWidth, or * 2 + 8) : 0;
+  const tabY = y1;
+  const sr = Math.min(STEP_R, Math.max(8, tabY - or));
+  const ks = KAPPA * sr;
+  const stepStartY = tabY - sr;
+  const fills: string[] = [];
+
+  const p: string[] = [];
+  const { M, L, C } = pathHelpers(p);
+
+  if (hasLeft) {
+    M(x0, tabY);
+    L(x0, y0 + or);
+    C(x0, y0 + or - ko, x0 + or - ko, y0, x0 + or, y0);
+    L(x0 + leftW - or, y0);
+    C(x0 + leftW - or + ko, y0, x0 + leftW, y0 + or - ko, x0 + leftW, y0 + or);
+    if (y0 + or < stepStartY - 0.25) L(x0 + leftW, stepStartY);
+    C(
+      x0 + leftW,
+      stepStartY + ks,
+      x0 + leftW + sr - ks,
+      tabY,
+      x0 + leftW + sr,
+      tabY,
+    );
+  } else {
+    M(x0, tabY);
+  }
+
+  if (hasRight) {
+    L(x1 - rightW - sr, tabY);
+    C(
+      x1 - rightW - sr + ks,
+      tabY,
+      x1 - rightW,
+      stepStartY + ks,
+      x1 - rightW,
+      stepStartY,
+    );
+    if (y0 + or < stepStartY - 0.25) L(x1 - rightW, y0 + or);
+    C(x1 - rightW, y0 + or - ko, x1 - rightW + or - ko, y0, x1 - rightW + or, y0);
+    L(x1 - or, y0);
+    C(x1 - or + ko, y0, x1, y0 + or - ko, x1, y0 + or);
+    L(x1, tabY);
+  } else {
+    L(x1, tabY);
+  }
+
+  const stroke = p.join(" ");
+
+  if (hasLeft) {
+    const f: string[] = [];
+    const h = pathHelpers(f);
+    h.M(x0, tabY);
+    h.L(x0 + leftW + sr, tabY);
+    h.C(
+      x0 + leftW + sr - ks,
+      tabY,
+      x0 + leftW,
+      stepStartY + ks,
+      x0 + leftW,
+      stepStartY,
+    );
+    if (y0 + or < stepStartY - 0.25) h.L(x0 + leftW, y0 + or);
+    h.C(
+      x0 + leftW,
+      y0 + or - ko,
+      x0 + leftW - or + ko,
+      y0,
+      x0 + leftW - or,
+      y0,
+    );
+    h.L(x0 + or, y0);
+    h.C(x0 + or - ko, y0, x0, y0 + or - ko, x0, y0 + or);
+    f.push("Z");
+    fills.push(f.join(" "));
+  }
+
+  if (hasRight) {
+    const f: string[] = [];
+    const h = pathHelpers(f);
+    h.M(x1 - rightW - sr, tabY);
+    h.C(
+      x1 - rightW - sr + ks,
+      tabY,
+      x1 - rightW,
+      stepStartY + ks,
+      x1 - rightW,
+      stepStartY,
+    );
+    if (y0 + or < stepStartY - 0.25) h.L(x1 - rightW, y0 + or);
+    h.C(
+      x1 - rightW,
+      y0 + or - ko,
+      x1 - rightW + or - ko,
+      y0,
+      x1 - rightW + or,
+      y0,
+    );
+    h.L(x1 - or, y0);
+    h.C(x1 - or + ko, y0, x1, y0 + or - ko, x1, y0 + or);
+    h.L(x1, tabY);
+    f.push("Z");
+    fills.push(f.join(" "));
+  }
+
+  return { stroke, fills };
+}
+
+function widthInset(width: number) {
+  return width - 0.5;
 }
 
 /** Hanging tab on a single connecting line — no side or body borders. */
 export function TabRail({
   tab,
-  position,
+  leftTab,
+  rightTab,
+  position = "top",
   fill = "var(--background)",
   className,
 }: {
-  tab: ReactNode;
-  position: "top" | "bottom";
+  tab?: ReactNode;
+  leftTab?: ReactNode;
+  rightTab?: ReactNode;
+  position?: "top" | "bottom";
   /** Fill behind the tab. Defaults to the page background. */
   fill?: string;
   className?: string;
 }) {
   const railRef = useRef<HTMLDivElement>(null);
   const tabRef = useRef<HTMLDivElement>(null);
+  const leftTabRef = useRef<HTMLDivElement>(null);
+  const rightTabRef = useRef<HTMLDivElement>(null);
+  const hasCenter = Boolean(tab) && !leftTab && !rightTab;
+  const hasLeft = Boolean(leftTab);
+  const hasRight = Boolean(rightTab);
   const [metrics, setMetrics] = useState<RailMetrics>({
     width: 0,
     height: 0,
     tabWidth: 0,
+    leftTabWidth: 0,
+    rightTabWidth: 0,
   });
 
   useLayoutEffect(() => {
@@ -684,23 +828,28 @@ export function TabRail({
         width: rail.offsetWidth,
         height: rail.offsetHeight,
         tabWidth: tabRef.current?.offsetWidth ?? 0,
+        leftTabWidth: leftTabRef.current?.offsetWidth ?? 0,
+        rightTabWidth: rightTabRef.current?.offsetWidth ?? 0,
       });
     };
 
     const ro = new ResizeObserver(measure);
     ro.observe(rail);
     if (tabRef.current) ro.observe(tabRef.current);
+    if (leftTabRef.current) ro.observe(leftTabRef.current);
+    if (rightTabRef.current) ro.observe(rightTabRef.current);
     measure();
     return () => ro.disconnect();
-  }, []);
+  }, [hasCenter, hasLeft, hasRight]);
 
-  const paths = useMemo(
-    () =>
-      position === "top"
-        ? buildTopRailPaths(metrics)
-        : buildBottomRailPaths(metrics),
-    [metrics, position],
-  );
+  const paths = useMemo(() => {
+    if (metrics.leftTabWidth > 0 || metrics.rightTabWidth > 0) {
+      return buildTopEdgeRailPaths(metrics);
+    }
+    return position === "bottom"
+      ? buildBottomRailPaths(metrics)
+      : buildTopRailPaths(metrics);
+  }, [metrics, position]);
 
   return (
     <div ref={railRef} className={cn("relative", className)}>
@@ -713,9 +862,9 @@ export function TabRail({
           className="pointer-events-none absolute inset-0"
           shapeRendering="geometricPrecision"
         >
-          {paths.fill ? (
-            <path d={paths.fill} className="stroke-none" style={{ fill }} />
-          ) : null}
+          {paths.fills.map((d) => (
+            <path key={d} d={d} className="stroke-none" style={{ fill }} />
+          ))}
           <path
             d={paths.stroke}
             className="fill-none stroke-border"
@@ -725,12 +874,32 @@ export function TabRail({
           />
         </svg>
       ) : null}
-      <div
-        ref={tabRef}
-        className="relative mx-auto w-[calc(100%-2.5rem)] max-w-full"
-      >
-        {tab}
-      </div>
+      {hasCenter ? (
+        <div
+          ref={tabRef}
+          className="relative mx-auto w-[calc(100%-2.5rem)] max-w-full"
+        >
+          {tab}
+        </div>
+      ) : (
+        <div
+          className={cn(
+            "relative flex items-stretch",
+            hasLeft && hasRight ? "justify-between" : hasRight ? "justify-end" : "justify-start",
+          )}
+        >
+          {hasLeft ? (
+            <div ref={leftTabRef} className="shrink-0">
+              {leftTab}
+            </div>
+          ) : null}
+          {hasRight ? (
+            <div ref={rightTabRef} className="shrink-0">
+              {rightTab}
+            </div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

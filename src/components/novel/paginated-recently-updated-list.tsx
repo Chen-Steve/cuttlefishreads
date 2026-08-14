@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useId, useState } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
+import { TabPanelShell } from "@/components/tab-panel-shell";
+import { useStoredOpen } from "@/hooks/use-stored-open";
 import { cn } from "@/lib/utils";
 import type { RecentlyUpdatedNovel } from "@/types";
 import { RecentlyUpdatedList } from "./recently-updated-list";
@@ -50,11 +52,13 @@ export function PaginatedRecentlyUpdatedList({
   /** Caps client payload / pagination depth (e.g. 5 → at most 5 pages). */
   maxPages,
   catalogBase = "novels",
+  className = "mt-4 sm:mt-5",
 }: {
   novels: RecentlyUpdatedNovel[];
   pageSize?: number;
   maxPages?: number;
   catalogBase?: import("@/lib/catalog-paths").CatalogBase;
+  className?: string;
 }) {
   const limited =
     maxPages != null && maxPages > 0
@@ -66,6 +70,31 @@ export function PaginatedRecentlyUpdatedList({
   const start = safePage * pageSize;
   const pageNovels = limited.slice(start, start + pageSize);
   const pageItems = buildPageRange(safePage, totalPages);
+  const { open, toggle } = useStoredOpen(
+    "cf-home-section-recently-updated",
+    true,
+  );
+  const panelId = useId();
+
+  const titleTab = (
+    <button
+      type="button"
+      aria-expanded={open}
+      aria-controls={panelId}
+      onClick={toggle}
+      className="inline-flex h-9 items-center gap-1.5 px-4 text-left text-sm font-semibold tracking-tight text-foreground transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+    >
+      <h2>Recently updated</h2>
+      <ChevronDown
+        className={cn(
+          "size-4 shrink-0 text-muted transition-transform",
+          open && "rotate-180",
+        )}
+        strokeWidth={2}
+        aria-hidden
+      />
+    </button>
+  );
 
   const pagination =
     totalPages > 1 ? (
@@ -138,10 +167,21 @@ export function PaginatedRecentlyUpdatedList({
     ) : null;
 
   return (
-    <RecentlyUpdatedList
-      novels={pageNovels}
-      catalogBase={catalogBase}
-      lastCardFooter={pagination}
-    />
+    <section className={className}>
+      {open ? (
+        <div id={panelId}>
+          <RecentlyUpdatedList
+            novels={pageNovels}
+            catalogBase={catalogBase}
+            firstCardHeader={titleTab}
+            lastCardFooter={pagination}
+          />
+        </div>
+      ) : (
+        <TabPanelShell leftTab={titleTab}>
+          <div id={panelId} hidden />
+        </TabPanelShell>
+      )}
+    </section>
   );
 }

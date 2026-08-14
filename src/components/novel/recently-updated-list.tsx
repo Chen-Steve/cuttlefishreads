@@ -87,13 +87,24 @@ export function RecentlyUpdatedCard({
 export function RecentlyUpdatedList({
   novels,
   catalogBase = "novels",
+  firstCardHeader,
   lastCardFooter,
 }: {
   novels: RecentlyUpdatedNovel[];
   catalogBase?: CatalogBase;
+  firstCardHeader?: ReactNode;
   lastCardFooter?: ReactNode;
 }) {
   if (novels.length === 0) {
+    if (firstCardHeader) {
+      return (
+        <TabPanelShell leftTab={firstCardHeader}>
+          <p className="px-4 py-12 text-center text-sm text-muted">
+            No recent updates yet.
+          </p>
+        </TabPanelShell>
+      );
+    }
     return (
       <p className="rounded-xl border border-dashed border-border bg-surface px-4 py-12 text-center text-sm text-muted">
         No recent updates yet.
@@ -102,11 +113,18 @@ export function RecentlyUpdatedList({
   }
 
   return (
-    <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-2 lg:grid-cols-3">
+    <div
+      className={cn(
+        "grid grid-cols-1 items-start gap-2 sm:grid-cols-2 lg:grid-cols-3",
+        firstCardHeader && "pt-9",
+      )}
+    >
       {novels.map((novel, index) => {
-        const isLast = Boolean(lastCardFooter) && index === novels.length - 1;
+        const isFirst = Boolean(firstCardHeader) && index === 0;
+        const isLast =
+          Boolean(lastCardFooter) && index === novels.length - 1;
 
-        if (!isLast) {
+        if (!isFirst && !isLast) {
           return (
             <RecentlyUpdatedCard
               key={novel.slug}
@@ -119,8 +137,9 @@ export function RecentlyUpdatedList({
         return (
           <TabPanelShell
             key={novel.slug}
-            className="min-w-0"
-            bottomCenterTab={lastCardFooter}
+            className={cn("min-w-0", isFirst && "-mt-9")}
+            leftTab={isFirst ? firstCardHeader : undefined}
+            bottomCenterTab={isLast ? lastCardFooter : undefined}
           >
             <RecentlyUpdatedCard
               novel={novel}

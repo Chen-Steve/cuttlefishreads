@@ -112,7 +112,8 @@ export default async function Home() {
         storageKey="cf-home-section-featured"
         href="/novels"
         linkLabel="View all"
-        className="mt-6 sm:mt-8"
+        className="mt-6 sm:mt-8 peer-data-[state=closed]/continue:mt-2 sm:peer-data-[state=closed]/continue:mt-2.5"
+        header="rail"
       >
         <FeaturedNovels novels={featured} />
       </HomeSection>
@@ -124,6 +125,7 @@ export default async function Home() {
         storageKey="cf-home-section-newly-added"
         href="/novels"
         linkLabel="View all"
+        header="rail"
       >
         <NovelCarousel novels={newlyAdded} dense fillRow showChapterCount />
       </HomeSection>
@@ -134,21 +136,17 @@ export default async function Home() {
           storageKey="cf-home-section-underrated"
           href="/novels"
           linkLabel="View all"
+          header="rail"
         >
           <NovelCarousel novels={underrated} dense fillRow showChapterCount />
         </HomeSection>
       ) : null}
 
-      <HomeSection
-        title="Recently updated"
-        storageKey="cf-home-section-recently-updated"
-      >
-        <PaginatedRecentlyUpdatedList
-          novels={recentlyUpdated}
-          pageSize={8}
-          maxPages={5}
-        />
-      </HomeSection>
+      <PaginatedRecentlyUpdatedList
+        novels={recentlyUpdated}
+        pageSize={8}
+        maxPages={5}
+      />
 
       {completed.length > 0 ? (
         <HomeSection
@@ -156,6 +154,7 @@ export default async function Home() {
           storageKey="cf-home-section-completed"
           href="/novels"
           linkLabel="View all"
+          header="rail"
         >
           <NovelCarousel novels={completed} dense fillRow showChapterCount />
         </HomeSection>
