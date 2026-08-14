@@ -60,7 +60,11 @@ export function AdminNav({ isMasterAdmin }: { isMasterAdmin: boolean }) {
     { href: `${base}/settings`, label: "Settings" },
   ];
   const links = isMasterAdmin
-    ? [...baseLinks, { href: "/admin/applications", label: "Applications" }]
+    ? [
+        ...baseLinks,
+        { href: "/admin/applications", label: "Applications" },
+        { href: "/admin/community", label: "Community" },
+      ]
     : baseLinks;
   const homeHref = "/";
   const scrollRef = useRef<HTMLDivElement>(null);

@@ -70,7 +70,7 @@ export function HomeDiscoveryLinks({
         <TileBackground src="/background2.jpg" />
         <span className="relative z-10 inline-flex flex-col items-center gap-1.5">
           <DiscordIcon className="size-5" />
-          Join our Discord
+          Join our Discord!
           <span className="sr-only"> (opens in a new tab)</span>
         </span>
       </a>

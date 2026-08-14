@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, Library } from "lucide-react";
+import { CommunityHomePreview } from "@/components/community/community-board";
 import { DiscordIcon } from "@/components/discord-icon";
 import { HomeDiscoveryLinks } from "@/components/home-discovery-links";
 import { HomeSection } from "@/components/home-section";
@@ -20,6 +21,7 @@ import {
   getRecentlyUpdatedNovels,
   getUnderratedNovels,
 } from "@/lib/data";
+import { COMMUNITY_HOME_LIMIT, getCommunityBoard } from "@/lib/community";
 import { SITE } from "@/lib/constants";
 import { novelsBrowseHref } from "@/lib/novels-browse";
 import { publicPageMetadata } from "@/lib/seo";
@@ -31,9 +33,10 @@ export const metadata: Metadata = publicPageMetadata({
 });
 
 export default async function Home() {
-  const [catalog, recentlyUpdated] = await Promise.all([
+  const [catalog, recentlyUpdated, community] = await Promise.all([
     getNovels(),
     getRecentlyUpdatedNovels(),
+    getCommunityBoard(COMMUNITY_HOME_LIMIT),
   ]);
 
   // Section sorts are in-memory once the catalog is loaded.
@@ -120,6 +123,13 @@ export default async function Home() {
       </HomeSection>
 
       <HomeDiscoveryLinks hasNovels={catalog.length > 0} />
+
+      <div id="community" className="mt-4 scroll-mt-20 sm:mt-5">
+        <CommunityHomePreview
+          posts={community.posts}
+          isLoggedIn={community.isLoggedIn}
+        />
+      </div>
 
       <HomeSection
         title="Newly added"

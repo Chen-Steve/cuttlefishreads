@@ -100,4 +100,21 @@ export interface NovelRatingSummary {
   count: number;
 }
 
+export type CommunityPostKind = "novel_request" | "idea";
+export type CommunityPostStatus = "open" | "planned" | "done" | "declined";
+
+export interface CommunityPost {
+  id: string;
+  kind: CommunityPostKind;
+  title: string;
+  body: string;
+  status: CommunityPostStatus;
+  voteCount: number;
+  votedByCurrentUser: boolean;
+  userId: string;
+  username: string;
+  isOwn: boolean;
+  createdAt: string;
+}
+
 export type { Genre, Language };
