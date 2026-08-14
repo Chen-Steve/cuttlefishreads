@@ -3,11 +3,11 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowRight, Cookie, ShoppingBag, X } from "lucide-react";
+import { ArrowRight, Cookie, X } from "lucide-react";
 
 import { bulkUnlockChapters } from "@/app/(main)/novels/actions";
 import { getBulkBuyState } from "@/lib/bulk-buy";
-import { loginHref, shopHref } from "@/lib/safe-return-path";
+import { shopHref } from "@/lib/safe-return-path";
 import { cookiesLabel } from "@/lib/utils";
 import type { ChapterListItem } from "@/types";
 
@@ -31,7 +31,7 @@ export function BulkBuyChapters({
   const bulkBuy = getBulkBuyState(chapters);
   const canAfford = userCoins >= bulkBuy.fullPrice;
 
-  if (!bulkBuy.eligible || bulkBuy.purchasableCount === 0) return null;
+  if (!isLoggedIn || !bulkBuy.eligible || bulkBuy.purchasableCount === 0) return null;
 
   function handleBulkBuy() {
     setError(null);
@@ -56,39 +56,27 @@ export function BulkBuyChapters({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
-        {!isLoggedIn ? (
-            <Link
-              href={loginHref(returnPath)}
-              className="inline-flex h-8 w-full items-center justify-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-500/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent dark:text-amber-400 sm:w-fit"
-            >
-              <ShoppingBag className="size-3.5" strokeWidth={1.75} aria-hidden />
-              Sign in to buy all chapters
-            </Link>
-          ) : (
-            <button
-              type="button"
-              onClick={handleBulkBuy}
-              disabled={pending}
-              className="inline-flex h-8 w-full items-center justify-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-500/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 dark:text-amber-400 sm:w-fit"
-            >
-              {pending
-                ? "Unlocking…"
-                : `Buy all ${bulkBuy.purchasableCount} chapters for ${bulkBuy.fullPrice.toLocaleString()} cookies`}
-              <span className="inline-flex items-center gap-1 font-normal text-amber-600/80 dark:text-amber-400/80">
-                <Cookie className="size-3" strokeWidth={1.75} aria-hidden />
-              </span>
-            </button>
-          )}
-
-
-          {error ? (
-            <p
-              role="alert"
-              className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400"
-            >
-              {cookiesLabel(error)}
-            </p>
-          ) : null}
+        <button
+          type="button"
+          onClick={handleBulkBuy}
+          disabled={pending}
+          className="inline-flex h-8 w-full items-center justify-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-500/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 dark:text-amber-400 sm:w-fit"
+        >
+          {pending
+            ? "Unlocking…"
+            : `Buy all ${bulkBuy.purchasableCount} chapters for ${bulkBuy.fullPrice.toLocaleString()} cookies`}
+          <span className="inline-flex items-center gap-1 font-normal text-amber-600/80 dark:text-amber-400/80">
+            <Cookie className="size-3" strokeWidth={1.75} aria-hidden />
+          </span>
+        </button>
+        {error ? (
+          <p
+            role="alert"
+            className="rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400"
+          >
+            {cookiesLabel(error)}
+          </p>
+        ) : null}
       </div>
 
       {showInsufficientPopup ? (

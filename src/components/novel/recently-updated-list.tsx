@@ -88,17 +88,19 @@ export function RecentlyUpdatedList({
   novels,
   catalogBase = "novels",
   firstCardHeader,
+  firstCardRightTab,
   lastCardFooter,
 }: {
   novels: RecentlyUpdatedNovel[];
   catalogBase?: CatalogBase;
   firstCardHeader?: ReactNode;
+  firstCardRightTab?: ReactNode;
   lastCardFooter?: ReactNode;
 }) {
   if (novels.length === 0) {
     if (firstCardHeader) {
       return (
-        <TabPanelShell leftTab={firstCardHeader}>
+        <TabPanelShell leftTab={firstCardHeader} rightTab={firstCardRightTab}>
           <p className="px-4 py-12 text-center text-sm text-muted">
             No recent updates yet.
           </p>
@@ -116,7 +118,7 @@ export function RecentlyUpdatedList({
     <div
       className={cn(
         "grid grid-cols-1 items-start gap-2 sm:grid-cols-2 lg:grid-cols-3",
-        firstCardHeader && "pt-9",
+        firstCardHeader ? "pt-9" : undefined,
       )}
     >
       {novels.map((novel, index) => {
@@ -139,6 +141,7 @@ export function RecentlyUpdatedList({
             key={novel.slug}
             className={cn("min-w-0", isFirst && "-mt-9")}
             leftTab={isFirst ? firstCardHeader : undefined}
+            rightTab={isFirst ? firstCardRightTab : undefined}
             bottomCenterTab={isLast ? lastCardFooter : undefined}
           >
             <RecentlyUpdatedCard

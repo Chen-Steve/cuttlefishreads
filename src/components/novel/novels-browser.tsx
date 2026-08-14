@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowUpDown,
   Check,
@@ -10,29 +11,28 @@ import {
   X,
 } from "lucide-react";
 
-import { GENRES } from "@/lib/constants";
+import { GENRES, type Genre } from "@/lib/constants";
+import {
+  DEFAULT_NOVELS_BROWSE_FILTERS,
+  novelsBrowseHref,
+  type NovelSortOption,
+  type NovelsBrowseFilters,
+  type NovelStatusFilter,
+} from "@/lib/novels-browse";
 import { cn } from "@/lib/utils";
 import type { Novel } from "@/types";
 import { NovelGrid } from "./novel-grid";
 
-type Status = Novel["status"] | "all";
-
-type SortOption =
-  | "updated"
-  | "title-asc"
-  | "title-desc"
-  | "views-desc"
-  | "views-asc";
-
-const STATUS_OPTIONS: { value: Status; label: string }[] = [
+const STATUS_OPTIONS: { value: NovelStatusFilter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "ongoing", label: "Ongoing" },
   { value: "completed", label: "Completed" },
   { value: "hiatus", label: "Hiatus" },
 ];
 
-const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+const SORT_OPTIONS: { value: NovelSortOption; label: string }[] = [
   { value: "updated", label: "Recently updated" },
+  { value: "newest", label: "Newly added" },
   { value: "title-asc", label: "Title A–Z" },
   { value: "title-desc", label: "Title Z–A" },
   { value: "views-desc", label: "Most views" },
@@ -44,8 +44,8 @@ function SortDropdown({
   onChange,
   className,
 }: {
-  value: SortOption;
-  onChange: (value: SortOption) => void;
+  value: NovelSortOption;
+  onChange: (value: NovelSortOption) => void;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -132,7 +132,7 @@ function SortDropdown({
 
 function sortNovels(
   novels: Novel[],
-  sort: SortOption,
+  sort: NovelSortOption,
   viewsBySlug: Record<string, number>,
 ): Novel[] {
   const items = [...novels];
@@ -153,6 +153,11 @@ function sortNovels(
       return items.sort(
         (a, b) => (viewsBySlug[a.slug] ?? 0) - (viewsBySlug[b.slug] ?? 0),
       );
+    case "newest":
+      return items.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
     case "updated":
     default:
       return items.sort(
@@ -165,21 +170,47 @@ function sortNovels(
 export function NovelsBrowser({
   novels,
   viewsBySlug = {},
+  initialFilters = DEFAULT_NOVELS_BROWSE_FILTERS,
 }: {
   novels: Novel[];
   viewsBySlug?: Record<string, number>;
+  initialFilters?: NovelsBrowseFilters;
 }) {
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<Status>("all");
-  const [genre, setGenre] = useState<string | null>(null);
-  const [sort, setSort] = useState<SortOption>("updated");
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const router = useRouter();
+  const [query, setQuery] = useState(initialFilters.query);
+  const [status, setStatus] = useState(initialFilters.status);
+  const [genre, setGenre] = useState(initialFilters.genre);
+  const [sort, setSort] = useState(initialFilters.sort);
+  const [filtersOpen, setFiltersOpen] = useState(
+    initialFilters.status !== "all" || initialFilters.genre !== null,
+  );
+
+  useEffect(() => {
+    setStatus(initialFilters.status);
+    setGenre(initialFilters.genre);
+    setSort(initialFilters.sort);
+  }, [initialFilters.status, initialFilters.genre, initialFilters.sort]);
+
+  function commitFilters(next: {
+    status: NovelStatusFilter;
+    genre: Genre | null;
+    sort: NovelSortOption;
+  }) {
+    router.replace(
+      novelsBrowseHref({
+        status: next.status,
+        genre: next.genre,
+        sort: next.sort,
+      }),
+      { scroll: false },
+    );
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const matched = novels.filter((novel) => {
       if (status !== "all" && novel.status !== status) return false;
-      if (genre && !novel.genres.includes(genre as (typeof GENRES)[number]))
+      if (genre && !novel.genres.includes(genre))
         return false;
       if (q) {
         const haystack = [
@@ -200,7 +231,10 @@ export function NovelsBrowser({
     return sortNovels(matched, sort, viewsBySlug);
   }, [novels, query, status, genre, sort, viewsBySlug]);
 
-  const hasFilters = query.trim() !== "" || status !== "all" || genre !== null;
+  const hasSearchFilters =
+    query.trim() !== "" || status !== "all" || genre !== null;
+  const hasCustomSort = sort !== "updated";
+  const showClear = hasSearchFilters || hasCustomSort;
   const activePillFilters =
     (status !== "all" ? 1 : 0) + (genre !== null ? 1 : 0);
 
@@ -208,6 +242,8 @@ export function NovelsBrowser({
     setQuery("");
     setStatus("all");
     setGenre(null);
+    setSort("updated");
+    commitFilters({ status: "all", genre: null, sort: "updated" });
   }
 
   const pillClass = (active: boolean) =>
@@ -227,9 +263,9 @@ export function NovelsBrowser({
         <div className="flex shrink-0 items-center gap-2">
           <p className="text-xs text-muted">
             {filtered.length} title{filtered.length !== 1 ? "s" : ""}
-            {hasFilters ? " found" : ""}
+            {hasSearchFilters ? " found" : ""}
           </p>
-          {hasFilters && (
+          {showClear && (
             <button
               type="button"
               onClick={clearAll}
@@ -272,7 +308,13 @@ export function NovelsBrowser({
           </label>
 
           <div className="flex items-center gap-2 sm:contents">
-            <SortDropdown value={sort} onChange={setSort} />
+            <SortDropdown
+              value={sort}
+              onChange={(value) => {
+                setSort(value);
+                commitFilters({ status, genre, sort: value });
+              }}
+            />
 
             <button
               type="button"
@@ -312,7 +354,10 @@ export function NovelsBrowser({
               <button
                 key={opt.value}
                 type="button"
-                onClick={() => setStatus(opt.value)}
+                onClick={() => {
+                  setStatus(opt.value);
+                  commitFilters({ status: opt.value, genre, sort });
+                }}
                 aria-pressed={status === opt.value}
                 className={pillClass(status === opt.value)}
               >
@@ -326,7 +371,11 @@ export function NovelsBrowser({
               <button
                 key={g}
                 type="button"
-                onClick={() => setGenre(genre === g ? null : g)}
+                onClick={() => {
+                  const nextGenre = genre === g ? null : g;
+                  setGenre(nextGenre);
+                  commitFilters({ status, genre: nextGenre, sort });
+                }}
                 aria-pressed={genre === g}
                 className={pillClass(genre === g)}
               >

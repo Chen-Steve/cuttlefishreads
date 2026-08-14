@@ -1,10 +1,12 @@
 "use client";
 
 import { useId, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { TabPanelShell } from "@/components/tab-panel-shell";
 import { useStoredOpen } from "@/hooks/use-stored-open";
+import { novelsBrowseHref } from "@/lib/novels-browse";
 import { cn } from "@/lib/utils";
 import type { RecentlyUpdatedNovel } from "@/types";
 import { RecentlyUpdatedList } from "./recently-updated-list";
@@ -96,6 +98,16 @@ export function PaginatedRecentlyUpdatedList({
     </button>
   );
 
+  const viewAll = (
+    <Link
+      href={novelsBrowseHref({ sort: "updated" })}
+      className="inline-flex h-9 items-center gap-1.5 pl-4 pr-2 text-sm font-semibold text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+    >
+      View all
+      <ArrowRight className="size-3.5" strokeWidth={2} aria-hidden />
+    </Link>
+  );
+
   const pagination =
     totalPages > 1 ? (
       <nav
@@ -174,11 +186,12 @@ export function PaginatedRecentlyUpdatedList({
             novels={pageNovels}
             catalogBase={catalogBase}
             firstCardHeader={titleTab}
+            firstCardRightTab={viewAll}
             lastCardFooter={pagination}
           />
         </div>
       ) : (
-        <TabPanelShell leftTab={titleTab}>
+        <TabPanelShell leftTab={titleTab} rightTab={viewAll}>
           <div id={panelId} hidden />
         </TabPanelShell>
       )}

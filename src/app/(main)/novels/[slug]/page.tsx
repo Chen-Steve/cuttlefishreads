@@ -204,10 +204,10 @@ export default async function NovelDetailPage({
   return (
     <PageContainer as="article" width="prose" className="pt-4 sm:pt-6 lg:pt-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
-        <MobileNovelTitle title={novel.title} />
+        {/* Left column: title (mobile) + cover + buttons (desktop) */}
+        <div className="flex flex-col gap-1 sm:w-40 sm:shrink-0 sm:gap-2">
+          <MobileNovelTitle title={novel.title} />
 
-        {/* Left column: cover + buttons (desktop) */}
-        <div className="flex flex-col gap-2 sm:w-40 sm:shrink-0 sm:gap-2">
           <div className="flex items-start gap-4 sm:flex-col sm:gap-2">
             <NovelCover
               title={novel.title}
@@ -246,7 +246,9 @@ export default async function NovelDetailPage({
 
           {/* Mobile buttons */}
           <div className="mt-3 flex flex-col gap-3 sm:hidden">
-            {actionButtons}
+            <div className="flex items-start gap-2">
+              {actionButtons}
+            </div>
             {supportLinks}
           </div>
         </div>

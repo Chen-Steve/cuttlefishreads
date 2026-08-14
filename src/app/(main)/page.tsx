@@ -21,6 +21,7 @@ import {
   getUnderratedNovels,
 } from "@/lib/data";
 import { SITE } from "@/lib/constants";
+import { novelsBrowseHref } from "@/lib/novels-browse";
 import { publicPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = publicPageMetadata({
@@ -110,7 +111,7 @@ export default async function Home() {
       <HomeSection
         title="Featured"
         storageKey="cf-home-section-featured"
-        href="/novels"
+        href={novelsBrowseHref({ sort: "views-desc" })}
         linkLabel="View all"
         className="mt-6 sm:mt-8 peer-data-[state=closed]/continue:mt-2 sm:peer-data-[state=closed]/continue:mt-2.5"
         header="rail"
@@ -123,7 +124,7 @@ export default async function Home() {
       <HomeSection
         title="Newly added"
         storageKey="cf-home-section-newly-added"
-        href="/novels"
+        href={novelsBrowseHref({ sort: "newest" })}
         linkLabel="View all"
         header="rail"
       >
@@ -134,7 +135,7 @@ export default async function Home() {
         <HomeSection
           title="Underrated"
           storageKey="cf-home-section-underrated"
-          href="/novels"
+          href={novelsBrowseHref({ sort: "views-asc" })}
           linkLabel="View all"
           header="rail"
         >
@@ -152,7 +153,7 @@ export default async function Home() {
         <HomeSection
           title="Completed"
           storageKey="cf-home-section-completed"
-          href="/novels"
+          href={novelsBrowseHref({ status: "completed" })}
           linkLabel="View all"
           header="rail"
         >
