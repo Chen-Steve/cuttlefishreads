@@ -227,22 +227,36 @@ export function domToMarkdown(root: Element): string {
   return normalizeParagraphs(parts.join(""));
 }
 
-/**
- * Convert an HTML clipboard fragment into Markdown.
- * Returns null when the HTML has no useful content.
- */
-function htmlToMarkdown(html: string): string | null {
+function parseHtmlToMarkdown(
+  html: string,
+  normalize: (text: string) => string,
+): string | null {
   const trimmed = html.trim();
   if (!trimmed) return null;
-
   if (typeof DOMParser === "undefined") return null;
 
   const doc = new DOMParser().parseFromString(trimmed, "text/html");
   const root = doc.body;
   if (!root) return null;
 
-  const markdown = normalizePastedParagraphs(domToMarkdown(root));
+  const markdown = normalize(domToMarkdown(root));
   return markdown.length > 0 ? markdown : null;
+}
+
+/**
+ * Convert an HTML clipboard fragment into Markdown.
+ * Returns null when the HTML has no useful content.
+ */
+function htmlToMarkdown(html: string): string | null {
+  return parseHtmlToMarkdown(html, normalizePastedParagraphs);
+}
+
+/**
+ * Convert HTML (e.g. from a Word document) into stored chapter Markdown.
+ * Soft line breaks stay as line breaks instead of being reflowed into spaces.
+ */
+export function htmlToChapterMarkdown(html: string): string {
+  return parseHtmlToMarkdown(html, normalizeParagraphs) ?? "";
 }
 
 /**

@@ -66,6 +66,7 @@ export async function WorkspaceChaptersPage({
         chapters={rows}
         backHref={base}
         addHref={`${base}/novels/${novelId}/chapters/new`}
+        bulkHref={`${base}/novels/${novelId}/chapters/bulk`}
         draftCount={draftCount}
       />
     </PageContainer>

@@ -8,6 +8,7 @@ import { getAdminAccess, type AdminAccess } from "@/lib/access";
 import { revalidateNovelsDataCache } from "@/lib/data";
 import { notifyBookmarkersOfChapter, notifyBookmarkersOfChapters } from "@/lib/notifications/data";
 import { slugify } from "@/lib/utils";
+import { MAX_IMPORT_CHAPTERS } from "@/lib/chapter-import";
 import {
   WORKSPACE_BASE,
   workspaceInternalPath,
@@ -601,6 +602,156 @@ export async function createChapter(
   revalidatePublicPaths();
   revalidatePath("/", "layout");
   redirect(`${workspaceBase}/novels/${novelId}/chapters`);
+}
+
+export type BulkChapterInput = {
+  number: number;
+  title: string;
+  content: string;
+  unlockAt?: string | null;
+};
+
+export async function bulkCreateChapters(
+  novelId: string,
+  chapters: BulkChapterInput[],
+  options: {
+    access: "free" | "paid";
+    coinCost: number;
+    publish: boolean;
+  },
+): Promise<AdminState> {
+  const auth = await requireWorkspace();
+  if (!auth.access) return { error: auth.error };
+
+  const id = novelId.trim();
+  if (!id) return { error: "Choose a novel." };
+  if (!Array.isArray(chapters) || chapters.length === 0) {
+    return { error: "Add at least one chapter file." };
+  }
+  if (chapters.length > MAX_IMPORT_CHAPTERS) {
+    return { error: `You can import at most ${MAX_IMPORT_CHAPTERS} chapters at once.` };
+  }
+
+  const isFree = options.access !== "paid";
+  const coinCost = isFree ? 0 : Math.floor(Number(options.coinCost ?? 0));
+  if (!isFree && (!Number.isFinite(coinCost) || coinCost < 1)) {
+    return { error: "Paid chapters need a cookie cost of at least 1." };
+  }
+
+  const prepared: Array<{
+    number: number;
+    title: string;
+    content: string;
+    unlockAt: string | null;
+  }> = [];
+  const seen = new Set<number>();
+
+  for (const [index, chapter] of chapters.entries()) {
+    const number = Math.floor(Number(chapter.number));
+    const title = String(chapter.title ?? "").trim();
+    const content = String(chapter.content ?? "").trim();
+    if (!Number.isFinite(number) || number < 1) {
+      return { error: `Chapter ${index + 1} needs a valid chapter number.` };
+    }
+    if (seen.has(number)) {
+      return { error: `Chapter ${number} is listed more than once.` };
+    }
+    if (!content) {
+      return { error: `Chapter ${number} has no content.` };
+    }
+    seen.add(number);
+
+    let unlockAt: string | null = null;
+    if (!isFree) {
+      const unlockAtRaw = String(chapter.unlockAt ?? "").trim();
+      if (unlockAtRaw) {
+        const date = new Date(unlockAtRaw);
+        if (Number.isNaN(date.getTime())) {
+          return { error: `Chapter ${number} has an invalid auto-unlock date.` };
+        }
+        unlockAt = date.toISOString();
+      }
+    }
+
+    prepared.push({ number, title, content, unlockAt });
+  }
+
+  const admin = createAdminClient();
+  const { data: novel } = await admin
+    .from("novels")
+    .select("id, publisher_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!novel) return { error: "That novel no longer exists." };
+  if (!ownsNovel(auth.access, novel.publisher_id)) {
+    return { error: "You can only manage your own novels." };
+  }
+
+  const { data: existingRows } = await admin
+    .from("chapters")
+    .select("number")
+    .eq("novel_id", id)
+    .in("number", [...seen]);
+
+  const collisions = (existingRows ?? [])
+    .map((row) => row.number as number)
+    .sort((a, b) => a - b);
+  if (collisions.length > 0) {
+    return {
+      error:
+        collisions.length === 1
+          ? `Chapter ${collisions[0]} already exists for this novel.`
+          : `Chapters ${collisions.join(", ")} already exist for this novel.`,
+    };
+  }
+
+  const publish = Boolean(options.publish);
+  const now = new Date().toISOString();
+  const rows = prepared.map((chapter) => ({
+    novel_id: id,
+    number: chapter.number,
+    title: chapter.title,
+    content: chapter.content,
+    translator_note: null,
+    use_global_translator_note: true,
+    is_free: isFree,
+    coin_cost: coinCost,
+    unlock_at: chapter.unlockAt,
+    is_published: publish,
+    updated_at: now,
+  }));
+
+  const chunkSize = 25;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const { error } = await admin.from("chapters").insert(rows.slice(i, i + chunkSize));
+    if (error) {
+      if (error.code === "23505") {
+        return { error: "A chapter number in this upload already exists." };
+      }
+      return { error: error.message };
+    }
+  }
+
+  await admin.from("novels").update({ updated_at: now }).eq("id", id);
+
+  if (publish) {
+    await notifyBookmarkersOfChapters({
+      novelId: id,
+      chapters: prepared.map((chapter) => {
+        const released =
+          isFree ||
+          (chapter.unlockAt != null && new Date(chapter.unlockAt).getTime() <= Date.now());
+        return { chapterNumber: chapter.number, released };
+      }),
+      excludeUserId: auth.access.userId,
+    });
+  }
+
+  const workspaceBase = WORKSPACE_BASE.translations;
+  revalidatePath(workspaceInternalPath(workspaceBase));
+  revalidatePublicPaths();
+  revalidatePath("/", "layout");
+  redirect(`${workspaceBase}/novels/${id}/chapters`);
 }
 
 export async function setChapterPublished(

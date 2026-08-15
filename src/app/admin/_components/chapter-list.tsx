@@ -3,7 +3,7 @@
 import { useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowDownUp, ChevronLeft, Pencil, PlusCircle } from "lucide-react";
+import { ArrowDownUp, ChevronLeft, FolderUp, Pencil, PlusCircle } from "lucide-react";
 
 import { TabPanelShell } from "@/components/tab-panel-shell";
 import { cn } from "@/lib/utils";
@@ -114,6 +114,7 @@ export function ChapterList({
   chapters,
   backHref,
   addHref,
+  bulkHref,
   draftCount,
 }: {
   novelId: string;
@@ -121,6 +122,7 @@ export function ChapterList({
   chapters: AdminChapterRow[];
   backHref: string;
   addHref: string;
+  bulkHref: string;
   draftCount: number;
 }) {
   const pathname = usePathname();
@@ -153,6 +155,13 @@ export function ChapterList({
         <div className="flex items-stretch">
           <PublishAllButton novelId={novelId} draftCount={draftCount} />
           {hasChapters ? <ChapterOrderToggle /> : null}
+          <Link
+            href={bulkHref}
+            className="inline-flex h-9 items-center justify-center gap-1.5 px-4 text-sm font-semibold text-foreground transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            <FolderUp className="size-4" strokeWidth={1.75} aria-hidden />
+            Bulk upload
+          </Link>
           <Link
             href={addHref}
             className="inline-flex h-9 items-center justify-center gap-1.5 px-4 text-sm font-semibold text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
@@ -230,7 +239,8 @@ export function ChapterList({
         </div>
       ) : (
         <p className="px-4 py-8 text-center text-sm text-muted">
-          No chapters yet — click &quot;Add chapter&quot; to get started.
+          No chapters yet — click &quot;Add chapter&quot; or &quot;Bulk upload&quot;
+          to get started.
         </p>
       )}
     </TabPanelShell>
