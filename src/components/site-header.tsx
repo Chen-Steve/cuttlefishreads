@@ -8,6 +8,7 @@ import { BookOpen, LogIn, Library, Search, ShoppingBag } from "lucide-react";
 import { AccountDropdown } from "@/components/account-dropdown";
 import { useImmersiveHidesSiteHeader } from "@/components/reader";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SITE } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 type SearchMatch = {
@@ -203,7 +204,7 @@ export function SiteHeader({
       <div className="relative mx-auto flex h-16 max-w-6xl items-center gap-3 overflow-visible px-4 sm:gap-6 sm:px-6 lg:px-8">
         <Link
           href="/"
-          aria-label="Cuttlefish Reads home"
+          aria-label={`${SITE.name} home`}
           className="relative z-0 inline-flex h-9 shrink-0 items-center overflow-hidden rounded-lg outline-offset-2 transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-accent sm:overflow-visible"
         >
           <span className="relative flex h-9 w-12 shrink-0 items-center overflow-hidden sm:overflow-visible">
@@ -219,7 +220,7 @@ export function SiteHeader({
           </span>
           <span className="ml-2 hidden items-center sm:flex">
             <span className="text-lg font-semibold leading-none tracking-tight text-foreground md:text-xl">
-              Cuttlefish Reads
+              {SITE.name}
             </span>
           </span>
         </Link>

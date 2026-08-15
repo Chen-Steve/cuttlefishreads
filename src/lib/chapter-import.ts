@@ -48,7 +48,7 @@ export function fileStem(path: string): string {
 /**
  * Pull a chapter number and leftover title from a filename.
  * `Chapter 1.txt` → number 1, no title.
- * `Chapter 1: The Storm.txt` → number 1, title "The Storm".
+ * `Chapter 1: The Storm.txt` / `Chapter 1 - The Storm.txt` → title "The Storm".
  */
 export function parseChapterFilename(path: string): {
   number: number | null;
@@ -57,24 +57,19 @@ export function parseChapterFilename(path: string): {
   const stem = fileStem(path);
   if (!stem) return { number: null, title: "" };
 
-  const cjk = stem.match(/^第\s*0*(\d+)\s*章(?:\s*[.:：\-–—]+\s*|\s+)?(.*)$/u);
-  if (cjk) {
-    return { number: Number(cjk[1]), title: titleAfterNumber(cjk[2] ?? "") };
-  }
+  const labeled =
+    stem.match(/^第\s*0*(\d+)\s*章/u) ??
+    stem.match(/^(?:chapter|ch\.?|ep\.?|episode)\s*0*(\d+)/iu) ??
+    stem.match(/^0*(\d+)/);
 
-  const labeled = stem.match(
-    /^(?:chapter|ch\.?|ep\.?|episode)\s*0*(\d+)(?:\s*[.:：\-–—]+\s*|\s+)?(.*)$/iu,
-  );
-  if (labeled) {
-    return { number: Number(labeled[1]), title: titleAfterNumber(labeled[2] ?? "") };
-  }
+  if (!labeled) return { number: null, title: cleanTitle(stem) };
 
-  const leading = stem.match(/^0*(\d+)(?:\s*[.:：\-–—]+\s*|\s+)?(.*)$/);
-  if (leading) {
-    return { number: Number(leading[1]), title: titleAfterNumber(leading[2] ?? "") };
-  }
+  const number = Number(labeled[1]);
+  const rest = stem.slice(labeled[0].length);
+  const separator = rest.match(/^\s*[.:：\-–—‐−]+\s*/);
+  if (!separator) return { number, title: "" };
 
-  return { number: null, title: cleanTitle(stem) };
+  return { number, title: titleAfterNumber(rest.slice(separator[0].length)) };
 }
 
 function titleAfterNumber(raw: string): string {

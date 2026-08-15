@@ -41,7 +41,7 @@ export function SiteFooter() {
           <div className="max-w-xs">
             <Link
               href="/"
-              aria-label="Cuttlefish Reads home"
+              aria-label={`${SITE.name} home`}
               className="inline-flex items-center overflow-visible rounded-lg outline-offset-2 transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-accent"
             >
               <span className="relative flex h-9 w-12 shrink-0 items-center overflow-visible">

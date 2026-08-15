@@ -1,9 +1,9 @@
 export const SITE = {
-  name: "Cuttlefish Reads",
+  name: "Cuttlefish",
   shortName: "cuttlefishreads",
   description: "Discover popular and niche novels",
   seoDescription:
-    "Read popular and niche web novels on Cuttlefish Reads, with updated chapters, novel summaries, genres, and reading progress.",
+    "Read popular and niche web novels on Cuttlefish, with updated chapters, novel summaries, genres, and reading progress.",
   discordUrl: "https://discord.gg/VQtwqRAVkP",
   legalEmail: "legal@cuttlefishreads.com",
   contactEmail: "contact@cuttlefishreads.com",

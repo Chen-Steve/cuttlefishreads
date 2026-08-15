@@ -46,7 +46,7 @@ export default async function ApplyPage() {
           Become a translator
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          Want to bring novels to Cuttlefish Reads? Approved translators get
+          Want to bring novels to Cuttlefish? Approved translators get
           their own workspace to upload and manage translations, plus a stats
           dashboard.
         </p>

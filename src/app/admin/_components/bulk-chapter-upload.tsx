@@ -367,8 +367,8 @@ export function BulkChapterUpload({
                   {chapters.length} chapter{chapters.length === 1 ? "" : "s"} ready
                   <span className="mt-0.5 block font-normal">
                     Filename sets the number. &quot;Chapter 1.txt&quot; has no
-                    title; &quot;Chapter 1: The Storm.txt&quot; uses &quot;The
-                    Storm&quot;.
+                    title; &quot;Chapter 1 - The Storm.txt&quot; or
+                    &quot;Chapter 1: The Storm.txt&quot; uses &quot;The Storm&quot;.
                   </span>
                 </p>
                 <button

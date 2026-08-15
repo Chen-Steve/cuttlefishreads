@@ -19,6 +19,7 @@ import {
   isUserAuthenticated,
 } from "@/lib/data";
 import { publicPageMetadata, novelDescription } from "@/lib/seo";
+import { SITE } from "@/lib/constants";
 
 export async function generateMetadata({
   params,
@@ -43,8 +44,8 @@ export async function generateMetadata({
     : `Chapter ${current.number}`;
   const title = `${novel.title} - ${chapterLabel}`;
   const description = current.locked
-    ? `Read ${novel.title} on Cuttlefish Reads. ${chapterLabel} is available with unlock access.`
-    : `Read ${novel.title} ${chapterLabel} on Cuttlefish Reads. ${novelDescription(novel)}`;
+    ? `Read ${novel.title} on ${SITE.name}. ${chapterLabel} is available with unlock access.`
+    : `Read ${novel.title} ${chapterLabel} on ${SITE.name}. ${novelDescription(novel)}`;
   const path = `/novels/${novel.slug}/${current.number}`;
 
   return {
