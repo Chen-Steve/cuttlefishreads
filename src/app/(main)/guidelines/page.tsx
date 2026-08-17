@@ -8,7 +8,7 @@ import { SITE } from "@/lib/constants";
 
 export const metadata: Metadata = publicPageMetadata({
   title: "Community Guidelines",
-  description: `Community guidelines for comments, Discord, and conduct on ${SITE.name}.`,
+  description: `Community guidelines for ${SITE.name}.`,
   path: "/guidelines",
 });
 

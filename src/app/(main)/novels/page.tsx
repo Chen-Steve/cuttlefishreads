@@ -8,8 +8,7 @@ import { publicPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = publicPageMetadata({
   title: "All Novels",
-  description:
-    "Browse every novel on Cuttlefish, including popular, niche, ongoing, and completed web novels.",
+  description: "Novels on Cuttlefish.",
   path: "/novels",
 });
 

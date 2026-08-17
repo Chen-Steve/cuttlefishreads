@@ -8,7 +8,7 @@ import { SITE } from "@/lib/constants";
 
 export const metadata: Metadata = publicPageMetadata({
   title: "Refund Policy",
-  description: `Refund and purchase policy for Cookies and digital content on ${SITE.name}.`,
+  description: `Refund policy for ${SITE.name}.`,
   path: "/refund",
 });
 

@@ -8,7 +8,7 @@ import { SITE } from "@/lib/constants";
 
 export const metadata: Metadata = publicPageMetadata({
   title: "Terms of Service",
-  description: `Read the terms of service for ${SITE.name} to understand your rights and responsibilities when using our platform.`,
+  description: `Terms of service for ${SITE.name}.`,
   path: "/terms",
 });
 

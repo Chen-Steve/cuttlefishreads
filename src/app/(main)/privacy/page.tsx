@@ -8,7 +8,7 @@ import { SITE } from "@/lib/constants";
 
 export const metadata: Metadata = publicPageMetadata({
   title: "Privacy Policy",
-  description: `Read the privacy policy for ${SITE.name} to understand how we collect, use, and protect your data.`,
+  description: `Privacy policy for ${SITE.name}.`,
   path: "/privacy",
 });
 

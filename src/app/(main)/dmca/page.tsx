@@ -9,7 +9,7 @@ const dmcaEmail = `dmca@${siteHost}`;
 
 export const metadata: Metadata = publicPageMetadata({
   title: "DMCA",
-  description: `DMCA copyright policy and takedown notice instructions for ${SITE.name}.`,
+  description: `DMCA policy for ${SITE.name}.`,
   path: "/dmca",
 });
 

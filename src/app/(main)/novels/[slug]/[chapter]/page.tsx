@@ -18,8 +18,7 @@ import {
   getUserCoins,
   isUserAuthenticated,
 } from "@/lib/data";
-import { publicPageMetadata, novelDescription } from "@/lib/seo";
-import { SITE } from "@/lib/constants";
+import { publicPageMetadata } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -42,20 +41,13 @@ export async function generateMetadata({
   const chapterLabel = current.title
     ? `Chapter ${current.number}: ${current.title}`
     : `Chapter ${current.number}`;
-  const title = `${novel.title} - ${chapterLabel}`;
-  const description = current.locked
-    ? `Read ${novel.title} on ${SITE.name}. ${chapterLabel} is available with unlock access.`
-    : `Read ${novel.title} ${chapterLabel} on ${SITE.name}. ${novelDescription(novel)}`;
-  const path = `/novels/${novel.slug}/${current.number}`;
 
-  return {
-    ...publicPageMetadata({
-      title,
-      description,
-      path,
-      index: !current.locked,
-    }),
-  };
+  return publicPageMetadata({
+    title: `${novel.title} — ${chapterLabel}`,
+    description: chapterLabel,
+    path: `/novels/${novel.slug}/${current.number}`,
+    index: !current.locked,
+  });
 }
 
 export default async function ChapterReaderPage({

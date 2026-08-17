@@ -50,24 +50,11 @@ export async function generateMetadata({
     };
   }
 
-  const description = novelDescription(novel);
-  const path = `/novels/${novel.slug}`;
-
-  return {
-    ...publicPageMetadata({
-      title: `${novel.title} - Read Chapters Online`,
-      description,
-      path,
-    }),
-    alternates: {
-      canonical: path,
-      types: {
-        "application/rss+xml": [
-          { url: `${path}/feed.xml`, title: `${novel.title} updates` },
-        ],
-      },
-    },
-  };
+  return publicPageMetadata({
+    title: novel.title,
+    description: novelDescription(novel),
+    path: `/novels/${novel.slug}`,
+  });
 }
 
 export default async function NovelDetailPage({

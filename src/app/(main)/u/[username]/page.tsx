@@ -29,7 +29,7 @@ export async function generateMetadata({
 
   return publicPageMetadata({
     title: `${profile.username}'s profile`,
-    description: `Novels and reading activity from ${profile.username} on ${SITE.name}.`,
+    description: `${profile.username} on ${SITE.name}.`,
     path: `/u/${profile.username}`,
   });
 }

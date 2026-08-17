@@ -26,11 +26,7 @@ export function truncateDescription(text: string, maxLength = 160) {
 
 export function novelDescription(novel: Novel) {
   if (novel.synopsis) return truncateDescription(novel.synopsis);
-
-  const genres = novel.genres.length ? ` ${novel.genres.join(", ")}.` : "";
-  return truncateDescription(
-    `Read ${novel.title} on ${SITE.name}. Browse chapters, updates, and novel details.${genres}`,
-  );
+  return SITE.seoDescription;
 }
 
 export function publicPageMetadata({
