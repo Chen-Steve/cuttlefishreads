@@ -30,7 +30,7 @@ export async function WorkspaceChapterEditPage({
   const access = await getAdminAccess();
   const admin = createAdminClient();
 
-  const [{ data: novel }, { data: chapter }, { data: latestUnlockRow }] =
+  const [{ data: novel }, { data: chapter }, { data: latestUnlockRow }, { data: siblings }] =
     await Promise.all([
       admin
         .from("novels")
@@ -55,6 +55,11 @@ export async function WorkspaceChapterEditPage({
         .order("unlock_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
+      admin
+        .from("chapters")
+        .select("id, number")
+        .eq("novel_id", novelId)
+        .order("number", { ascending: true }),
     ]);
 
   if (!novel || !chapter) notFound();
@@ -63,12 +68,23 @@ export async function WorkspaceChapterEditPage({
   }
 
   const row = chapter as ChapterRow;
+  const ordered = siblings ?? [];
+  const currentIndex = ordered.findIndex((sibling) => sibling.id === chapterId);
+  const previousChapter =
+    currentIndex > 0 ? ordered[currentIndex - 1] : null;
+  const nextChapter =
+    currentIndex >= 0 && currentIndex < ordered.length - 1
+      ? ordered[currentIndex + 1]
+      : null;
 
   return (
     <PageContainer as="div">
       <ChapterForm
+        key={row.id}
         novelId={novel.id}
         latestChapterUnlockAt={latestUnlockRow?.unlock_at ?? null}
+        previousChapter={previousChapter}
+        nextChapter={nextChapter}
         initial={{
           chapterId: row.id,
           number: row.number,

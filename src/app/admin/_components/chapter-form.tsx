@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
@@ -39,12 +39,124 @@ export type ChapterFormInitial = {
   unlockAt: string | null;
 };
 
+export type ChapterSibling = {
+  id: string;
+  number: number;
+};
+
+function chapterEditHref(
+  base: string,
+  novelId: string,
+  chapterId: string,
+) {
+  return `${base}/novels/${novelId}/chapters/${chapterId}/edit`;
+}
+
+function ChapterSiblingNav({
+  novelId,
+  base,
+  previous,
+  next,
+  variant = "header",
+}: {
+  novelId: string;
+  base: string;
+  previous?: ChapterSibling | null;
+  next?: ChapterSibling | null;
+  variant?: "header" | "sidebar";
+}) {
+  const previousHref = previous
+    ? chapterEditHref(base, novelId, previous.id)
+    : undefined;
+  const nextHref = next
+    ? chapterEditHref(base, novelId, next.id)
+    : undefined;
+
+  const isSidebar = variant === "sidebar";
+  const linkClass = isSidebar
+    ? "inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+    : "inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-background hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+  const disabledClass = isSidebar
+    ? "inline-flex h-11 flex-1 cursor-not-allowed items-center justify-center gap-1.5 rounded-xl border border-border bg-background px-3 text-sm font-medium text-muted opacity-40"
+    : "inline-flex h-8 cursor-not-allowed items-center gap-1 rounded-lg px-2.5 text-xs font-semibold text-muted opacity-40";
+
+  const previousLabel = previous
+    ? `Previous chapter (Ch. ${previous.number})`
+    : "Previous chapter";
+  const nextLabel = next
+    ? `Next chapter (Ch. ${next.number})`
+    : "Next chapter";
+  const previousText = isSidebar ? "Previous" : "Prev";
+  const nextText = isSidebar ? "Next chapter" : "Next";
+
+  return (
+    <nav
+      aria-label="Chapter navigation"
+      className={isSidebar ? "flex gap-2" : "ml-auto flex shrink-0 items-center"}
+    >
+      <SiblingNavItem
+        href={previousHref}
+        label={previousLabel}
+        linkClass={linkClass}
+        disabledClass={disabledClass}
+      >
+        <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
+        <span className={isSidebar ? undefined : "hidden sm:inline"}>
+          {previousText}
+        </span>
+      </SiblingNavItem>
+      <SiblingNavItem
+        href={nextHref}
+        label={nextLabel}
+        linkClass={linkClass}
+        disabledClass={disabledClass}
+      >
+        <span className={isSidebar ? undefined : "hidden sm:inline"}>
+          {nextText}
+        </span>
+        <ChevronRight className="size-4" strokeWidth={1.75} aria-hidden />
+      </SiblingNavItem>
+    </nav>
+  );
+}
+
+function SiblingNavItem({
+  href,
+  label,
+  linkClass,
+  disabledClass,
+  children,
+}: {
+  href?: string;
+  label: string;
+  linkClass: string;
+  disabledClass: string;
+  children: ReactNode;
+}) {
+  if (href) {
+    return (
+      <Link href={href} className={linkClass} title={label} aria-label={label}>
+        {children}
+      </Link>
+    );
+  }
+
+  return (
+    <span className={disabledClass} aria-disabled="true" title={label}>
+      {children}
+      <span className="sr-only">{label}</span>
+    </span>
+  );
+}
+
 export function ChapterForm({
   novelId,
   initial,
   latestChapterUnlockAt = null,
   defaultCoinCost = null,
   nextChapterNumber = null,
+  previousChapter = null,
+  nextChapter = null,
 }: {
   novelId: string;
   initial?: ChapterFormInitial;
@@ -53,6 +165,8 @@ export function ChapterForm({
   defaultCoinCost?: number | null;
   /** Next chapter number for new chapters, shown instead of "Auto". */
   nextChapterNumber?: number | null;
+  previousChapter?: ChapterSibling | null;
+  nextChapter?: ChapterSibling | null;
 }) {
   const isEdit = Boolean(initial);
   const pathname = usePathname();
@@ -166,7 +280,7 @@ export function ChapterForm({
           </button>
         }
       >
-        <div className="flex min-w-0 items-center gap-3 px-4 pt-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 px-4 pt-2">
           <h1 className="shrink-0 text-sm font-semibold tracking-tight text-foreground">
             {isEdit ? `Edit chapter ${initial!.number}` : "Add chapter"}
           </h1>
@@ -180,6 +294,14 @@ export function ChapterForm({
             placeholder="Chapter title (optional)"
             className={`${inputClass} h-9 min-w-0 flex-1`}
           />
+          {isEdit ? (
+            <ChapterSiblingNav
+              novelId={novelId}
+              base={base}
+              previous={previousChapter}
+              next={nextChapter}
+            />
+          ) : null}
         </div>
 
         {!isEdit && state.error ? (
@@ -376,6 +498,15 @@ export function ChapterForm({
           >
             {submitLabel}
           </button>
+          {isEdit ? (
+            <ChapterSiblingNav
+              novelId={novelId}
+              base={base}
+              previous={previousChapter}
+              next={nextChapter}
+              variant="sidebar"
+            />
+          ) : null}
         </aside>
         </div>
       </TabPanelShell>
