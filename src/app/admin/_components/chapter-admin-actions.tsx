@@ -3,12 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Eye, EyeOff, Loader2, Trash2, UploadCloud } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   deleteChapter,
+  deleteChapters,
   publishAllChapters,
   setChapterPublished,
 } from "../actions";
+import { ConfirmDialog } from "./confirm-dialog";
 
 export function ChapterRowActions({
   chapterId,
@@ -76,6 +79,62 @@ export function ChapterRowActions({
         </span>
       )}
     </div>
+  );
+}
+
+export function DeleteSelectedButton({
+  novelId,
+  chapterIds,
+  onDeleted,
+}: {
+  novelId: string;
+  chapterIds: string[];
+  onDeleted: () => void;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const count = chapterIds.length;
+
+  function confirmDelete() {
+    startTransition(async () => {
+      const result = await deleteChapters(novelId, chapterIds);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      setOpen(false);
+      onDeleted();
+      router.refresh();
+    });
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        disabled={pending || count === 0}
+        className="inline-flex h-9 items-center gap-1.5 px-3 text-xs font-semibold text-rose-600 transition-colors hover:text-rose-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:opacity-50 dark:text-rose-400 dark:hover:text-rose-300"
+      >
+        {pending ? (
+          <Loader2 className="size-3.5 animate-spin" aria-hidden />
+        ) : (
+          <Trash2 className="size-3.5" strokeWidth={1.75} aria-hidden />
+        )}
+        Delete{count > 0 ? ` ${count}` : ""}
+      </button>
+      <ConfirmDialog
+        open={open}
+        title={count === 1 ? "Delete chapter" : "Delete chapters"}
+        pending={pending}
+        onCancel={() => setOpen(false)}
+        onConfirm={confirmDelete}
+      >
+        This will permanently delete{" "}
+        {count === 1 ? "this chapter" : `${count} chapters`}.
+      </ConfirmDialog>
+    </>
   );
 }
 
