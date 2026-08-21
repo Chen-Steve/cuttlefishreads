@@ -962,6 +962,70 @@ export async function deleteChapters(
   return {};
 }
 
+export type ChapterDownloadRow = {
+  number: number;
+  title: string;
+  content: string;
+};
+
+const DOWNLOAD_CHUNK = 25;
+
+export async function getChaptersForDownload(
+  novelId: string,
+  chapterIds: string[],
+): Promise<{ error?: string; chapters?: ChapterDownloadRow[] }> {
+  const auth = await requireWorkspace();
+  if (!auth.access) return { error: auth.error };
+
+  const id = novelId.trim();
+  if (!id) return { error: "Choose a novel." };
+
+  const uniqueIds = [
+    ...new Set(chapterIds.map((chapterId) => String(chapterId).trim()).filter(Boolean)),
+  ];
+  if (uniqueIds.length === 0) {
+    return { error: "Select at least one chapter." };
+  }
+  if (uniqueIds.length > DOWNLOAD_CHUNK) {
+    return {
+      error: `Request at most ${DOWNLOAD_CHUNK} chapters at a time.`,
+    };
+  }
+
+  const admin = createAdminClient();
+
+  const { data: novel } = await admin
+    .from("novels")
+    .select("id, publisher_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!novel) return { error: "That novel no longer exists." };
+  if (!ownsNovel(auth.access, novel.publisher_id)) {
+    return { error: "You can only manage your own novels." };
+  }
+
+  const { data: rows, error } = await admin
+    .from("chapters")
+    .select("number, title, content")
+    .eq("novel_id", id)
+    .in("id", uniqueIds)
+    .order("number", { ascending: true })
+    .returns<ChapterDownloadRow[]>();
+
+  if (error) return { error: error.message };
+  if ((rows ?? []).length !== uniqueIds.length) {
+    return { error: "One or more chapters could not be found." };
+  }
+
+  return {
+    chapters: (rows ?? []).map((row) => ({
+      number: row.number,
+      title: row.title ?? "",
+      content: row.content ?? "",
+    })),
+  };
+}
+
 export async function updateChapter(
   chapterId: string,
   _prev: AdminState,

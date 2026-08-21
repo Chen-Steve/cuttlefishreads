@@ -188,3 +188,18 @@ export function assignChapterNumbers(
     };
   });
 }
+
+const UNSAFE_FILENAME_RE = /[<>:"/\\|?*\u0000-\u001f]+/g;
+
+/** Filename that bulk upload can parse back into a chapter number + title. */
+export function chapterExportFilename(number: number, title: string): string {
+  const safeTitle = title
+    .replace(UNSAFE_FILENAME_RE, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const stem = safeTitle
+    ? `Chapter ${number} - ${safeTitle}`
+    : `Chapter ${number}`;
+  const clipped = stem.length > 120 ? stem.slice(0, 120).trim() : stem;
+  return `${clipped}.md`;
+}

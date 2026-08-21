@@ -18,6 +18,7 @@ import { WORKSPACE_BASE, workspaceKindFromPathname } from "@/lib/workspace";
 import {
   ChapterRowActions,
   DeleteSelectedButton,
+  DownloadChaptersButton,
   PublishAllButton,
 } from "./chapter-admin-actions";
 
@@ -228,6 +229,12 @@ export function ChapterList({
             >
               {allSelected ? "Clear" : "Select all"}
             </button>
+            <DownloadChaptersButton
+              novelId={novelId}
+              novelTitle={novelTitle}
+              chapterIds={[...selected]}
+              label={selectedCount > 0 ? `Download ${selectedCount}` : "Download"}
+            />
             <DeleteSelectedButton
               novelId={novelId}
               chapterIds={[...selected]}
@@ -247,6 +254,13 @@ export function ChapterList({
                 <CheckSquare className="size-3.5" strokeWidth={1.75} aria-hidden />
                 Select
               </button>
+            ) : null}
+            {hasChapters ? (
+              <DownloadChaptersButton
+                novelId={novelId}
+                novelTitle={novelTitle}
+                chapterIds={chapters.map((chapter) => chapter.id)}
+              />
             ) : null}
             <Link
               href={bulkHref}
