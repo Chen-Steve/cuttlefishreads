@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { notifyComment } from "@/lib/notifications/data";
 import { getNovelComments, isChapterReadable } from "@/lib/data";
 import type { NovelComment } from "@/types";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 
 const MAX_COMMENT_LENGTH = 2000;
@@ -31,8 +32,9 @@ function revalidateCommentPaths(
 export type UnlockState = { error?: string; unlocked?: boolean };
 
 // Spends coins to unlock a paid chapter for the signed-in user. The coin price
-// is resolved server-side inside unlock_chapter() (SECURITY DEFINER), which
-// deducts coins and records the chapter_unlocks row atomically.
+// is resolved inside unlock_chapter() (SECURITY DEFINER). EXECUTE is granted
+// only to service_role so signed-in users cannot hit /rest/v1/rpc/unlock_chapter
+// directly; this action verifies the session then calls it as admin.
 export async function unlockChapter(
   novelSlug: string,
   chapterNumber: number,
@@ -41,11 +43,12 @@ export async function unlockChapter(
   if (!claims) {
     return { error: "Please sign in to unlock this chapter." };
   }
-  const supabase = await getServerSupabase();
+  const admin = createAdminClient();
 
-  const { data, error } = await supabase.rpc("unlock_chapter", {
+  const { data, error } = await admin.rpc("unlock_chapter", {
     p_novel_slug: novelSlug,
     p_chapter_number: chapterNumber,
+    p_user_id: claims.sub,
   });
 
   if (error) {
