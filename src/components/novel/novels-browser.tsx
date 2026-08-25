@@ -386,7 +386,7 @@ export function NovelsBrowser({
         </div>
       </div>
 
-      <NovelGrid novels={filtered} showChapterCount hideAuthor tightGap />
+      <NovelGrid novels={filtered} dense showChapterCount hideAuthor />
     </div>
   );
 }
