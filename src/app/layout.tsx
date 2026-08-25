@@ -59,12 +59,6 @@ export default function RootLayout({
         src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
         strategy="afterInteractive"
       />
-      <Script
-        async
-        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7984663674761616"
-        crossOrigin="anonymous"
-        strategy="beforeInteractive"
-      />
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <GoogleAnalyticsPageViews />
         {children}
