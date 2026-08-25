@@ -33,6 +33,9 @@ export const metadata: Metadata = {
   },
   verification: {
     google: "2KUBSqgtMFqO85PxbI9vc_QYd1ZRQ2u05kSDa-yKv74",
+    other: {
+      "google-adsense-account": "ca-pub-7984663674761616",
+    },
   },
 };
 
@@ -55,6 +58,12 @@ export default function RootLayout({
         async
         src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
         strategy="afterInteractive"
+      />
+      <Script
+        async
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7984663674761616"
+        crossOrigin="anonymous"
+        strategy="beforeInteractive"
       />
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <GoogleAnalyticsPageViews />
