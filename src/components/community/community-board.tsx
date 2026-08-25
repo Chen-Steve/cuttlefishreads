@@ -2,23 +2,19 @@
 
 import Link from "next/link";
 import {
-  useId,
   useMemo,
   useState,
   useTransition,
   type FormEvent,
-  type ReactNode,
 } from "react";
-import { ArrowRight, ChevronDown, LogIn, Trash2 } from "lucide-react";
+import { LogIn, Trash2 } from "lucide-react";
 
 import {
   createCommunityPost,
   deleteCommunityPost,
 } from "@/app/(main)/community/actions";
 import { CommunityVoteButton } from "@/components/community/community-vote-button";
-import { TabPanelShell } from "@/components/tab-panel-shell";
 import { Badge } from "@/components/ui/badge";
-import { useStoredOpen } from "@/hooks/use-stored-open";
 import {
   COMMUNITY_BODY_MAX,
   COMMUNITY_TITLE_MAX,
@@ -200,13 +196,11 @@ function CommunitySubmitForm({
 function CommunityPostCard({
   post,
   isLoggedIn,
-  compact,
   returnPath,
   onDeleted,
 }: {
   post: CommunityPost;
   isLoggedIn: boolean;
-  compact: boolean;
   returnPath: string;
   onDeleted: (id: string) => void;
 }) {
@@ -251,12 +245,7 @@ function CommunityPostCard({
           ) : null}
         </div>
         {post.body ? (
-          <p
-            className={cn(
-              "mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-muted",
-              compact && "line-clamp-2",
-            )}
-          >
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-muted">
             {post.body}
           </p>
         ) : null}
@@ -324,35 +313,25 @@ function CommunityPostCard({
 function CommunityColumn({
   posts,
   isLoggedIn,
-  compact,
   returnPath,
-  leftTab,
-  rightTab,
 }: {
   posts: CommunityPost[];
   isLoggedIn: boolean;
-  compact: boolean;
   returnPath: string;
-  leftTab?: ReactNode;
-  rightTab?: ReactNode;
 }) {
   const [items, setItems] = useState(posts);
   const [sort, setSort] = useState<"top" | "new">("top");
   const sorted = useMemo(() => sortPosts(items, sort), [items, sort]);
-  const visible = compact ? sorted.slice(0, 5) : sorted;
-  const shelled = Boolean(leftTab || rightTab);
 
-  const body = (
-    <>
-      {!compact ? (
-        <CommunitySubmitForm
-          isLoggedIn={isLoggedIn}
-          returnPath={returnPath}
-          onCreated={(post) => setItems((current) => [post, ...current])}
-        />
-      ) : null}
+  return (
+    <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-surface p-4 sm:p-5">
+      <CommunitySubmitForm
+        isLoggedIn={isLoggedIn}
+        returnPath={returnPath}
+        onCreated={(post) => setItems((current) => [post, ...current])}
+      />
 
-      {!compact && items.length > 1 ? (
+      {items.length > 1 ? (
         <div className="mt-4 flex gap-1" role="group" aria-label="Sort posts">
           {(["top", "new"] as const).map((value) => (
             <button
@@ -373,14 +352,13 @@ function CommunityColumn({
         </div>
       ) : null}
 
-      {visible.length > 0 ? (
-        <ul className={cn("flex flex-col gap-4", !compact && "mt-5")}>
-          {visible.map((post) => (
+      {sorted.length > 0 ? (
+        <ul className="mt-5 flex flex-col gap-4">
+          {sorted.map((post) => (
             <li key={post.id}>
               <CommunityPostCard
                 post={post}
                 isLoggedIn={isLoggedIn}
-                compact={compact}
                 returnPath={returnPath}
                 onDeleted={(id) =>
                   setItems((current) => current.filter((item) => item.id !== id))
@@ -390,91 +368,10 @@ function CommunityColumn({
           ))}
         </ul>
       ) : (
-        <p
-          className={cn(
-            "rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-muted",
-            !compact && "mt-4",
-          )}
-        >
+        <p className="mt-4 rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-muted">
           Ideas & Novel Requests
         </p>
       )}
-    </>
-  );
-
-  if (shelled) {
-    return (
-      <TabPanelShell leftTab={leftTab} rightTab={rightTab} className="min-w-0">
-        <div className="min-w-0 overflow-hidden p-4 sm:p-5">{body}</div>
-      </TabPanelShell>
-    );
-  }
-
-  return (
-    <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-surface p-4 sm:p-5">
-      {body}
-    </div>
-  );
-}
-
-export function CommunityHomePreview({
-  posts,
-  isLoggedIn,
-}: {
-  posts: CommunityPost[];
-  isLoggedIn: boolean;
-}) {
-  const { open, toggle } = useStoredOpen("cf-home-section-community", true);
-  const panelId = useId();
-
-  const communityTab = (
-    <button
-      type="button"
-      aria-expanded={open}
-      aria-controls={panelId}
-      onClick={toggle}
-      className="inline-flex h-9 items-center gap-1.5 px-4 text-left text-sm font-semibold tracking-tight text-foreground transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-    >
-      <h2>Community</h2>
-      <ChevronDown
-        className={cn(
-          "size-4 shrink-0 text-muted transition-transform",
-          open && "rotate-180",
-        )}
-        strokeWidth={2}
-        aria-hidden
-      />
-    </button>
-  );
-
-  const openBoard = (
-    <Link
-      href="/community"
-      className="inline-flex h-9 items-center gap-1.5 pl-4 pr-2 text-sm font-semibold text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-    >
-      Open board
-      <ArrowRight className="size-3.5" strokeWidth={2} aria-hidden />
-    </Link>
-  );
-
-  if (!open) {
-    return (
-      <TabPanelShell leftTab={communityTab} rightTab={openBoard}>
-        <div id={panelId} hidden />
-      </TabPanelShell>
-    );
-  }
-
-  return (
-    <div id={panelId}>
-      <CommunityColumn
-        posts={posts}
-        isLoggedIn={isLoggedIn}
-        compact
-        returnPath="/#community"
-        leftTab={communityTab}
-        rightTab={openBoard}
-      />
     </div>
   );
 }
@@ -495,7 +392,6 @@ export function CommunityPageBoard({
       <CommunityColumn
         posts={posts}
         isLoggedIn={isLoggedIn}
-        compact={false}
         returnPath="/community"
       />
     </>

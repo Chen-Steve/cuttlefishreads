@@ -11,7 +11,6 @@ import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 export {
   COMMUNITY_BODY_MAX,
   COMMUNITY_DAILY_LIMIT,
-  COMMUNITY_HOME_LIMIT,
   COMMUNITY_PAGE_LIMIT,
   COMMUNITY_TITLE_MAX,
 } from "@/lib/community-constants";
