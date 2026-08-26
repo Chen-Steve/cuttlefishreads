@@ -7,6 +7,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess, type AdminAccess } from "@/lib/access";
 import { revalidateNovelsDataCache } from "@/lib/data";
 import { notifyBookmarkersOfChapter, notifyBookmarkersOfChapters } from "@/lib/notifications/data";
+import { validateCoverFile } from "@/lib/cover-file";
 import { slugify } from "@/lib/utils";
 import { MAX_IMPORT_CHAPTERS } from "@/lib/chapter-import";
 import {
@@ -151,25 +152,9 @@ function parseTags(raw: string): string[] {
   );
 }
 
-const MAX_COVER_BYTES = 5 * 1024 * 1024;
-
-function resolveCoverFile(
-  coverFile: File | null | undefined,
-  formData: FormData,
-): File | null {
-  if (coverFile instanceof File && coverFile.size > 0) return coverFile;
+function resolveCoverFile(formData: FormData): File | null {
   const fromForm = formData.get("cover");
   if (fromForm instanceof File && fromForm.size > 0) return fromForm;
-  return null;
-}
-
-function validateCoverFile(file: File): string | null {
-  if (file.size > MAX_COVER_BYTES) {
-    return `Cover image is too large (max ${MAX_COVER_BYTES / 1024 / 1024} MB). Try a smaller image.`;
-  }
-  if (file.type && !file.type.startsWith("image/")) {
-    return "Cover must be an image file (JPEG, PNG, WebP, or GIF).";
-  }
   return null;
 }
 
@@ -198,12 +183,11 @@ async function uploadCover(
 }
 
 export async function createNovel(
-  coverFile: File | null,
   _prev: AdminState,
   formData: FormData,
 ): Promise<AdminState> {
   try {
-    return await _createNovel(coverFile, formData);
+    return await _createNovel(formData);
   } catch (err) {
     // redirect() throws internally — re-throw so Next.js can handle navigation.
     if (
@@ -225,10 +209,7 @@ export async function createNovel(
   }
 }
 
-async function _createNovel(
-  coverFile: File | null,
-  formData: FormData,
-): Promise<AdminState> {
+async function _createNovel(formData: FormData): Promise<AdminState> {
   const auth = await requireWorkspace();
   if (!auth.access) return { error: auth.error };
 
@@ -249,7 +230,7 @@ async function _createNovel(
   const { access } = auth;
   const publishError = assertCanPublish(access);
   if (publishError) return { error: publishError };
-  const cover = resolveCoverFile(coverFile, formData);
+  const cover = resolveCoverFile(formData);
   if (cover) {
     const coverError = validateCoverFile(cover);
     if (coverError) return { error: coverError };
@@ -273,7 +254,9 @@ async function _createNovel(
   if (access.isMasterAdmin) {
     originalAuthor = String(formData.get("originalAuthor") ?? "").trim();
     translator = String(formData.get("translator") ?? "").trim() || (access.username ?? "");
-    const publisherUsername = String(formData.get("publisherUsername") ?? "").trim();
+    const publisherUsername =
+      String(formData.get("publisherUsername") ?? "").trim() ||
+      (access.username ?? "");
     if (!publisherUsername) {
       return {
         error:
@@ -344,7 +327,6 @@ async function _createNovel(
 
 export async function updateNovel(
   novelId: string,
-  coverFile: File | null,
   _prev: AdminState,
   formData: FormData,
 ): Promise<AdminState> {
@@ -364,7 +346,7 @@ export async function updateNovel(
   const language: Language = (LANGUAGES as readonly string[]).includes(languageRaw)
     ? (languageRaw as Language)
     : "Chinese";
-  const cover = resolveCoverFile(coverFile, formData);
+  const cover = resolveCoverFile(formData);
   if (cover) {
     const coverError = validateCoverFile(cover);
     if (coverError) return { error: coverError };

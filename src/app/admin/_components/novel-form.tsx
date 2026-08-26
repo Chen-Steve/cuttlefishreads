@@ -1,12 +1,19 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+} from "react";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { TabPanelShell } from "@/components/tab-panel-shell";
 import { GENRES, LANGUAGES } from "@/lib/constants";
+import { prepareCoverFile } from "@/lib/prepare-cover";
 import { createNovel, updateNovel, type AdminState } from "../actions";
 import { DeleteNovelButton } from "./delete-novel-button";
 
@@ -43,6 +50,8 @@ export function NovelForm({
 }) {
   const isEdit = Boolean(novel);
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverError, setCoverError] = useState<string | null>(null);
+  const [coverPreparing, setCoverPreparing] = useState(false);
   const localCoverPreview = useMemo(
     () => (coverFile ? URL.createObjectURL(coverFile) : null),
     [coverFile],
@@ -55,8 +64,8 @@ export function NovelForm({
   }, [localCoverPreview]);
 
   const boundAction = isEdit
-    ? updateNovel.bind(null, novel!.id, coverFile)
-    : createNovel.bind(null, coverFile);
+    ? updateNovel.bind(null, novel!.id)
+    : createNovel;
 
   const [state, action, pending] = useActionState<AdminState, FormData>(
     boundAction,
@@ -64,13 +73,46 @@ export function NovelForm({
   );
 
   const displayCover = localCoverPreview ?? novel?.cover_url ?? null;
-  const submitLabel = pending
-    ? isEdit
-      ? "Saving…"
-      : "Creating…"
-    : isEdit
-      ? "Save changes"
-      : "Create novel";
+  const displayError = coverError ?? state.error;
+  const submitDisabled = pending || coverPreparing;
+  const submitLabel = coverPreparing
+    ? "Processing cover…"
+    : pending
+      ? isEdit
+        ? "Saving…"
+        : "Creating…"
+      : isEdit
+        ? "Save changes"
+        : "Create novel";
+
+  async function onCoverChange(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const selected = input.files?.[0] ?? null;
+    setCoverError(null);
+    if (!selected) {
+      setCoverFile(null);
+      return;
+    }
+
+    setCoverPreparing(true);
+    try {
+      const prepared = await prepareCoverFile(selected);
+      const dt = new DataTransfer();
+      dt.items.add(prepared);
+      input.files = dt.files;
+      setCoverFile(prepared);
+    } catch (err) {
+      input.value = "";
+      setCoverFile(null);
+      setCoverError(
+        err instanceof Error
+          ? err.message
+          : "Could not process that cover image.",
+      );
+    } finally {
+      setCoverPreparing(false);
+    }
+  }
 
   return (
     <form action={action}>
@@ -87,7 +129,7 @@ export function NovelForm({
         rightTab={
           <button
             type="submit"
-            disabled={pending}
+            disabled={submitDisabled}
             className="inline-flex h-9 items-center justify-center px-4 text-sm font-semibold text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitLabel}
@@ -111,12 +153,12 @@ export function NovelForm({
           />
         </div>
 
-        {state.error ? (
+        {displayError ? (
           <p
             role="alert"
             className="mx-4 mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400"
           >
-            {state.error}
+            {displayError}
           </p>
         ) : null}
 
@@ -146,9 +188,7 @@ export function NovelForm({
                   name="cover"
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif,image/*"
-                  onChange={(event) =>
-                    setCoverFile(event.target.files?.[0] ?? null)
-                  }
+                  onChange={onCoverChange}
                   className="block w-full text-transparent text-xs file:mr-0 file:rounded-lg file:border-0 file:bg-accent file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-accent-foreground hover:file:bg-accent-hover"
                 />
                 {coverFile ? (
