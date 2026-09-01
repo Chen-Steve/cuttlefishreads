@@ -19,7 +19,7 @@ import type {
 } from "@/types";
 import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { isAdminEmail } from "@/lib/admin";
+import { getSessionProfile } from "@/lib/session-profile";
 import { formatRelativeDate } from "@/lib/utils";
 
 type DbNovel = {
@@ -170,26 +170,14 @@ type CurrentUser = {
 
 /** Request-scoped current user (auth claims + profile roles). */
 const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
-  const claims = await getAuthClaims();
-  if (!claims) return null;
-
-  const id = claims.sub as string;
-  const supabase = await getServerSupabase();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", id)
-    .maybeSingle();
-
-  const roles = parseProfileRoles({
-    role: profile?.role as string | null | undefined,
-  });
+  const session = await getSessionProfile();
+  if (!session) return null;
 
   return {
-    id,
-    isAdmin: isAdminEmail(claims.email as string | undefined),
-    roles,
-    role: hasProfileRole(roles, "translator") ? "translator" : "user",
+    id: session.id,
+    isAdmin: session.isAdmin,
+    roles: session.roles,
+    role: session.isTranslator ? "translator" : "user",
   };
 });
 
@@ -871,17 +859,8 @@ export async function getClosestNovelTitleMatch(
 }
 
 export const getUserCoins = cache(async (): Promise<number> => {
-  const claims = await getAuthClaims();
-  if (!claims) return 0;
-
-  const supabase = await getServerSupabase();
-  const { data } = await supabase
-    .from("profiles")
-    .select("coins")
-    .eq("id", claims.sub)
-    .maybeSingle();
-
-  return data?.coins ?? 0;
+  const session = await getSessionProfile();
+  return session?.coins ?? 0;
 });
 
 export const isUserAuthenticated = cache(async (): Promise<boolean> => {
