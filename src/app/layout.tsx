@@ -7,7 +7,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { analyticsConsentInitScript } from "@/lib/analytics-consent";
 import { SITE } from "@/lib/constants";
 import { nationalPark } from "@/lib/fonts";
-import { readerFontVariables } from "@/lib/reader-fonts";
 import { GA_MEASUREMENT_ID } from "@/lib/google-analytics-id";
 import { siteUrl } from "@/lib/seo";
 import { themeInitScript } from "@/lib/theme";
@@ -48,7 +47,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${nationalPark.className} ${nationalPark.variable} ${readerFontVariables} h-full antialiased`}
+      className={`${nationalPark.className} ${nationalPark.variable} h-full antialiased`}
     >
       <head>
         <InlineScript html={themeInitScript} />
