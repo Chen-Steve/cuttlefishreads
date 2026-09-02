@@ -3,10 +3,8 @@ export { ChapterContentsDropdown } from "./chapter-contents-dropdown";
 export { ChapterReaderHeader } from "./chapter-reader-header";
 export { ChapterUnlockGate } from "./chapter-unlock-gate";
 export { ReadingProgressTracker } from "./reading-progress-tracker";
-export {
-  ImmersiveChapterShell,
-  useImmersiveHidesSiteHeader,
-} from "./immersive-chapter-shell";
+export { useImmersiveHidesSiteHeader } from "@/hooks/use-immersive-hides-site-header";
+export { ImmersiveChapterShell } from "./immersive-chapter-shell";
 export { ReaderNav } from "./reader-nav";
 export { ReaderSettingsPanel } from "./reader-settings-panel";
 export { TranslatorNote } from "./translator-note";

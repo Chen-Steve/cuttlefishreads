@@ -20,6 +20,7 @@ import {
   getUnderratedNovels,
 } from "@/lib/data";
 import { SITE } from "@/lib/constants";
+import { toNovelCardData } from "@/lib/novel-card-data";
 import { novelsBrowseHref } from "@/lib/novels-browse";
 import { publicPageMetadata } from "@/lib/seo";
 
@@ -49,14 +50,6 @@ export default async function Home() {
     undefined,
     catalog,
   );
-
-  const continueNovels = catalog.map((novel) => ({
-    id: novel.id,
-    slug: novel.slug,
-    title: novel.title,
-    coverUrl: novel.coverUrl,
-    chapterCount: novel.chapterCount,
-  }));
 
   return (
     <PageContainer className="pt-3 pb-6 sm:py-8 lg:py-10">
@@ -103,7 +96,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <ContinueReadingSection novels={continueNovels} className="mt-0 sm:mt-5" />
+      <ContinueReadingSection className="mt-0 sm:mt-5" />
 
       <HomeSection
         title="Featured"
@@ -125,7 +118,12 @@ export default async function Home() {
         linkLabel="View all"
         header="rail"
       >
-        <NovelCarousel novels={newlyAdded} dense fillRow showChapterCount />
+        <NovelCarousel
+          novels={newlyAdded.map(toNovelCardData)}
+          dense
+          fillRow
+          showChapterCount
+        />
       </HomeSection>
 
       {underrated.length > 0 ? (
@@ -136,7 +134,12 @@ export default async function Home() {
           linkLabel="View all"
           header="rail"
         >
-          <NovelCarousel novels={underrated} dense fillRow showChapterCount />
+          <NovelCarousel
+            novels={underrated.map(toNovelCardData)}
+            dense
+            fillRow
+            showChapterCount
+          />
         </HomeSection>
       ) : null}
 
@@ -154,7 +157,12 @@ export default async function Home() {
           linkLabel="View all"
           header="rail"
         >
-          <NovelCarousel novels={completed} dense fillRow showChapterCount />
+          <NovelCarousel
+            novels={completed.map(toNovelCardData)}
+            dense
+            fillRow
+            showChapterCount
+          />
         </HomeSection>
       ) : null}
     </PageContainer>

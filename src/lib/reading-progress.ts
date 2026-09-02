@@ -10,6 +10,15 @@ export type ReadingProgressEntry = {
   slug: string;
   chapterNumber: number;
   updatedAt: number;
+  title?: string;
+  coverUrl?: string;
+  chapterCount?: number;
+};
+
+export type ReadingProgressMeta = {
+  title: string;
+  coverUrl?: string;
+  chapterCount: number;
 };
 
 export type ReadingProgressMap = Record<string, ReadingProgressEntry>;
@@ -42,6 +51,20 @@ export function parseReadingProgress(raw: string | null): ReadingProgressMap {
         slug,
         chapterNumber: Math.floor(value.chapterNumber),
         updatedAt: value.updatedAt,
+        title:
+          typeof value.title === "string" && value.title.length > 0
+            ? value.title
+            : undefined,
+        coverUrl:
+          typeof value.coverUrl === "string" && value.coverUrl.length > 0
+            ? value.coverUrl
+            : undefined,
+        chapterCount:
+          typeof value.chapterCount === "number" &&
+          Number.isFinite(value.chapterCount) &&
+          value.chapterCount >= 1
+            ? Math.floor(value.chapterCount)
+            : undefined,
       };
     }
     return result;
@@ -71,6 +94,7 @@ export function listReadingProgress(
 export function recordReadingProgress(
   slug: string,
   chapterNumber: number,
+  meta?: ReadingProgressMeta,
 ): void {
   const normalizedSlug = slug.trim();
   const chapter = Math.floor(chapterNumber);
@@ -78,10 +102,14 @@ export function recordReadingProgress(
 
   try {
     const current = readReadingProgress();
+    const previous = current[normalizedSlug];
     current[normalizedSlug] = {
       slug: normalizedSlug,
       chapterNumber: chapter,
       updatedAt: Date.now(),
+      title: meta?.title ?? previous?.title,
+      coverUrl: meta?.coverUrl ?? previous?.coverUrl,
+      chapterCount: meta?.chapterCount ?? previous?.chapterCount,
     };
 
     const trimmed = Object.fromEntries(

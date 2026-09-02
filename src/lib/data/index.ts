@@ -28,7 +28,7 @@ type DbNovel = {
   title: string;
   original_author: string | null;
   translator: string | null;
-  description: string | null;
+  description?: string | null;
   cover_url: string | null;
   genres: string[];
   tags: string[];
@@ -44,8 +44,15 @@ type DbNovel = {
   chapters: { count: number }[];
 };
 
+/** Catalog cards / carousels — no synopsis. */
 const NOVEL_LIST_COLUMNS =
-  "id, slug, title, original_author, translator, description, cover_url, genres, tags, status, created_at, updated_at, publisher_id, novelupdates_url, language, view_count, reader_count, library_add_count, chapters(count)";
+  "id, slug, title, original_author, translator, cover_url, genres, tags, status, created_at, updated_at, publisher_id, novelupdates_url, language, view_count, reader_count, library_add_count, chapters(count)";
+
+/** Novel detail, featured, metadata — includes synopsis. */
+const NOVEL_DETAIL_COLUMNS = `${NOVEL_LIST_COLUMNS}, description`;
+
+const CHAPTER_META_COLUMNS =
+  "id, number, title, translator_note, use_global_translator_note, is_free, coin_cost, unlock_at, published_at";
 
 const NEWLY_ADDED_LIMIT = 7;
 const UNDERRATED_LIMIT = 7;
@@ -115,21 +122,6 @@ function mapNovel(row: DbNovel): Novel {
     publisherId: row.publisher_id ?? undefined,
     novelupdatesUrl: row.novelupdates_url ?? undefined,
     language: (row.language as Language) ?? "Chinese",
-  };
-}
-
-function mapChapter(
-  slug: string,
-  row: DbChapter,
-  unlockedNumbers: Set<number>,
-  bypassLock: boolean,
-  allowLockedContent = false,
-): Chapter {
-  const listItem = mapChapterListItem(slug, row, unlockedNumbers, bypassLock);
-  return {
-    ...listItem,
-    content:
-      listItem.locked && !allowLockedContent ? [] : splitContent(row.content),
   };
 }
 
@@ -231,36 +223,11 @@ const fetchNovelRows = unstable_cache(
   },
 );
 
-/** Request-scoped novel id (+ publisher) by slug. */
-const fetchNovelIdBySlug = cache(
-  async (
-    slug: string,
-  ): Promise<{
-    id: string;
-    publisher_id: string | null;
-  } | null> => {
-    const supabase = await getServerSupabase();
-    const { data } = await supabase
-      .from("novels")
-      .select("id, publisher_id")
-      .eq("slug", slug)
-      .eq("publication_type", "translation")
-      .maybeSingle();
-    if (!data) return null;
-    return {
-      id: data.id,
-      publisher_id: data.publisher_id,
-    };
-  },
-);
-
 async function fetchDbChapterMetas(novelId: string): Promise<DbChapterMeta[]> {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("chapters")
-    .select(
-      "id, number, title, translator_note, use_global_translator_note, is_free, coin_cost, unlock_at, published_at",
-    )
+    .select(CHAPTER_META_COLUMNS)
     .eq("novel_id", novelId)
     .eq("is_published", true)
     .order("number", { ascending: true });
@@ -272,26 +239,44 @@ async function fetchDbChapterMetas(novelId: string): Promise<DbChapterMeta[]> {
   return (data ?? []) as DbChapterMeta[];
 }
 
-async function fetchDbChapter(
+async function fetchDbChapterMeta(
   novelId: string,
   chapterNumber: number,
-): Promise<DbChapter | null> {
+): Promise<DbChapterMeta | null> {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("chapters")
-    .select(
-      "id, number, title, content, translator_note, use_global_translator_note, is_free, coin_cost, unlock_at, published_at",
-    )
+    .select(CHAPTER_META_COLUMNS)
     .eq("novel_id", novelId)
     .eq("number", chapterNumber)
     .eq("is_published", true)
     .maybeSingle();
 
   if (error) {
-    console.error("fetchDbChapter:", error);
+    console.error("fetchDbChapterMeta:", error);
     return null;
   }
-  return (data as DbChapter | null) ?? null;
+  return (data as DbChapterMeta | null) ?? null;
+}
+
+async function fetchDbChapterContent(
+  novelId: string,
+  chapterNumber: number,
+): Promise<string | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("chapters")
+    .select("content")
+    .eq("novel_id", novelId)
+    .eq("number", chapterNumber)
+    .eq("is_published", true)
+    .maybeSingle();
+
+  if (error) {
+    console.error("fetchDbChapterContent:", error);
+    return null;
+  }
+  return (data?.content as string | null | undefined) ?? null;
 }
 
 async function fetchDbChapterSummaries(
@@ -322,68 +307,103 @@ export const getNovels = cache(async (): Promise<Novel[]> => {
   return rows.map(mapNovel);
 });
 
-export const getNovel = cache(
-  async (slug: string): Promise<Novel | undefined> => {
-    const supabase = await getServerSupabase();
-    const { data, error } = await supabase
-      .from("novels")
-      .select(NOVEL_LIST_COLUMNS)
-      .eq("slug", slug)
-      .eq("publication_type", "translation")
+async function fetchPublisherFields(novel: Novel): Promise<Novel> {
+  const admin = createAdminClient();
+
+  if (novel.publisherId) {
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("username, translator_note, kofi_url, patreon_url")
+      .eq("id", novel.publisherId)
       .maybeSingle();
-
-    if (error || !data) return undefined;
-
-    const novel = mapNovel(data as DbNovel);
-
-    if (novel.publisherId) {
-      const profile = await getPublisherProfile(novel.publisherId);
-      if (profile?.username) {
-        novel.translatorUsername = profile.username;
-      }
-      if (profile?.translator_note?.trim()) {
-        novel.translatorGlobalNote = profile.translator_note;
-      }
-      if (profile?.kofi_url) {
-        novel.translatorKofiUrl = profile.kofi_url;
-      }
-      if (profile?.patreon_url) {
-        novel.translatorPatreonUrl = profile.patreon_url;
-      }
-    } else if (novel.translator) {
-      // No publisher assigned — try to find a profile whose username matches
-      // the translator name set by an admin so the name can still be linked.
-      const profile = await getProfileByUsername(novel.translator);
-      if (profile?.username) {
-        novel.translatorUsername = profile.username;
-      }
+    if (profile?.username) novel.translatorUsername = profile.username;
+    if (profile?.translator_note?.trim()) {
+      novel.translatorGlobalNote = profile.translator_note;
     }
-
+    if (profile?.kofi_url) novel.translatorKofiUrl = profile.kofi_url;
+    if (profile?.patreon_url) novel.translatorPatreonUrl = profile.patreon_url;
     return novel;
-  },
+  }
+
+  if (novel.translator) {
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("username")
+      .eq("username", novel.translator)
+      .maybeSingle();
+    if (profile?.username) novel.translatorUsername = profile.username;
+  }
+
+  return novel;
+}
+
+async function loadCachedNovel(slug: string): Promise<Novel | undefined> {
+  return unstable_cache(
+    async () => {
+      const admin = createAdminClient();
+      const { data, error } = await admin
+        .from("novels")
+        .select(NOVEL_DETAIL_COLUMNS)
+        .eq("slug", slug)
+        .eq("publication_type", "translation")
+        .maybeSingle();
+
+      if (error || !data) return undefined;
+      return fetchPublisherFields(mapNovel(data as DbNovel));
+    },
+    ["novel-detail", slug],
+    {
+      revalidate: CATALOG_REVALIDATE_SECONDS,
+      tags: [NOVELS_CATALOG_CACHE_TAG],
+    },
+  )();
+}
+
+export const getNovel = cache(
+  async (slug: string): Promise<Novel | undefined> => loadCachedNovel(slug),
 );
 
-const getPublisherProfile = cache(async (publisherId: string) => {
-  const supabase = await getServerSupabase();
-  const { data } = await supabase
-    .from("profiles")
-    .select("username, translator_note, kofi_url, patreon_url")
-    .eq("id", publisherId)
-    .maybeSingle();
-  return data;
+/** Novel id (+ publisher) by slug — shared with getNovel's cross-request cache. */
+const fetchNovelIdBySlug = cache(async (slug: string) => {
+  const novel = await getNovel(slug);
+  if (!novel) return null;
+  return { id: novel.id, publisher_id: novel.publisherId ?? null };
 });
 
-const getProfileByUsername = cache(async (username: string) => {
-  const supabase = await getServerSupabase();
-  const { data } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("username", username)
-    .maybeSingle();
-  return data;
-});
+async function fetchNovelSynopses(
+  slugs: string[],
+): Promise<Record<string, string>> {
+  const unique = [...new Set(slugs.filter(Boolean))].sort();
+  if (unique.length === 0) return {};
 
-/** Homepage featured ranking by GA4 all-time novel + chapter pageviews. */
+  return unstable_cache(
+    async () => {
+      const admin = createAdminClient();
+      const { data, error } = await admin
+        .from("novels")
+        .select("slug, description")
+        .in("slug", unique);
+
+      if (error) {
+        console.error("fetchNovelSynopses:", error);
+        return {};
+      }
+
+      const synopses: Record<string, string> = {};
+      for (const row of data ?? []) {
+        synopses[row.slug as string] = (row.description as string | null) ?? "";
+      }
+      return synopses;
+    },
+    ["novel-synopses", unique.join("|")],
+    {
+      revalidate: CATALOG_REVALIDATE_SECONDS,
+      tags: [NOVELS_CATALOG_CACHE_TAG],
+    },
+  )();
+}
+
+/** Homepage featured ranking by GA4 all-time page views. */
 export async function getFeaturedNovels(
   novels?: Novel[],
 ): Promise<Novel[]> {
@@ -392,9 +412,15 @@ export async function getFeaturedNovels(
 
   const viewsBySlug = await getAllTimeViewsBySlug(catalog.map((n) => n.slug));
 
-  return [...catalog]
+  const ranked = [...catalog]
     .sort((a, b) => (viewsBySlug[b.slug] ?? 0) - (viewsBySlug[a.slug] ?? 0))
     .slice(0, FEATURED_LIMIT);
+
+  const synopses = await fetchNovelSynopses(ranked.map((novel) => novel.slug));
+  return ranked.map((novel) => ({
+    ...novel,
+    synopsis: synopses[novel.slug] ?? "",
+  }));
 }
 
 export async function getNewlyAddedNovels(
@@ -762,18 +788,21 @@ export const getChapter = cache(
     const bypassLock = currentUser?.isAdmin === true || isPublisher;
 
     const [row, unlocked] = await Promise.all([
-      fetchDbChapter(novel.id, chapterNumber),
+      fetchDbChapterMeta(novel.id, chapterNumber),
       getUnlockedChapterNumbers(slug),
     ]);
     if (!row) return undefined;
 
-    return mapChapter(
-      slug,
-      row,
-      unlocked,
-      bypassLock,
-      false,
-    );
+    const listItem = mapChapterListItem(slug, row, unlocked, bypassLock);
+    if (listItem.locked) {
+      return listItem;
+    }
+
+    const body = await fetchDbChapterContent(novel.id, chapterNumber);
+    return {
+      ...listItem,
+      content: splitContent(body ?? ""),
+    };
   },
 );
 
@@ -784,13 +813,12 @@ export async function searchNovels(query: string): Promise<Novel[]> {
   const novels = await getNovels();
   return novels.filter((novel) => {
     const haystack = [
-      novel.title,
-      novel.author,
-      novel.originalAuthor ?? "",
-      novel.translator ?? "",
-      novel.synopsis,
-      ...novel.genres,
-      ...novel.tags,
+        novel.title,
+        novel.author,
+        novel.originalAuthor ?? "",
+        novel.translator ?? "",
+        ...novel.genres,
+        ...novel.tags,
     ]
       .join(" ")
       .toLowerCase();

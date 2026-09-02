@@ -6,8 +6,8 @@ import { useEffect, useState } from "react";
 import { BookOpen, LogIn, Library, Search, ShoppingBag } from "lucide-react";
 
 import { AccountDropdown } from "@/components/account-dropdown";
-import { useImmersiveHidesSiteHeader } from "@/components/reader";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useImmersiveHidesSiteHeader } from "@/hooks/use-immersive-hides-site-header";
 import { SITE } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 

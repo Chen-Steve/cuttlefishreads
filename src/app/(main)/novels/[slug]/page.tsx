@@ -14,6 +14,7 @@ import {
   NovelTags,
   StartReadingButton,
 } from "@/components/novel";
+import { COVER_SIZES_DETAIL } from "@/components/novel/novel-cover";
 import { getBulkBuyState } from "@/lib/bulk-buy";
 import { PageContainer } from "@/components/page-container";
 import { StarRating } from "@/components/reviews";
@@ -22,11 +23,10 @@ import {
   getChapterListItems,
   getNovel,
   getNovelRatingSummary,
-  getUserCoins,
   isNovelBookmarked,
-  isUserAuthenticated,
 } from "@/lib/data";
 import { getNovelPageViews } from "@/lib/google-analytics";
+import { getSessionProfile } from "@/lib/session-profile";
 import { publicPageMetadata, novelDescription } from "@/lib/seo";
 
 const statusLabel = {
@@ -61,16 +61,17 @@ export default async function NovelDetailPage({
   params,
 }: PageProps<"/novels/[slug]">) {
   const { slug } = await params;
-  const [novel, chapters, bookmarked, isLoggedIn, userCoins, viewCount, rating] =
+  const [novel, chapters, bookmarked, session, viewCount, rating] =
     await Promise.all([
       getNovel(slug),
       getChapterListItems(slug),
       isNovelBookmarked(slug),
-      isUserAuthenticated(),
-      getUserCoins(),
+      getSessionProfile(),
       getNovelPageViews(slug),
       getNovelRatingSummary(slug),
     ]);
+  const isLoggedIn = Boolean(session);
+  const userCoins = session?.coins ?? 0;
 
   if (!novel) {
     notFound();
@@ -204,6 +205,8 @@ export default async function NovelDetailPage({
               slug={novel.slug}
               coverUrl={novel.coverUrl}
               genres={novel.genres}
+              sizes={COVER_SIZES_DETAIL}
+              priority
               className="w-28 shrink-0 sm:w-full"
             />
             <div className="flex min-w-0 flex-1 flex-col gap-2 sm:hidden">

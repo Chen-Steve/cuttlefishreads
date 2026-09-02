@@ -1,13 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { CookieConsentBanner } from "@/components/cookie-consent-banner";
 import { GoogleAnalyticsPageViews } from "@/components/google-analytics-page-views";
 import { InlineScript } from "@/components/inline-script";
 import { Toaster } from "@/components/ui/sonner";
-import { analyticsConsentInitScript } from "@/lib/analytics-consent";
 import { SITE } from "@/lib/constants";
 import { nationalPark } from "@/lib/fonts";
-import { GA_MEASUREMENT_ID } from "@/lib/google-analytics-id";
+import { GA_MEASUREMENT_ID, gtagInitScript } from "@/lib/google-analytics-id";
 import { siteUrl } from "@/lib/seo";
 import { themeInitScript } from "@/lib/theme";
 import "./globals.css";
@@ -51,7 +49,7 @@ export default function RootLayout({
     >
       <head>
         <InlineScript html={themeInitScript} />
-        <InlineScript html={analyticsConsentInitScript(GA_MEASUREMENT_ID)} />
+        <InlineScript html={gtagInitScript(GA_MEASUREMENT_ID)} />
       </head>
       <Script
         async
@@ -61,7 +59,6 @@ export default function RootLayout({
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <GoogleAnalyticsPageViews />
         {children}
-        <CookieConsentBanner />
         <Toaster />
       </body>
     </html>

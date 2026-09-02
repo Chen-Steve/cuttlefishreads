@@ -3,8 +3,8 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { CommentSection, CommentsFallback } from "@/components/comments";
 import { PageContainer } from "@/components/page-container";
+import { ChapterContent } from "@/components/reader/chapter-content";
 import {
-  ChapterContent,
   ChapterReaderHeader,
   ChapterUnlockGate,
   ImmersiveChapterShell,
@@ -15,19 +15,20 @@ import {
   getChapter,
   getChapterSummaries,
   getNovel,
-  getUserCoins,
-  isUserAuthenticated,
 } from "@/lib/data";
+import { getSessionProfile } from "@/lib/session-profile";
 import { publicPageMetadata } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
 }: PageProps<"/novels/[slug]/[chapter]">): Promise<Metadata> {
   const { slug, chapter } = await params;
-  const [novel, current] = await Promise.all([
+  const chapterNumber = Number(chapter);
+  const [novel, summaries] = await Promise.all([
     getNovel(slug),
-    getChapter(slug, Number(chapter)),
+    getChapterSummaries(slug),
   ]);
+  const current = summaries.find((entry) => entry.number === chapterNumber);
   if (!novel || !current) {
     return {
       title: "Chapter not found",
@@ -74,11 +75,9 @@ export default async function ChapterReaderPage({
       ? { number: chapters[index + 1]!.number }
       : undefined;
 
-  const unlockState = current.locked
-    ? await Promise.all([getUserCoins(), isUserAuthenticated()])
-    : null;
-  const userCoins = unlockState?.[0] ?? 0;
-  const isLoggedIn = unlockState?.[1] ?? false;
+  const session = current.locked ? await getSessionProfile() : null;
+  const userCoins = session?.coins ?? 0;
+  const isLoggedIn = Boolean(session);
 
   const chapterTitles = Object.fromEntries(
     chapters.map((c) => [c.number, c.title || `Chapter ${c.number}`]),
@@ -88,7 +87,13 @@ export default async function ChapterReaderPage({
     <PageContainer as="article" width="narrow" className="pt-4 sm:pt-6 lg:pt-6">
       <span data-hide-main-footer hidden />
       {!current.locked ? (
-        <ReadingProgressTracker slug={slug} chapterNumber={chapterNumber} />
+        <ReadingProgressTracker
+          slug={slug}
+          chapterNumber={chapterNumber}
+          title={novel.title}
+          coverUrl={novel.coverUrl}
+          chapterCount={novel.chapterCount}
+        />
       ) : null}
       <ImmersiveChapterShell
         header={
@@ -106,21 +111,20 @@ export default async function ChapterReaderPage({
           chapters,
           currentChapter: chapterNumber,
         }}
-        content={
-          current.locked ? (
-            <ChapterUnlockGate
-              novelSlug={slug}
-              chapterNumber={chapterNumber}
-              coinCost={current.coinCost}
-              unlockAt={current.unlockAt}
-              userCoins={userCoins}
-              isLoggedIn={isLoggedIn}
-            />
-          ) : (
-            <ChapterContent paragraphs={current.content} />
-          )
-        }
-      />
+      >
+        {current.locked ? (
+          <ChapterUnlockGate
+            novelSlug={slug}
+            chapterNumber={chapterNumber}
+            coinCost={current.coinCost}
+            unlockAt={current.unlockAt}
+            userCoins={userCoins}
+            isLoggedIn={isLoggedIn}
+          />
+        ) : (
+          <ChapterContent paragraphs={current.content ?? []} />
+        )}
+      </ImmersiveChapterShell>
 
       {!current.locked ? (
         <>

@@ -13,7 +13,11 @@ import { SITE } from "@/lib/constants";
 function TileBackground({ src }: { src: string }) {
   return (
     <>
-      <DitheredImageBackground src={src} className="-z-20" />
+      <DitheredImageBackground
+        src={src}
+        sizes="(max-width: 640px) 33vw, 12rem"
+        className="-z-20"
+      />
       <span
         className="pointer-events-none absolute inset-0 -z-10 bg-surface/50"
         aria-hidden

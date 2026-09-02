@@ -5,18 +5,14 @@ import { SiteHeader } from "@/components/site-header";
 import { SITE } from "@/lib/constants";
 import { getUnreadNotificationCount } from "@/lib/notifications/data";
 import { getSessionProfile } from "@/lib/session-profile";
-import { getAuthClaims } from "@/utils/supabase/auth";
 
 export async function SiteHeaderFromSession() {
-  const claims = await getAuthClaims();
-  if (!claims) {
+  const session = await getSessionProfile();
+  if (!session) {
     return <SiteHeader />;
   }
 
-  const [session, unreadNotifications] = await Promise.all([
-    getSessionProfile(),
-    getUnreadNotificationCount(claims.sub),
-  ]);
+  const unreadNotifications = await getUnreadNotificationCount(session.id);
 
   return (
     <SiteHeader

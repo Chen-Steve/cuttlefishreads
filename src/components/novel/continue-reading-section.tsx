@@ -4,7 +4,6 @@ import { useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronDown } from "lucide-react";
 
-import type { Novel } from "@/types";
 import { useStoredOpen } from "@/hooks/use-stored-open";
 import { DitheredImageBackground } from "@/components/dithered-image-background";
 import { TabPanelShell } from "@/components/tab-panel-shell";
@@ -16,33 +15,25 @@ import {
 } from "@/lib/reading-progress";
 import { cn } from "@/lib/utils";
 
-/** Fields needed to resume reading — keep the homepage client payload small. */
-export type ContinueReadingNovel = Pick<
-  Novel,
-  "id" | "slug" | "title" | "coverUrl" | "chapterCount"
->;
-
 type ContinueItem = {
-  novel: ContinueReadingNovel;
+  slug: string;
+  title: string;
+  coverUrl?: string;
   chapterNumber: number;
 };
 
-function resolveContinueItems(
-  novels: ContinueReadingNovel[],
-  progress: ReadingProgressEntry[],
-): ContinueItem[] {
-  const bySlug = new Map(novels.map((novel) => [novel.slug, novel]));
+function resolveContinueItems(progress: ReadingProgressEntry[]): ContinueItem[] {
   const items: ContinueItem[] = [];
 
   for (const entry of progress) {
-    const novel = bySlug.get(entry.slug);
-    if (!novel || novel.chapterCount < 1) continue;
+    if (!entry.title || !entry.chapterCount || entry.chapterCount < 1) continue;
 
-    const chapterNumber = Math.min(
-      entry.chapterNumber,
-      novel.chapterCount,
-    );
-    items.push({ novel, chapterNumber });
+    items.push({
+      slug: entry.slug,
+      title: entry.title,
+      coverUrl: entry.coverUrl,
+      chapterNumber: Math.min(entry.chapterNumber, entry.chapterCount),
+    });
     if (items.length >= CONTINUE_READING_LIMIT) break;
   }
 
@@ -50,18 +41,18 @@ function resolveContinueItems(
 }
 
 function ContinueCard({ item }: { item: ContinueItem }) {
-  const { novel, chapterNumber } = item;
+  const { slug, title, coverUrl, chapterNumber } = item;
 
   return (
     <li>
       <Link
-        href={chapterPublicHref(novel, chapterNumber)}
+        href={chapterPublicHref({ slug }, chapterNumber)}
         className="group relative isolate flex items-center justify-between overflow-hidden px-2.5 py-2 outline-offset-[-2px] transition-colors hover:bg-background/60 focus-visible:outline-2 focus-visible:outline-accent"
       >
-        {novel.coverUrl ? (
+        {coverUrl ? (
           <>
             <DitheredImageBackground
-              src={novel.coverUrl}
+              src={coverUrl}
               className="-z-20"
             />
             <span
@@ -72,7 +63,7 @@ function ContinueCard({ item }: { item: ContinueItem }) {
         ) : null}
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-sm font-medium text-foreground transition-colors group-hover:text-accent">
-            {novel.title}
+            {title}
           </h3>
           <p className="mt-0.5 text-xs text-muted">Ch. {chapterNumber}</p>
         </div>
@@ -85,10 +76,8 @@ function ContinueCard({ item }: { item: ContinueItem }) {
 }
 
 export function ContinueReadingSection({
-  novels,
   className = "mt-0 sm:mt-5",
 }: {
-  novels: ContinueReadingNovel[];
   className?: string;
 }) {
   const [items, setItems] = useState<ContinueItem[] | null>(null);
@@ -97,7 +86,7 @@ export function ContinueReadingSection({
 
   useEffect(() => {
     function sync() {
-      setItems(resolveContinueItems(novels, listReadingProgress()));
+      setItems(resolveContinueItems(listReadingProgress()));
     }
 
     sync();
@@ -107,7 +96,7 @@ export function ContinueReadingSection({
       window.removeEventListener("storage", sync);
       window.removeEventListener("cf-reading-progress", sync);
     };
-  }, [novels]);
+  }, []);
 
   // Empty peer placeholder keeps Featured flush when there is nothing to resume.
   if (!items || items.length === 0) {
@@ -152,7 +141,7 @@ export function ContinueReadingSection({
         {open ? (
           <ul id={panelId} className="relative divide-y divide-border">
             {items.map((item) => (
-              <ContinueCard key={item.novel.id} item={item} />
+              <ContinueCard key={item.slug} item={item} />
             ))}
           </ul>
         ) : (

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Novel, NovelRatingSummary } from "@/types";
+import type { NovelCardData, NovelRatingSummary } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { StarRating } from "@/components/reviews";
 import {
@@ -7,9 +7,13 @@ import {
   novelHref,
   novelPublicHref,
 } from "@/lib/catalog-paths";
-import { genresExcludingCoverBadges, NovelCover } from "./novel-cover";
+import {
+  genresExcludingCoverBadges,
+  NovelCover,
+  COVER_SIZES_DENSE,
+} from "./novel-cover";
 
-const statusLabel: Record<Novel["status"], string> = {
+const statusLabel: Record<NovelCardData["status"], string> = {
   ongoing: "Ongoing",
   completed: "Completed",
   hiatus: "Hiatus",
@@ -26,7 +30,7 @@ export function NovelCard({
   rating,
   catalogBase,
 }: {
-  novel: Novel;
+  novel: NovelCardData;
   /** Title and genres only — hides author and status. */
   compact?: boolean;
   /** Smaller cover grid cards — title + genres, tighter padding. */
@@ -65,6 +69,7 @@ export function NovelCard({
           showChapterCount && !showRatingMeta ? novel.chapterCount : undefined
         }
         genres={showRatingMeta ? [] : novel.genres}
+        sizes={dense ? COVER_SIZES_DENSE : undefined}
         className="transition-transform duration-300 group-hover:-translate-y-0.5"
       />
       <div

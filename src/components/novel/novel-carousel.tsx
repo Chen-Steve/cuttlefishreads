@@ -1,6 +1,4 @@
-"use client";
-
-import type { Novel, NovelRatingSummary } from "@/types";
+import type { NovelCardData, NovelRatingSummary } from "@/types";
 import type { CatalogBase } from "@/lib/catalog-paths";
 import { NovelCard } from "./novel-card";
 import { NovelGrid } from "./novel-grid";
@@ -17,7 +15,7 @@ export function NovelCarousel({
   catalogBase = "novels",
   emptyLabel = "No novels found.",
 }: {
-  novels: Novel[];
+  novels: NovelCardData[];
   compact?: boolean;
   dense?: boolean;
   /** On desktop, show only as many cards as fit one row. */

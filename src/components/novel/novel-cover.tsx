@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { cn } from "@/lib/utils";
 
 const palettes = [
@@ -47,6 +49,23 @@ const GENRE_BADGE_STYLES: Record<CoverGenreBadge, string> = {
   GL: "bg-rose-500/90 text-white",
 };
 
+/** Dense rails/grids: ~7.5rem on mobile, 4–7 columns from sm up. */
+export const COVER_SIZES_DENSE =
+  "(max-width: 640px) 7.5rem, (max-width: 1024px) 25vw, 15vw";
+
+/** Default 2–5 column browse cards. */
+export const COVER_SIZES_CARD =
+  "(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 20vw";
+
+export const COVER_SIZES_DETAIL = "(max-width: 640px) 7rem, 10rem";
+export const COVER_SIZES_RECENT = "(max-width: 640px) 6rem, 7rem";
+export const COVER_SIZES_ROW = "2.75rem";
+
+function canOptimizeCoverSrc(src: string) {
+  if (src.startsWith("/") && !src.startsWith("//")) return true;
+  return src.startsWith("https://") && src.includes(".supabase.co/");
+}
+
 export function NovelCover({
   title,
   slug,
@@ -54,6 +73,8 @@ export function NovelCover({
   chapterCount,
   genres = [],
   className,
+  sizes = COVER_SIZES_CARD,
+  priority = false,
 }: {
   title: string;
   slug: string;
@@ -63,6 +84,9 @@ export function NovelCover({
   /** BL / GL badges on the top-left when present in genres. */
   genres?: readonly string[];
   className?: string;
+  sizes?: string;
+  /** First visible cover on a page (LCP). */
+  priority?: boolean;
 }) {
   const coverGenreBadges = getCoverGenreBadges(genres);
 
@@ -98,13 +122,25 @@ export function NovelCover({
           className,
         )}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={coverUrl}
-          alt={title}
-          draggable={false}
-          className="h-full w-full object-cover"
-        />
+        {canOptimizeCoverSrc(coverUrl) ? (
+          <Image
+            src={coverUrl}
+            alt={title}
+            fill
+            sizes={sizes}
+            priority={priority}
+            draggable={false}
+            className="object-cover"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={coverUrl}
+            alt={title}
+            draggable={false}
+            className="h-full w-full object-cover"
+          />
+        )}
         {chapterBadge}
         {genreBadges}
       </div>

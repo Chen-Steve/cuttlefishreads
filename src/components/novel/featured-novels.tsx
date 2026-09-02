@@ -10,7 +10,7 @@ import {
   novelHref,
   type CatalogBase,
 } from "@/lib/catalog-paths";
-import { NovelCover } from "./novel-cover";
+import { NovelCover, COVER_SIZES_DENSE } from "./novel-cover";
 import { DENSE_FILL_ROW_LIMIT } from "./novel-grid";
 
 const PREVIEW_LENGTH = 220;
@@ -35,11 +35,13 @@ function FeaturedCoverButton({
   selected,
   onSelect,
   controlsId,
+  priority = false,
 }: {
   novel: Novel;
   selected: boolean;
   onSelect: () => void;
   controlsId: string;
+  priority?: boolean;
 }) {
   return (
     <button
@@ -53,6 +55,8 @@ function FeaturedCoverButton({
         title={novel.title}
         slug={novel.slug}
         coverUrl={novel.coverUrl}
+        sizes={COVER_SIZES_DENSE}
+        priority={priority}
       />
       {selected ? (
         <span
@@ -152,13 +156,14 @@ export function FeaturedNovels({
         className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] sm:hidden [&::-webkit-scrollbar]:hidden"
         aria-label="Featured novels"
       >
-        {novels.map((novel) => (
+        {novels.map((novel, index) => (
           <div key={novel.id} className="w-[7.5rem] shrink-0 snap-start">
             <FeaturedCoverButton
               novel={novel}
               selected={selected.slug === novel.slug}
               onSelect={() => setSelectedSlug(novel.slug)}
               controlsId={panelId}
+              priority={index === 0}
             />
           </div>
         ))}
@@ -168,13 +173,14 @@ export function FeaturedNovels({
         className="hidden grid-cols-4 gap-x-2.5 gap-y-3 sm:grid lg:grid-cols-6 xl:grid-cols-7 sm:max-lg:[&>*:nth-child(n+5)]:hidden lg:max-xl:[&>*:nth-child(n+7)]:hidden xl:[&>*:nth-child(n+8)]:hidden"
         aria-label="Featured novels"
       >
-        {desktopNovels.map((novel) => (
+        {desktopNovels.map((novel, index) => (
           <FeaturedCoverButton
             key={novel.id}
             novel={novel}
             selected={selected.slug === novel.slug}
             onSelect={() => setSelectedSlug(novel.slug)}
             controlsId={panelId}
+            priority={index === 0}
           />
         ))}
       </div>

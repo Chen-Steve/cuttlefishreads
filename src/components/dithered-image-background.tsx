@@ -1,5 +1,7 @@
 /** CSS halftone dither for photo backgrounds (shared with Continue reading). */
 
+import Image from "next/image";
+
 import { cn } from "@/lib/utils";
 
 const DITHER_MASK =
@@ -8,19 +10,23 @@ const DITHER_MASK =
 export function DitheredImageBackground({
   src,
   className,
+  sizes = "24rem",
 }: {
   src: string;
   className?: string;
+  sizes?: string;
 }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <Image
       src={src}
       alt=""
+      fill
+      sizes={sizes}
+      quality={60}
       aria-hidden
       draggable={false}
       className={cn(
-        "pointer-events-none absolute inset-0 h-full w-full max-h-none max-w-none object-cover object-center opacity-35 grayscale contrast-150",
+        "pointer-events-none object-cover object-center opacity-35 grayscale contrast-150",
         DITHER_MASK,
         className,
       )}

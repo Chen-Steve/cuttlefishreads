@@ -8,13 +8,23 @@ import { recordReadingProgress } from "@/lib/reading-progress";
 export function ReadingProgressTracker({
   slug,
   chapterNumber,
+  title,
+  coverUrl,
+  chapterCount,
 }: {
   slug: string;
   chapterNumber: number;
+  title: string;
+  coverUrl?: string;
+  chapterCount: number;
 }) {
   useEffect(() => {
-    recordReadingProgress(slug, chapterNumber);
-  }, [slug, chapterNumber]);
+    recordReadingProgress(slug, chapterNumber, {
+      title,
+      coverUrl,
+      chapterCount,
+    });
+  }, [slug, chapterNumber, title, coverUrl, chapterCount]);
 
   return null;
 }

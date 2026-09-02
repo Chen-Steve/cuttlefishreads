@@ -20,7 +20,7 @@ import {
   type NovelStatusFilter,
 } from "@/lib/novels-browse";
 import { cn } from "@/lib/utils";
-import type { Novel } from "@/types";
+import type { NovelCardData } from "@/types";
 import { NovelGrid } from "./novel-grid";
 
 const STATUS_OPTIONS: { value: NovelStatusFilter; label: string }[] = [
@@ -131,10 +131,10 @@ function SortDropdown({
 }
 
 function sortNovels(
-  novels: Novel[],
+  novels: NovelCardData[],
   sort: NovelSortOption,
   viewsBySlug: Record<string, number>,
-): Novel[] {
+): NovelCardData[] {
   const items = [...novels];
   switch (sort) {
     case "title-asc":
@@ -172,7 +172,7 @@ export function NovelsBrowser({
   viewsBySlug = {},
   initialFilters = DEFAULT_NOVELS_BROWSE_FILTERS,
 }: {
-  novels: Novel[];
+  novels: NovelCardData[];
   viewsBySlug?: Record<string, number>;
   initialFilters?: NovelsBrowseFilters;
 }) {
@@ -218,9 +218,8 @@ export function NovelsBrowser({
           novel.author,
           novel.originalAuthor ?? "",
           novel.translator ?? "",
-          novel.synopsis,
           ...novel.genres,
-          ...novel.tags,
+          ...(novel.tags ?? []),
         ]
           .join(" ")
           .toLowerCase();

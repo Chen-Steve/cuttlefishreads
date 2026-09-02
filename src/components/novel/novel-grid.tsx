@@ -1,4 +1,4 @@
-import type { Novel, NovelRatingSummary } from "@/types";
+import type { NovelCardData, NovelRatingSummary } from "@/types";
 import { cn } from "@/lib/utils";
 import type { CatalogBase } from "@/lib/catalog-paths";
 import { NovelCard } from "./novel-card";
@@ -19,7 +19,7 @@ export function NovelGrid({
   ratingsBySlug,
   catalogBase,
 }: {
-  novels: Novel[];
+  novels: NovelCardData[];
   compact?: boolean;
   /** More columns and smaller cards (implies compact card chrome). */
   dense?: boolean;

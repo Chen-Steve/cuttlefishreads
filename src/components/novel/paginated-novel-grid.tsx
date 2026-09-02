@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import type { Novel } from "@/types";
+import type { NovelCardData } from "@/types";
 import { NovelGrid } from "./novel-grid";
 
 export function PaginatedNovelGrid({
@@ -13,7 +13,7 @@ export function PaginatedNovelGrid({
   compact = false,
   hideAuthor = false,
 }: {
-  novels: Novel[];
+  novels: NovelCardData[];
   pageSize?: number;
   compact?: boolean;
   hideAuthor?: boolean;

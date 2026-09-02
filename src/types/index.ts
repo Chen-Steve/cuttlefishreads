@@ -28,6 +28,25 @@ export interface Novel {
   publisherId?: string;
 }
 
+/** Catalog fields safe to send to client grids (no synopsis or translator notes). */
+export type NovelCardData = Pick<
+  Novel,
+  | "id"
+  | "slug"
+  | "title"
+  | "author"
+  | "coverUrl"
+  | "genres"
+  | "tags"
+  | "status"
+  | "chapterCount"
+  | "createdAt"
+  | "updatedAt"
+> &
+  Partial<
+    Pick<Novel, "originalAuthor" | "translator" | "translatorUsername">
+  >;
+
 export interface RecentlyUpdatedChapter {
   number: number;
   title: string;
@@ -48,7 +67,8 @@ export interface Chapter {
   novelSlug: string;
   number: number;
   title: string;
-  content: string[];
+  /** Omitted when the chapter is locked for the current reader. */
+  content?: string[];
   /** Per-chapter message when useGlobalTranslatorNote is false. */
   translatorNote: string | null;
   /** When true, readers see the translator's global note from their profile. */

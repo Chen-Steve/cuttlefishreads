@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { ArrowDownUp, ChevronRight, ShieldCheck } from "lucide-react";
+import { ArrowDownUp, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
 
 import { TabPanelShell } from "@/components/tab-panel-shell";
 import { isScheduledUnlock } from "@/lib/unlock-countdown";
@@ -11,6 +11,7 @@ import type { ChapterListItem } from "@/types";
 import { ChapterLockBadge } from "./chapter-lock-badge";
 
 const CHAPTER_ORDER_STORAGE_KEY = "cf-chapter-order";
+const CHAPTER_PAGE_SIZE = 50;
 
 const chapterOrderListeners = new Set<() => void>();
 
@@ -97,11 +98,23 @@ export function ChapterList({
   hideLockBadges?: boolean;
 }) {
   const newestFirst = useChapterOrderPreference();
+  const [page, setPage] = useState(0);
 
   const rows = useMemo(() => {
     const sorted = [...chapters].sort((a, b) => a.number - b.number);
     return newestFirst ? sorted.reverse() : sorted;
   }, [chapters, newestFirst]);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / CHAPTER_PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const pageRows = rows.slice(
+    safePage * CHAPTER_PAGE_SIZE,
+    safePage * CHAPTER_PAGE_SIZE + CHAPTER_PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [newestFirst]);
 
   const hasChapters = chapters.length > 0;
 
@@ -118,8 +131,9 @@ export function ChapterList({
       rightTab={hasChapters ? <ChapterOrderToggle /> : undefined}
     >
       {hasChapters ? (
+        <>
         <ol className="divide-y divide-border overflow-hidden rounded-b-xl">
-          {rows.map((chapter) => (
+          {pageRows.map((chapter) => (
             <li key={chapter.id}>
               <Link
                 href={`/novels/${slug}/${chapter.number}`}
@@ -158,6 +172,42 @@ export function ChapterList({
             </li>
           ))}
         </ol>
+        {totalPages > 1 ? (
+          <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.max(0, current - 1))}
+              disabled={safePage === 0}
+              aria-label="Previous page"
+              className={cn(
+                "inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40",
+                safePage > 0 && "hover:border-accent hover:text-accent",
+              )}
+            >
+              <ChevronLeft className="size-4" strokeWidth={2} aria-hidden />
+              Previous
+            </button>
+            <p className="text-sm tabular-nums text-muted">
+              {safePage + 1} / {totalPages}
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                setPage((current) => Math.min(totalPages - 1, current + 1))
+              }
+              disabled={safePage >= totalPages - 1}
+              aria-label="Next page"
+              className={cn(
+                "inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40",
+                safePage < totalPages - 1 && "hover:border-accent hover:text-accent",
+              )}
+            >
+              Next
+              <ChevronRight className="size-4" strokeWidth={2} aria-hidden />
+            </button>
+          </div>
+        ) : null}
+        </>
       ) : (
         <p className="px-4 py-8 text-center text-sm text-muted">
           No chapters published yet.

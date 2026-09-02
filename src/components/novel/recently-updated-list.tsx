@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { TabPanelShell } from "@/components/tab-panel-shell";
-import { NovelCover } from "./novel-cover";
+import { NovelCover, COVER_SIZES_RECENT } from "./novel-cover";
 import type { RecentlyUpdatedNovel } from "@/types";
 import {
   type CatalogBase,
@@ -41,6 +41,7 @@ export function RecentlyUpdatedCard({
           title={novel.title}
           slug={novel.slug}
           coverUrl={novel.coverUrl}
+          sizes={COVER_SIZES_RECENT}
           className="w-24 transition-transform duration-300 group-hover/cover:-translate-y-0.5 sm:w-28"
         />
       </Link>

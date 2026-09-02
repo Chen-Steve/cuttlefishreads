@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
+    // Serve originals; skip Vercel Image Optimization billing.
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",

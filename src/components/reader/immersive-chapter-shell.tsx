@@ -7,7 +7,6 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import { usePathname } from "next/navigation";
 
 import { TabRail } from "@/components/tab-panel-shell";
 import { useReaderSettings } from "@/hooks/use-reader-settings";
@@ -17,8 +16,6 @@ import { cn } from "@/lib/utils";
 import type { Chapter, ChapterSummary } from "@/types";
 
 import { ReaderNav } from "./reader-nav";
-
-const CHAPTER_PATH = /^\/(?:novels|series)\/[^/]+\/(?:chapter\/)?\d+\/?$/;
 
 type ChapterReaderNavConfig = {
   slug: string;
@@ -40,20 +37,13 @@ function isInteractiveTarget(target: EventTarget | null) {
   );
 }
 
-/** Hides the site header on chapter pages when immersive reading is on. */
-export function useImmersiveHidesSiteHeader() {
-  const pathname = usePathname();
-  const { settings } = useReaderSettings();
-  return settings.immersive && CHAPTER_PATH.test(pathname);
-}
-
 export function ImmersiveChapterShell({
   header,
-  content,
+  children,
   nav,
 }: {
   header: ReactNode;
-  content: ReactNode;
+  children: ReactNode;
   /** Single chapters payload shared by top and bottom nav. */
   nav?: ChapterReaderNavConfig;
 }) {
@@ -118,7 +108,7 @@ export function ImmersiveChapterShell({
       className={cn(!immersive && "py-5 sm:py-6")}
       onClick={onContentClick}
     >
-      {content}
+      {children}
     </div>
   );
 
