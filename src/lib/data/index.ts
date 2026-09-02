@@ -224,59 +224,65 @@ const fetchNovelRows = unstable_cache(
 );
 
 async function fetchDbChapterMetas(novelId: string): Promise<DbChapterMeta[]> {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("chapters")
-    .select(CHAPTER_META_COLUMNS)
-    .eq("novel_id", novelId)
-    .eq("is_published", true)
-    .order("number", { ascending: true });
+  return unstable_cache(
+    async () => {
+      const admin = createAdminClient();
+      const { data, error } = await admin
+        .from("chapters")
+        .select(CHAPTER_META_COLUMNS)
+        .eq("novel_id", novelId)
+        .eq("is_published", true)
+        .order("number", { ascending: true });
 
-  if (error) {
-    console.error("fetchDbChapterMetas:", error);
-    return [];
-  }
-  return (data ?? []) as DbChapterMeta[];
+      if (error) {
+        console.error("fetchDbChapterMetas:", error);
+        return [];
+      }
+      return (data ?? []) as DbChapterMeta[];
+    },
+    ["chapter-metas", novelId],
+    {
+      revalidate: CATALOG_REVALIDATE_SECONDS,
+      tags: [NOVELS_CATALOG_CACHE_TAG],
+    },
+  )();
 }
 
 async function fetchDbChapterMeta(
   novelId: string,
   chapterNumber: number,
 ): Promise<DbChapterMeta | null> {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("chapters")
-    .select(CHAPTER_META_COLUMNS)
-    .eq("novel_id", novelId)
-    .eq("number", chapterNumber)
-    .eq("is_published", true)
-    .maybeSingle();
-
-  if (error) {
-    console.error("fetchDbChapterMeta:", error);
-    return null;
-  }
-  return (data as DbChapterMeta | null) ?? null;
+  const rows = await fetchDbChapterMetas(novelId);
+  return rows.find((row) => row.number === chapterNumber) ?? null;
 }
 
 async function fetchDbChapterContent(
   novelId: string,
   chapterNumber: number,
 ): Promise<string | null> {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("chapters")
-    .select("content")
-    .eq("novel_id", novelId)
-    .eq("number", chapterNumber)
-    .eq("is_published", true)
-    .maybeSingle();
+  return unstable_cache(
+    async () => {
+      const admin = createAdminClient();
+      const { data, error } = await admin
+        .from("chapters")
+        .select("content")
+        .eq("novel_id", novelId)
+        .eq("number", chapterNumber)
+        .eq("is_published", true)
+        .maybeSingle();
 
-  if (error) {
-    console.error("fetchDbChapterContent:", error);
-    return null;
-  }
-  return (data?.content as string | null | undefined) ?? null;
+      if (error) {
+        console.error("fetchDbChapterContent:", error);
+        return null;
+      }
+      return (data?.content as string | null | undefined) ?? null;
+    },
+    ["chapter-body", novelId, String(chapterNumber)],
+    {
+      revalidate: CATALOG_REVALIDATE_SECONDS,
+      tags: [NOVELS_CATALOG_CACHE_TAG],
+    },
+  )();
 }
 
 async function fetchDbChapterSummaries(
@@ -287,19 +293,14 @@ async function fetchDbChapterSummaries(
     "number" | "title" | "is_free" | "coin_cost" | "unlock_at"
   >[]
 > {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("chapters")
-    .select("number, title, is_free, coin_cost, unlock_at")
-    .eq("novel_id", novelId)
-    .eq("is_published", true)
-    .order("number", { ascending: true });
-
-  if (error) {
-    console.error("fetchDbChapterSummaries:", error);
-    return [];
-  }
-  return data ?? [];
+  const rows = await fetchDbChapterMetas(novelId);
+  return rows.map((row) => ({
+    number: row.number,
+    title: row.title,
+    is_free: row.is_free,
+    coin_cost: row.coin_cost,
+    unlock_at: row.unlock_at,
+  }));
 }
 
 export const getNovels = cache(async (): Promise<Novel[]> => {
@@ -989,13 +990,8 @@ function mapCommentRows(
 // Fetches the publisher (translator) id for a novel so replies authored by the
 // translator can be badged. Returns null when the novel or column is missing.
 async function fetchNovelPublisherId(slug: string): Promise<string | null> {
-  const supabase = await getServerSupabase();
-  const { data } = await supabase
-    .from("novels")
-    .select("publisher_id")
-    .eq("slug", slug)
-    .maybeSingle();
-  return (data?.publisher_id as string | null) ?? null;
+  const novel = await getNovel(slug);
+  return novel?.publisherId ?? null;
 }
 
 async function fetchReplyRows(parentIds: string[]): Promise<DbCommentRow[]> {
@@ -1259,40 +1255,54 @@ export async function getNovelRatingSummary(
   return summaries[slug] ?? { average: 0, count: 0 };
 }
 
-/** Batch rating averages for many novels (one query). */
+/** Batch rating averages for many novels (one cached query). */
 export async function getNovelRatingSummariesBySlug(
   slugs: string[],
 ): Promise<Record<string, NovelRatingSummary>> {
   const unique = [...new Set(slugs.filter(Boolean))];
   if (unique.length === 0) return {};
 
-  const supabase = await getServerSupabase();
-  const { data, error } = await supabase
-    .from("novel_comments")
-    .select("novel_slug, rating")
-    .in("novel_slug", unique)
-    .is("parent_id", null)
-    .not("rating", "is", null);
+  const all = await unstable_cache(
+    async (): Promise<Record<string, NovelRatingSummary>> => {
+      const admin = createAdminClient();
+      const { data, error } = await admin
+        .from("novel_comments")
+        .select("novel_slug, rating")
+        .is("parent_id", null)
+        .not("rating", "is", null);
 
-  if (error || !data) {
-    if (error) console.error("getNovelRatingSummariesBySlug:", error);
-    return Object.fromEntries(unique.map((s) => [s, { average: 0, count: 0 }]));
-  }
+      if (error || !data) {
+        if (error) console.error("getNovelRatingSummariesBySlug:", error);
+        return {};
+      }
 
-  const buckets = new Map<string, { sum: number; count: number }>();
-  for (const row of data as { novel_slug: string; rating: number }[]) {
-    const bucket = buckets.get(row.novel_slug) ?? { sum: 0, count: 0 };
-    bucket.sum += row.rating;
-    bucket.count += 1;
-    buckets.set(row.novel_slug, bucket);
-  }
+      const buckets = new Map<string, { sum: number; count: number }>();
+      for (const row of data as { novel_slug: string; rating: number }[]) {
+        const bucket = buckets.get(row.novel_slug) ?? { sum: 0, count: 0 };
+        bucket.sum += row.rating;
+        bucket.count += 1;
+        buckets.set(row.novel_slug, bucket);
+      }
+
+      const summaries: Record<string, NovelRatingSummary> = {};
+      for (const [slug, bucket] of buckets) {
+        summaries[slug] = {
+          average: bucket.sum / bucket.count,
+          count: bucket.count,
+        };
+      }
+      return summaries;
+    },
+    ["novel-rating-summaries"],
+    {
+      revalidate: CATALOG_REVALIDATE_SECONDS,
+      tags: [NOVELS_CATALOG_CACHE_TAG],
+    },
+  )();
 
   const result: Record<string, NovelRatingSummary> = {};
   for (const slug of unique) {
-    const bucket = buckets.get(slug);
-    result[slug] = bucket
-      ? { average: bucket.sum / bucket.count, count: bucket.count }
-      : { average: 0, count: 0 };
+    result[slug] = all[slug] ?? { average: 0, count: 0 };
   }
   return result;
 }
@@ -1309,15 +1319,8 @@ export async function isChapterReadable(
     novel.publisher_id !== null && currentUser?.id === novel.publisher_id;
   if (currentUser?.isAdmin === true || isPublisher) return true;
 
-  const admin = createAdminClient();
-  const [{ data: row }, unlocked] = await Promise.all([
-    admin
-      .from("chapters")
-      .select("number, is_free, unlock_at")
-      .eq("novel_id", novel.id)
-      .eq("number", chapterNumber)
-      .eq("is_published", true)
-      .maybeSingle(),
+  const [row, unlocked] = await Promise.all([
+    fetchDbChapterMeta(novel.id, chapterNumber),
     getUnlockedChapterNumbers(slug),
   ]);
 

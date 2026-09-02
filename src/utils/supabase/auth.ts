@@ -1,7 +1,10 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 
-import { isStaleAuthSessionError } from "@/lib/auth-session";
+import {
+  isStaleAuthSessionError,
+  isSupabaseAuthCookie,
+} from "@/lib/auth-session";
 import { createClient } from "@/utils/supabase/server";
 
 /** Request-scoped Supabase cookie client (dedupes createClient + cookies()). */
@@ -15,6 +18,11 @@ export const getServerSupabase = cache(async () => {
  * render (which races single-use refresh tokens).
  */
 export const getAuthClaims = cache(async () => {
+  const cookieStore = await cookies();
+  if (!cookieStore.getAll().some((cookie) => isSupabaseAuthCookie(cookie.name))) {
+    return null;
+  }
+
   const supabase = await getServerSupabase();
   const { data, error } = await supabase.auth.getClaims();
 

@@ -6,6 +6,8 @@ import {
   protos,
 } from "@google-analytics/data";
 
+import { createAdminClient } from "@/utils/supabase/admin";
+
 type FilterExpression =
   protos.google.analytics.data.v1beta.IFilterExpression;
 
@@ -298,23 +300,36 @@ async function fetchAllTimeViewsBySlug(
 }
 
 /**
- * All-time views for many novels — single batched GA request, cached for an
- * hour per slug set. Shared by novel pages, featured ranking, and the dashboard.
+ * One GA report for the whole translation catalog, cached an hour.
+ * Home, /novels, novel pages, and the dashboard all read this same entry.
  */
-export async function getAllTimeViewsBySlug(
-  slugs: string[],
-): Promise<Record<string, number>> {
-  if (!getConfiguration() || slugs.length === 0) return {};
-
-  const unique = uniqueSortedSlugs(slugs);
+async function loadCatalogAllTimeViews(): Promise<Record<string, number>> {
+  if (!getConfiguration()) return {};
 
   try {
     return await unstable_cache(
-      () => fetchAllTimeViewsBySlug(unique),
-      ["ga4-all-time-views-v5", unique.join("|")],
+      async () => {
+        const admin = createAdminClient();
+        const { data, error } = await admin
+          .from("novels")
+          .select("slug")
+          .eq("publication_type", "translation");
+
+        if (error) {
+          console.error(
+            "[google-analytics] Unable to load catalog slugs:",
+            error,
+          );
+          return {};
+        }
+
+        const slugs = (data ?? []).map((row) => row.slug as string);
+        return fetchAllTimeViewsBySlug(slugs);
+      },
+      ["ga4-all-time-views-catalog-v1"],
       {
         revalidate: GA_REVALIDATE_SECONDS,
-        tags: unique.map((slug) => `ga4-novel-views:${slug}`),
+        tags: ["ga4-all-time-views"],
       },
     )();
   } catch (error) {
@@ -327,11 +342,26 @@ export async function getAllTimeViewsBySlug(
 }
 
 /**
+ * All-time views for many novels — shared catalog cache, then filtered.
+ */
+export async function getAllTimeViewsBySlug(
+  slugs: string[],
+): Promise<Record<string, number>> {
+  if (!getConfiguration() || slugs.length === 0) return {};
+
+  const all = await loadCatalogAllTimeViews();
+  const unique = uniqueSortedSlugs(slugs);
+  const totals: Record<string, number> = {};
+  for (const slug of unique) totals[slug] = all[slug] ?? 0;
+  return totals;
+}
+
+/**
  * All-time novel detail + chapter page views for a single novel
  * (GA4 screenPageViews for `/novels/{slug}` and `/novels/{slug}/{n}`).
  */
 export async function getNovelPageViews(slug: string): Promise<number> {
   if (!slug) return 0;
-  const totals = await getAllTimeViewsBySlug([slug]);
+  const totals = await loadCatalogAllTimeViews();
   return totals[slug] ?? 0;
 }

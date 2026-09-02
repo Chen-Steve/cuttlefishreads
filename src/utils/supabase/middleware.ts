@@ -32,6 +32,13 @@ export const updateSession = async (
       request,
     });
 
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((cookie) => isSupabaseAuthCookie(cookie.name));
+  if (!hasAuthCookie) {
+    return supabaseResponse;
+  }
+
   const host = request.headers.get("host");
   const sharedDomain = authCookieDomainForHost(host);
 
