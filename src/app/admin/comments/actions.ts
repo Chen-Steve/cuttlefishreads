@@ -1,8 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 
 import { getAdminAccess, type AdminAccess } from "@/lib/access";
+import { novelCommentsCacheTag } from "@/lib/data";
 import { notifyComment } from "@/lib/notifications/data";
 import { createAdminClient } from "@/utils/supabase/admin";
 import type { NovelComment } from "@/types";
