@@ -151,7 +151,6 @@ export default async function NovelDetailPage({
         <StartReadingButton
           slug={novel.slug}
           firstChapterNumber={firstChapter.number}
-          chapterCount={novel.chapterCount}
         />
       ) : null}
       <BookmarkButton

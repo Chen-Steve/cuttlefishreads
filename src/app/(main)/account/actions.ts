@@ -93,7 +93,6 @@ export async function updateUsername(
   }
 
   revalidatePath("/account");
-  revalidatePath("/", "layout");
   revalidatePath(`/u/${username}`);
   return { message: "Username updated." };
 }
@@ -155,7 +154,6 @@ export async function updateAvatar(
   await deleteAvatarObject(admin, existing?.avatar_url);
 
   revalidatePath("/account");
-  revalidatePath("/", "layout");
   if (existing?.username) {
     revalidatePath(`/u/${existing.username}`);
   }
@@ -226,7 +224,6 @@ export async function removeAvatar(): Promise<AvatarState> {
   await deleteAvatarObject(admin, existing.avatar_url);
 
   revalidatePath("/account");
-  revalidatePath("/", "layout");
   if (existing.username) {
     revalidatePath(`/u/${existing.username}`);
   }

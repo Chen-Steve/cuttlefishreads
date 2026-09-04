@@ -21,11 +21,11 @@ import {
   type Language,
 } from "@/lib/constants";
 
-// Public pages that show catalog novels.
+// Public catalog data is tag-cached (see lib/data). Path-level revalidation
+// of "/" or "/novels" would also drop unrelated entries (e.g. the hourly GA4
+// report) via Next's implicit route tags, so bust by tag only.
 function revalidatePublicPaths() {
   revalidateNovelsDataCache();
-  revalidatePath("/");
-  revalidatePath("/novels", "layout");
 }
 
 export type AdminState = { error?: string; success?: string };
@@ -93,8 +93,8 @@ export async function updateSupportLinks(
 
   if (error) return { error: error.message };
 
-  // Global note and support links appear on chapters that use the global message.
-  revalidatePath("/novels", "layout");
+  // Global note and support links are cached inside the novel-detail entries.
+  revalidatePublicPaths();
   revalidatePath("/admin/settings");
   return { message: "Settings saved." };
 }
@@ -582,7 +582,6 @@ export async function createChapter(
   const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));
   revalidatePublicPaths();
-  revalidatePath("/", "layout");
   redirect(`${workspaceBase}/novels/${novelId}/chapters`);
 }
 
@@ -732,7 +731,6 @@ export async function bulkCreateChapters(
   const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));
   revalidatePublicPaths();
-  revalidatePath("/", "layout");
   redirect(`${workspaceBase}/novels/${id}/chapters`);
 }
 
@@ -795,7 +793,6 @@ export async function setChapterPublished(
     ),
   );
   revalidatePublicPaths();
-  revalidatePath("/", "layout");
   return {};
 }
 
@@ -854,7 +851,6 @@ export async function publishAllChapters(novelId: string): Promise<AdminState> {
     workspaceInternalPath(`${workspaceBase}/novels/${novelId}/chapters`),
   );
   revalidatePublicPaths();
-  revalidatePath("/", "layout");
   return {};
 }
 

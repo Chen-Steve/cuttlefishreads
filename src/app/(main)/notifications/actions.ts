@@ -28,7 +28,6 @@ export async function markNotificationRead(
   if (error) return { error: error.message };
 
   revalidatePath("/notifications");
-  revalidatePath("/", "layout");
   return {};
 }
 
@@ -49,7 +48,6 @@ export async function markAllNotificationsRead(): Promise<NotificationActionStat
   if (error) return { error: error.message };
 
   revalidatePath("/notifications");
-  revalidatePath("/", "layout");
   return {};
 }
 
@@ -76,7 +74,6 @@ export async function deleteNotification(
   if (error) return { error: error.message };
 
   revalidatePath("/notifications");
-  revalidatePath("/", "layout");
   return {};
 }
 
@@ -97,6 +94,5 @@ export async function deleteAllNotifications(): Promise<NotificationActionState>
   if (error) return { error: error.message };
 
   revalidatePath("/notifications");
-  revalidatePath("/", "layout");
   return {};
 }

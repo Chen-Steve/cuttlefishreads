@@ -16,7 +16,6 @@ const STATUSES: CommunityPostStatus[] = [
 ];
 
 function revalidateCommunity() {
-  revalidatePath("/");
   revalidatePath("/community");
   revalidatePath("/admin/community");
 }

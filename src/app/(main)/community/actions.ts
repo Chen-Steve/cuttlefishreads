@@ -17,7 +17,6 @@ export type CommunityActionState = {
 };
 
 function revalidateCommunity() {
-  revalidatePath("/");
   revalidatePath("/community");
   revalidatePath("/admin/community");
 }

@@ -2,7 +2,6 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/utils/supabase/server";
 import { absoluteUrl } from "@/lib/seo";
@@ -48,7 +47,6 @@ export async function login(
     return { error: error.message };
   }
 
-  revalidatePath("/", "layout");
   return redirectAfterAuth(safeRedirect);
 }
 
@@ -94,7 +92,6 @@ export async function signup(
     }
   }
 
-  revalidatePath("/", "layout");
   return redirectAfterAuth(safeRedirect);
 }
 
@@ -168,14 +165,12 @@ export async function confirmPasswordReset(
   }
 
   cookieStore.delete(PASSWORD_RECOVERY_COOKIE);
-  revalidatePath("/", "layout");
   return redirectAfterAuth("/account");
 }
 
 export async function signOut(formData?: FormData): Promise<void> {
   const supabase = createClient(await cookies());
   await supabase.auth.signOut();
-  revalidatePath("/", "layout");
 
   const raw = formData
     ? String(formData.get("redirectTo") ?? "").trim()

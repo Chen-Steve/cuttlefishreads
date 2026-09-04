@@ -1,9 +1,14 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 
 import { notifyComment } from "@/lib/notifications/data";
-import { getNovelComments, isChapterReadable } from "@/lib/data";
+import {
+  getNovelComments,
+  isChapterReadable,
+  NOVEL_RATINGS_CACHE_TAG,
+  novelCommentsCacheTag,
+} from "@/lib/data";
 import type { NovelComment } from "@/types";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
@@ -19,13 +24,17 @@ function validateCommentBody(body: string): string | null {
   return null;
 }
 
-function revalidateCommentPaths(
+// Comment trees are cached per novel (see lib/data). `updateTag` expires the
+// entry so the author's next render reflects their own write. Pages are
+// dynamic, so no path revalidation is needed (and revalidatePath would also
+// drop this novel's cached catalog/chapter entries via implicit route tags).
+function expireCommentCache(
   novelSlug: string,
-  chapterNumber?: number | null,
+  options: { ratingsChanged?: boolean } = {},
 ) {
-  revalidatePath(`/novels/${novelSlug}`);
-  if (chapterNumber != null) {
-    revalidatePath(`/novels/${novelSlug}/${chapterNumber}`);
+  updateTag(novelCommentsCacheTag(novelSlug));
+  if (options.ratingsChanged) {
+    updateTag(NOVEL_RATINGS_CACHE_TAG);
   }
 }
 
@@ -260,7 +269,7 @@ export async function createComment(
     .eq("id", claims.sub)
     .maybeSingle();
 
-  revalidateCommentPaths(novelSlug, chapterNumber);
+  expireCommentCache(novelSlug, { ratingsChanged: ratingValue != null });
 
   return {
     comment: {
@@ -360,10 +369,7 @@ export async function replyToComment(
     },
   ]);
 
-  revalidateCommentPaths(parent.novel_slug, parent.chapter_number);
-  revalidatePath("/account");
-  revalidatePath("/notifications");
-  revalidatePath("/", "layout");
+  expireCommentCache(parent.novel_slug);
 
   return {
     comment: {
@@ -421,7 +427,7 @@ export async function updateComment(
 
   if (error) return { error: error.message };
 
-  revalidateCommentPaths(existing.novel_slug, existing.chapter_number);
+  expireCommentCache(existing.novel_slug);
   return {};
 }
 
@@ -434,7 +440,7 @@ export async function deleteComment(commentId: string): Promise<CommentState> {
 
   const { data: existing, error: fetchError } = await supabase
     .from("novel_comments")
-    .select("novel_slug, chapter_number")
+    .select("novel_slug, rating")
     .eq("id", commentId)
     .eq("user_id", claims.sub)
     .maybeSingle();
@@ -451,7 +457,9 @@ export async function deleteComment(commentId: string): Promise<CommentState> {
 
   if (error) return { error: error.message };
 
-  revalidateCommentPaths(existing.novel_slug, existing.chapter_number);
+  expireCommentCache(existing.novel_slug, {
+    ratingsChanged: existing.rating != null,
+  });
   return {};
 }
 
@@ -490,7 +498,7 @@ export async function toggleCommentLike(commentId: string): Promise<LikeState> {
       .eq("id", existing.id);
     if (error) return { error: error.message };
 
-    revalidateCommentPaths(comment.novel_slug, comment.chapter_number);
+    expireCommentCache(comment.novel_slug);
     return { liked: false };
   }
 
@@ -509,9 +517,7 @@ export async function toggleCommentLike(commentId: string): Promise<LikeState> {
     },
   ]);
 
-  revalidateCommentPaths(comment.novel_slug, comment.chapter_number);
-  revalidatePath("/notifications");
-  revalidatePath("/", "layout");
+  expireCommentCache(comment.novel_slug);
   return { liked: true };
 }
 

@@ -192,8 +192,15 @@ const getUnlockedChapterNumbers = cache(
 /** Tags for cross-request catalog caches (invalidate from admin mutations). */
 export const NOVELS_CATALOG_CACHE_TAG = "novels-catalog";
 export const RECENTLY_UPDATED_NOVELS_CACHE_TAG = "recently-updated-novels";
+/** Rating averages (busted when a rated comment is created/removed). */
+export const NOVEL_RATINGS_CACHE_TAG = "novel-ratings";
+/** Comment trees for one novel (all chapters). Bust with `updateTag`. */
+export function novelCommentsCacheTag(slug: string): string {
+  return `novel-comments:${slug}`;
+}
 
 const CATALOG_REVALIDATE_SECONDS = 60 * 5;
+const COMMENTS_REVALIDATE_SECONDS = 60;
 
 /** Bust shared novel-list caches after create/update/delete/publish. */
 export function revalidateNovelsDataCache() {
@@ -254,6 +261,33 @@ async function fetchDbChapterMeta(
 ): Promise<DbChapterMeta | null> {
   const rows = await fetchDbChapterMetas(novelId);
   return rows.find((row) => row.number === chapterNumber) ?? null;
+}
+
+export type PublicChapterMeta = {
+  number: number;
+  title: string;
+  /** Free for everyone right now (is_free or unlock_at has passed). */
+  naturallyFree: boolean;
+};
+
+/**
+ * Chapter title + public lock state from cached metadata only. No auth or
+ * per-user unlock lookups — for `generateMetadata` and other visitor-agnostic
+ * paths.
+ */
+export async function getPublicChapterMeta(
+  slug: string,
+  chapterNumber: number,
+): Promise<PublicChapterMeta | null> {
+  const novel = await fetchNovelIdBySlug(slug);
+  if (!novel) return null;
+  const row = await fetchDbChapterMeta(novel.id, chapterNumber);
+  if (!row) return null;
+  return {
+    number: row.number,
+    title: row.title,
+    naturallyFree: isNaturallyFree(row),
+  };
 }
 
 async function fetchDbChapterContent(
@@ -851,31 +885,16 @@ export async function getClosestNovelTitleMatch(
   const q = query.trim().toLowerCase();
   if (!q || q.length > 100) return null;
 
-  // Escape ILIKE wildcards so user input is treated literally.
-  const escaped = q.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
-
-  const admin = createAdminClient();
-  const request = admin
-    .from("novels")
-    .select("slug, title, cover_url")
-    .eq("publication_type", "translation")
-    .ilike("title", `%${escaped}%`)
-    .limit(40);
-
-  const { data, error } = await request;
-  if (error) {
-    console.error("getClosestNovelTitleMatch:", error);
-    return null;
-  }
-
-  const [match] = (data ?? [])
-    .map((row) => ({
+  // Score against the tag-cached catalog instead of a per-keystroke ILIKE.
+  const novels = await getNovels();
+  const [match] = novels
+    .map((novel) => ({
       novel: {
-        slug: row.slug as string,
-        title: row.title as string,
-        coverUrl: (row.cover_url as string | null) ?? undefined,
+        slug: novel.slug,
+        title: novel.title,
+        coverUrl: novel.coverUrl,
       },
-      score: titleMatchScore(row.title as string, q),
+      score: titleMatchScore(novel.title, q),
     }))
     .filter(({ score }) => Number.isFinite(score))
     .sort((a, b) => {
@@ -1012,30 +1031,122 @@ async function fetchReplyRows(parentIds: string[]): Promise<DbCommentRow[]> {
   return (data ?? []) as DbCommentRow[];
 }
 
-// Maps a page of top-level comment rows into NovelComment trees, fetching their
-// replies, likes, and author usernames and nesting replies under their parent.
-async function assembleCommentTree(
+/** Visitor-agnostic comment page payload (safe to share across users). */
+type CachedCommentPage = {
+  rows: DbCommentRow[];
+  likes: DbLikeRow[];
+  usernames: Record<string, string>;
+  hasMore: boolean;
+};
+
+const CHAPTER_COMMENTS_LIMIT = 100;
+
+/**
+ * One cached round of queries (top-level page → replies → likes + authors)
+ * per (novel, chapter, page). Comments and likes are publicly readable, so the
+ * service role sees the same rows a visitor would. Personal flags
+ * (`isOwn`, `likedByCurrentUser`) are applied per request outside the cache.
+ * Mutations call `updateTag(novelCommentsCacheTag(slug))`.
+ */
+async function fetchCachedCommentPage(
   slug: string,
-  topLevelRows: DbCommentRow[],
+  chapterNumber: number | null,
+  limit: number,
+  offset: number,
+): Promise<CachedCommentPage> {
+  return unstable_cache(
+    async (): Promise<CachedCommentPage> => {
+      const admin = createAdminClient();
+      const empty: CachedCommentPage = {
+        rows: [],
+        likes: [],
+        usernames: {},
+        hasMore: false,
+      };
+
+      let query = admin
+        .from("novel_comments")
+        .select(COMMENT_COLUMNS)
+        .eq("novel_slug", slug)
+        .is("parent_id", null)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit);
+      if (chapterNumber != null) {
+        query = query.eq("chapter_number", chapterNumber);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error("fetchCachedCommentPage:", error);
+        return empty;
+      }
+
+      const fetched = (data ?? []) as DbCommentRow[];
+      const hasMore = fetched.length > limit;
+      const topLevel = hasMore ? fetched.slice(0, limit) : fetched;
+      if (topLevel.length === 0) return empty;
+
+      const { data: replyData, error: replyError } = await admin
+        .from("novel_comments")
+        .select(COMMENT_COLUMNS)
+        .in(
+          "parent_id",
+          topLevel.map((row) => row.id),
+        )
+        .order("created_at", { ascending: true });
+      if (replyError) console.error("fetchCachedCommentPage replies:", replyError);
+
+      const rows = [...topLevel, ...((replyData ?? []) as DbCommentRow[])];
+      const userIds = [...new Set(rows.map((row) => row.user_id))];
+
+      const [{ data: likeData, error: likeError }, { data: profileData, error: profileError }] =
+        await Promise.all([
+          admin
+            .from("novel_comment_likes")
+            .select("comment_id, user_id")
+            .in(
+              "comment_id",
+              rows.map((row) => row.id),
+            ),
+          admin.from("profiles").select("id, username").in("id", userIds),
+        ]);
+      if (likeError) console.error("fetchCachedCommentPage likes:", likeError);
+      if (profileError) {
+        console.error("fetchCachedCommentPage profiles:", profileError);
+      }
+
+      const usernames: Record<string, string> = {};
+      for (const profile of profileData ?? []) {
+        usernames[profile.id as string] =
+          (profile.username as string | null) ?? "Unknown";
+      }
+
+      return {
+        rows,
+        likes: (likeData ?? []) as DbLikeRow[],
+        usernames,
+        hasMore,
+      };
+    },
+    ["novel-comments", slug, String(chapterNumber ?? "all"), String(limit), String(offset)],
+    {
+      revalidate: COMMENTS_REVALIDATE_SECONDS,
+      tags: [novelCommentsCacheTag(slug)],
+    },
+  )();
+}
+
+// Applies per-request user flags to a cached comment page and nests replies
+// under their parent.
+function assembleCommentTree(
+  page: CachedCommentPage,
   currentUserId: string | null,
-): Promise<NovelComment[]> {
-  const parentIds = topLevelRows.map((row) => row.id);
-  const [replyRows, publisherId] = await Promise.all([
-    fetchReplyRows(parentIds),
-    fetchNovelPublisherId(slug),
-  ]);
-
-  const allRows = [...topLevelRows, ...replyRows];
-  const userIds = [...new Set(allRows.map((row) => row.user_id))];
-  const [likes, usernames] = await Promise.all([
-    fetchCommentLikes(allRows.map((row) => row.id)),
-    fetchProfileUsernames(userIds),
-  ]);
-
+  publisherId: string | null,
+): NovelComment[] {
   const mapped = mapCommentRows(
-    allRows,
-    likes,
-    usernames,
+    page.rows,
+    page.likes,
+    new Map(Object.entries(page.usernames)),
     currentUserId,
     publisherId,
   );
@@ -1053,47 +1164,16 @@ async function assembleCommentTree(
   return topLevel;
 }
 
-async function fetchCommentLikes(commentIds: string[]): Promise<DbLikeRow[]> {
-  if (commentIds.length === 0) return [];
-
-  const supabase = await getServerSupabase();
-  const { data, error } = await supabase
-    .from("novel_comment_likes")
-    .select("comment_id, user_id")
-    .in("comment_id", commentIds);
-
-  if (error) {
-    console.error("fetchCommentLikes:", error);
-    return [];
-  }
-
-  return data ?? [];
-}
-
 export async function getChapterComments(
   slug: string,
   chapterNumber: number,
 ): Promise<NovelComment[]> {
-  const supabase = await getServerSupabase();
-  const [currentUserId, commentsResult] = await Promise.all([
+  const [page, currentUserId, publisherId] = await Promise.all([
+    fetchCachedCommentPage(slug, chapterNumber, CHAPTER_COMMENTS_LIMIT, 0),
     getCurrentUserId(),
-    supabase
-      .from("novel_comments")
-      .select(COMMENT_COLUMNS)
-      .eq("novel_slug", slug)
-      .eq("chapter_number", chapterNumber)
-      .is("parent_id", null)
-      .order("created_at", { ascending: false }),
+    fetchNovelPublisherId(slug),
   ]);
-
-  const { data, error } = commentsResult;
-  if (error) {
-    console.error("getChapterComments:", error);
-    return [];
-  }
-
-  const rows = (data ?? []) as DbCommentRow[];
-  return assembleCommentTree(slug, rows, currentUserId);
+  return assembleCommentTree(page, currentUserId, publisherId);
 }
 
 export type NovelCommentsResult = {
@@ -1107,31 +1187,15 @@ export async function getNovelComments(
 ): Promise<NovelCommentsResult> {
   const limit = options.limit ?? 50;
   const offset = options.offset ?? 0;
-  const supabase = await getServerSupabase();
-  const [currentUserId, commentsResult] = await Promise.all([
+  const [page, currentUserId, publisherId] = await Promise.all([
+    fetchCachedCommentPage(slug, null, limit, offset),
     getCurrentUserId(),
-    supabase
-      .from("novel_comments")
-      .select(COMMENT_COLUMNS)
-      .eq("novel_slug", slug)
-      .is("parent_id", null)
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit),
+    fetchNovelPublisherId(slug),
   ]);
 
-  const { data, error } = commentsResult;
-  if (error) {
-    console.error("getNovelComments:", error);
-    return { comments: [], hasMore: false };
-  }
-
-  const rows = (data ?? []) as DbCommentRow[];
-  const hasMore = rows.length > limit;
-  const pageRows = hasMore ? rows.slice(0, limit) : rows;
-
   return {
-    comments: await assembleCommentTree(slug, pageRows, currentUserId),
-    hasMore,
+    comments: assembleCommentTree(page, currentUserId, publisherId),
+    hasMore: page.hasMore,
   };
 }
 
@@ -1296,7 +1360,7 @@ export async function getNovelRatingSummariesBySlug(
     ["novel-rating-summaries"],
     {
       revalidate: CATALOG_REVALIDATE_SECONDS,
-      tags: [NOVELS_CATALOG_CACHE_TAG],
+      tags: [NOVELS_CATALOG_CACHE_TAG, NOVEL_RATINGS_CACHE_TAG],
     },
   )();
 

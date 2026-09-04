@@ -17,11 +17,17 @@ export type SessionProfile = {
   roles: ProfileRole[];
   isAdmin: boolean;
   isTranslator: boolean;
+  /** Unread, undismissed inbox rows — for the header badge. */
+  unreadNotifications: number;
 };
 
 /**
  * Request-scoped signed-in profile. Shared by the site header and page
  * loaders so auth + profiles are not fetched twice in one RSC render.
+ *
+ * The unread badge count is embedded in the same PostgREST request
+ * (`notifications` has a FK to `profiles`), so the header costs one round
+ * trip instead of two.
  */
 export const getSessionProfile = cache(
   async (): Promise<SessionProfile | null> => {
@@ -31,11 +37,20 @@ export const getSessionProfile = cache(
     const id = claims.sub as string;
     const email = claims.email as string | undefined;
     const supabase = await getServerSupabase();
-    const { data: profile } = await supabase
+    const { data: profile, error } = await supabase
       .from("profiles")
-      .select("username, coins, avatar_url, role")
+      .select(
+        "username, coins, avatar_url, role, unread:notifications!notifications_user_id_fkey(count)",
+      )
       .eq("id", id)
+      .is("unread.read_at", null)
+      .is("unread.dismissed_at", null)
       .maybeSingle();
+    if (error) console.error("getSessionProfile:", error);
+
+    const unreadNotifications = Number(
+      (profile?.unread as { count: number }[] | null | undefined)?.[0]?.count ?? 0,
+    );
 
     let username = profile?.username ?? null;
     if (!username) {
@@ -60,6 +75,7 @@ export const getSessionProfile = cache(
       roles,
       isAdmin: isAdminEmail(email),
       isTranslator: hasProfileRole(roles, "translator"),
+      unreadNotifications,
     };
   },
 );

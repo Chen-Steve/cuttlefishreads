@@ -93,14 +93,8 @@ export async function replyToComment(
     },
   ]);
 
-  revalidatePath(`/novels/${parent.novel_slug}`);
-  if (parent.chapter_number != null) {
-    revalidatePath(`/novels/${parent.novel_slug}/${parent.chapter_number}`);
-  }
+  updateTag(novelCommentsCacheTag(parent.novel_slug));
   revalidatePath("/admin/comments");
-  revalidatePath("/account");
-  revalidatePath("/notifications");
-  revalidatePath("/", "layout");
 
   return {
     reply: {

@@ -3,7 +3,6 @@ import Link from "next/link";
 
 import { SiteHeader } from "@/components/site-header";
 import { SITE } from "@/lib/constants";
-import { getUnreadNotificationCount } from "@/lib/notifications/data";
 import { getSessionProfile } from "@/lib/session-profile";
 
 export async function SiteHeaderFromSession() {
@@ -12,17 +11,15 @@ export async function SiteHeaderFromSession() {
     return <SiteHeader />;
   }
 
-  const unreadNotifications = await getUnreadNotificationCount(session.id);
-
   return (
     <SiteHeader
       isAuthenticated
-      username={session?.username ?? null}
-      avatarUrl={session?.avatarUrl ?? null}
-      coins={session?.coins ?? 0}
-      isTranslator={session?.isTranslator ?? false}
-      isMasterAdmin={session?.isAdmin ?? false}
-      unreadNotifications={unreadNotifications}
+      username={session.username}
+      avatarUrl={session.avatarUrl}
+      coins={session.coins}
+      isTranslator={session.isTranslator}
+      isMasterAdmin={session.isAdmin}
+      unreadNotifications={session.unreadNotifications}
     />
   );
 }
