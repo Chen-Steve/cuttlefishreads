@@ -1,4 +1,5 @@
 import { footnoteId, prepareChapterFootnotes } from "@/lib/footnotes";
+import { createChapterScrapeBait } from "@/lib/chapter-scrape-bait";
 
 import { ChapterContentFrame } from "./chapter-content-frame";
 import {
@@ -10,16 +11,33 @@ import {
 
 export function ChapterContent({ paragraphs }: { paragraphs: string[] }) {
   const { paragraphs: body, footnotes } = prepareChapterFootnotes(paragraphs);
+  const bait = createChapterScrapeBait(body);
   const rendered =
     footnotes.length > 0
-      ? renderChapterParagraphs(body, footnotes)
-      : renderMarkdownParagraphs(body);
+      ? renderChapterParagraphs(body, footnotes, bait)
+      : renderMarkdownParagraphs(body, bait);
 
   return (
     <ChapterContentFrame>
-      {rendered.map((children, index) => (
-        <p key={index}>{children}</p>
-      ))}
+      <style href={bait.className} precedence="default">
+        {bait.css}
+      </style>
+      {rendered.flatMap((children, index) => {
+        const decoy = bait.decoyParagraphs[index];
+        const showDecoy = decoy && bait.rng() < 0.75;
+        return [
+          <p key={`c-${index}`}>{children}</p>,
+          showDecoy ? (
+            <p
+              key={`d-${index}`}
+              className={bait.className}
+              aria-hidden="true"
+            >
+              {decoy}
+            </p>
+          ) : null,
+        ];
+      })}
 
       {footnotes.length > 0 ? (
         <section
@@ -36,7 +54,7 @@ export function ChapterContent({ paragraphs }: { paragraphs: string[] }) {
                 <span className="mr-1.5 font-medium tabular-nums">
                   {footnote.label}.
                 </span>
-                {renderFootnoteContent(footnote.content)}
+                {renderFootnoteContent(footnote.content, bait)}
                 {renderFootnoteBacklinks(footnote)}
               </li>
             ))}

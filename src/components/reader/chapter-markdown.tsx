@@ -1,6 +1,10 @@
 import { Fragment, type ReactNode } from "react";
 
 import {
+  nextBaitEvery,
+  type ChapterScrapeBait,
+} from "@/lib/chapter-scrape-bait";
+import {
   footnoteId,
   footnoteRefId,
   splitFootnoteParts,
@@ -13,14 +17,60 @@ import {
   type InlineStyle,
 } from "@/lib/inline-markdown";
 
-function renderSegments(segments: InlineSegment[]): ReactNode[] {
-  return segments.map((segment, index) => {
-    let node: ReactNode = segment.text;
-    if (segment.style.underline) node = <u>{node}</u>;
-    if (segment.style.italic) node = <em>{node}</em>;
-    if (segment.style.bold) node = <strong>{node}</strong>;
-    return <Fragment key={index}>{node}</Fragment>;
-  });
+function styledText(text: string, style: InlineStyle): ReactNode {
+  let node: ReactNode = text;
+  if (style.underline) node = <u>{node}</u>;
+  if (style.italic) node = <em>{node}</em>;
+  if (style.bold) node = <strong>{node}</strong>;
+  return node;
+}
+
+function baitSpan(bait: ChapterScrapeBait, key: string, phraseIndex: number) {
+  const phrase =
+    bait.phrases.length === 0
+      ? " "
+      : (bait.phrases[phraseIndex % bait.phrases.length] ?? " ");
+  return (
+    <span key={key} className={bait.className} aria-hidden="true">
+      {phrase}
+    </span>
+  );
+}
+
+function renderSegments(
+  segments: InlineSegment[],
+  bait?: ChapterScrapeBait,
+  keyPrefix = "s",
+): ReactNode[] {
+  if (!bait) {
+    return segments.map((segment, index) => (
+      <Fragment key={index}>{styledText(segment.text, segment.style)}</Fragment>
+    ));
+  }
+
+  const nodes: ReactNode[] = [];
+  let wordsUntilBait = nextBaitEvery(bait.rng);
+  let phraseIndex = Math.floor(bait.rng() * 64);
+  let key = 0;
+
+  for (const segment of segments) {
+    const parts = segment.text.split(/(\s+)/);
+    for (const part of parts) {
+      if (!part) continue;
+      nodes.push(
+        <Fragment key={`${keyPrefix}-${key++}`}>
+          {styledText(part, segment.style)}
+        </Fragment>,
+      );
+      if (/^\s+$/.test(part)) continue;
+      wordsUntilBait -= 1;
+      if (wordsUntilBait > 0) continue;
+      nodes.push(baitSpan(bait, `${keyPrefix}-b-${key++}`, phraseIndex++));
+      wordsUntilBait = nextBaitEvery(bait.rng);
+    }
+  }
+
+  return nodes;
 }
 
 /**
@@ -28,12 +78,15 @@ function renderSegments(segments: InlineSegment[]): ReactNode[] {
  * paragraph breaks so markers that open in one paragraph and close in a later
  * one still format correctly instead of showing up as literal `**` / `_`.
  */
-export function renderMarkdownParagraphs(paragraphs: string[]): ReactNode[][] {
+export function renderMarkdownParagraphs(
+  paragraphs: string[],
+  bait?: ChapterScrapeBait,
+): ReactNode[][] {
   let state: InlineStyle = INITIAL_INLINE_STYLE;
-  return paragraphs.map((paragraph) => {
+  return paragraphs.map((paragraph, paragraphIndex) => {
     const parsed = parseInlineMarkdown(paragraph, state);
     state = parsed.state;
-    return renderSegments(parsed.segments);
+    return renderSegments(parsed.segments, bait, `p${paragraphIndex}`);
   });
 }
 
@@ -48,6 +101,7 @@ const footnoteLinkClassName =
 export function renderChapterParagraphs(
   paragraphs: string[],
   footnotes: Footnote[],
+  bait?: ChapterScrapeBait,
 ): ReactNode[][] {
   const defined = new Map(footnotes.map((fn) => [fn.label, fn]));
   const occurrence = new Map<string, number>();
@@ -63,7 +117,11 @@ export function renderChapterParagraphs(
         state = parsed.state;
         nodes.push(
           <Fragment key={`${paragraphIndex}-t-${partIndex}`}>
-            {renderSegments(parsed.segments)}
+            {renderSegments(
+              parsed.segments,
+              bait,
+              `${paragraphIndex}-t-${partIndex}`,
+            )}
           </Fragment>,
         );
         continue;
@@ -74,7 +132,7 @@ export function renderChapterParagraphs(
         const literal = `[^${part.label}]`;
         nodes.push(
           <Fragment key={`${paragraphIndex}-u-${partIndex}`}>
-            {renderSegments([{ text: literal, style: { ...state } }])}
+            {renderSegments([{ text: literal, style: { ...state } }], bait)}
           </Fragment>,
         );
         continue;
@@ -105,9 +163,12 @@ export function renderChapterParagraphs(
   });
 }
 
-export function renderFootnoteContent(content: string): ReactNode[] {
+export function renderFootnoteContent(
+  content: string,
+  bait?: ChapterScrapeBait,
+): ReactNode[] {
   const parsed = parseInlineMarkdown(content, INITIAL_INLINE_STYLE);
-  return renderSegments(parsed.segments);
+  return renderSegments(parsed.segments, bait, "fn");
 }
 
 export function renderFootnoteBacklinks(footnote: Footnote): ReactNode {
