@@ -33,7 +33,7 @@ export function publicPageMetadata({
   title,
   description = SITE.seoDescription,
   path,
-  index = true,
+  index = false,
 }: {
   title: string;
   description?: string;
@@ -51,7 +51,7 @@ export function publicPageMetadata({
     },
     robots: {
       index,
-      follow: true,
+      follow: false,
     },
   };
 }

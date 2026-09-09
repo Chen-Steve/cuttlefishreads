@@ -137,6 +137,7 @@ export function ChapterList({
             <li key={chapter.id}>
               <Link
                 href={`/novels/${slug}/${chapter.number}`}
+                prefetch={false}
                 className="group flex items-center gap-3 px-4 py-3 outline-offset-2 transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-accent"
               >
                 <span className="min-w-0 flex-1">

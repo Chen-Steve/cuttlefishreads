@@ -47,7 +47,6 @@ export async function generateMetadata({
     title: `${novel.title} — ${chapterLabel}`,
     description: chapterLabel,
     path: `/novels/${novel.slug}/${current.number}`,
-    index: !current.locked,
   });
 }
 

@@ -65,6 +65,7 @@ export function RecentlyUpdatedCard({
             <li key={chapter.number}>
               <Link
                 href={chapterHref(novel.slug, chapter.number, catalogBase)}
+                prefetch={false}
                 className="group/chapter block truncate text-xs text-muted outline-offset-2 transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-accent sm:text-sm"
               >
                 <span className="font-medium text-foreground/80 group-hover/chapter:text-accent">

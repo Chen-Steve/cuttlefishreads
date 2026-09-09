@@ -137,6 +137,7 @@ export function ChapterContentsDropdown({
               <Link
                 key={chapter.number}
                 ref={isCurrent ? currentRef : undefined}
+                prefetch={false}
                 href={chapterHref(slug, chapter.number, catalogBase)}
                 role="option"
                 aria-selected={isCurrent}
