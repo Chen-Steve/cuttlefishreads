@@ -19,20 +19,13 @@ export function ChapterContent({ paragraphs }: { paragraphs: string[] }) {
 
   return (
     <ChapterContentFrame>
-      <style href={bait.className} precedence="default">
-        {bait.css}
-      </style>
       {rendered.flatMap((children, index) => {
         const decoy = bait.decoyParagraphs[index];
         const showDecoy = decoy && bait.rng() < 0.75;
         return [
           <p key={`c-${index}`}>{children}</p>,
           showDecoy ? (
-            <p
-              key={`d-${index}`}
-              className={bait.className}
-              aria-hidden="true"
-            >
+            <p key={`d-${index}`} hidden aria-hidden="true">
               {decoy}
             </p>
           ) : null,

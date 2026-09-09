@@ -31,7 +31,7 @@ function baitSpan(bait: ChapterScrapeBait, key: string, phraseIndex: number) {
       ? " "
       : (bait.phrases[phraseIndex % bait.phrases.length] ?? " ");
   return (
-    <span key={key} className={bait.className} aria-hidden="true">
+    <span key={key} hidden aria-hidden="true">
       {phrase}
     </span>
   );

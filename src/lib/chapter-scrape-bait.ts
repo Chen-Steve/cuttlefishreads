@@ -1,23 +1,14 @@
 /**
  * Poison HTML dumps of chapter pages with hidden copy from the same chapter.
- * Visible layout, find-in-page, and screen readers skip it (`display: none` +
- * `aria-hidden`). Class names are per-request so a static CSS selector is a
- * weak filter.
+ * Visible layout, find-in-page, and screen readers skip it (`hidden` +
+ * `aria-hidden`).
  */
 
 export type ChapterScrapeBait = {
-  className: string;
-  css: string;
   rng: () => number;
   phrases: string[];
   decoyParagraphs: string[];
 };
-
-function randomClassName(): string {
-  const bytes = new Uint8Array(6);
-  crypto.getRandomValues(bytes);
-  return `_${Array.from(bytes, (byte) => (byte % 36).toString(36)).join("")}`;
-}
 
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
@@ -58,7 +49,6 @@ function pickWords(words: string[], rng: () => number, count: number): string[] 
 export function createChapterScrapeBait(
   paragraphs: string[],
 ): ChapterScrapeBait {
-  const className = randomClassName();
   const rng = seedRng();
   const words = chapterWords(paragraphs);
 
@@ -79,8 +69,6 @@ export function createChapterScrapeBait(
         });
 
   return {
-    className,
-    css: `.${className}{display:none!important}`,
     rng,
     phrases,
     decoyParagraphs,
