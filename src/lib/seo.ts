@@ -52,6 +52,9 @@ export function publicPageMetadata({
     robots: {
       index,
       follow: false,
+      noarchive: true,
+      nosnippet: true,
+      nocache: true,
     },
   };
 }

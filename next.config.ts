@@ -9,6 +9,19 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "20mb",
     },
   },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow, noarchive, nosnippet",
+          },
+        ],
+      },
+    ];
+  },
   images: {
     // Serve originals; skip Vercel Image Optimization billing.
     unoptimized: true,
