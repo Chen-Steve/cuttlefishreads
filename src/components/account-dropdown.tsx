@@ -16,6 +16,7 @@ import {
 import { signOut } from "@/app/(auth)/actions";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
+import { WORKSPACE_BASE } from "@/lib/workspace";
 
 function AccountAvatar({
   avatarUrl,
@@ -71,7 +72,7 @@ export function AccountDropdown({
   coins = 0,
   isMasterAdmin = false,
   showCoins = true,
-  /** Show the translator workspace link (/admin). */
+  /** Show the translator workspace link (/workspace). */
   showTranslatorWorkspace = false,
   showPublicProfile = true,
   accountHref = "/account",
@@ -243,7 +244,7 @@ export function AccountDropdown({
           ) : null}
 
           {showTranslatorWorkspace ? (
-            <MenuLink href="/admin" onClick={close}>
+            <MenuLink href={WORKSPACE_BASE.translations} onClick={close}>
               {isMasterAdmin ? (
                 <Settings
                   className="size-4 shrink-0 text-muted"

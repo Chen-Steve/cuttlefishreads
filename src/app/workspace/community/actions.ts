@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getAdminAccess } from "@/lib/access";
+import { WORKSPACE_BASE } from "@/lib/workspace";
 import type { CommunityPostStatus } from "@/types";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -17,7 +18,7 @@ const STATUSES: CommunityPostStatus[] = [
 
 function revalidateCommunity() {
   revalidatePath("/community");
-  revalidatePath("/admin/community");
+  revalidatePath(`${WORKSPACE_BASE.translations}/community`);
 }
 
 export async function updateCommunityPostStatus(

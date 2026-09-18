@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { getAdminAccess } from "@/lib/access";
+import { WORKSPACE_BASE } from "@/lib/workspace";
 import { AdminNav } from "./_components/admin-nav";
 
 export const metadata: Metadata = {
@@ -21,7 +22,9 @@ export default async function AdminLayout({
 }) {
   const access = await getAdminAccess();
 
-  if (!access) redirect("/login");
+  if (!access) {
+    redirect(`/login?redirect=${encodeURIComponent(WORKSPACE_BASE.translations)}`);
+  }
   if (!access.isMasterAdmin && !access.isTranslator) {
     redirect("/apply");
   }

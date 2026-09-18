@@ -8,6 +8,7 @@ import { absoluteUrl } from "@/lib/seo";
 import { ensureProfileWithUsername } from "@/lib/profile";
 import { generateRandomUsername } from "@/lib/username";
 import { PASSWORD_RECOVERY_COOKIE } from "@/lib/password-recovery";
+import { rewriteLegacyWorkspacePath } from "@/lib/workspace";
 
 export type AuthState = { error?: string; message?: string };
 
@@ -38,7 +39,9 @@ export async function login(
   }
 
   const redirectTo = String(formData.get("redirectTo") ?? "").trim();
-  const safeRedirect = redirectTo.startsWith("/") ? redirectTo : "/account";
+  const safeRedirect = rewriteLegacyWorkspacePath(
+    redirectTo.startsWith("/") ? redirectTo : "/account",
+  );
 
   const supabase = createClient(await cookies());
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -67,7 +70,9 @@ export async function signup(
   }
 
   const redirectTo = String(formData.get("redirectTo") ?? "").trim();
-  const safeRedirect = redirectTo.startsWith("/") ? redirectTo : "/";
+  const safeRedirect = rewriteLegacyWorkspacePath(
+    redirectTo.startsWith("/") ? redirectTo : "/",
+  );
 
   const username = generateRandomUsername();
   const supabase = createClient(await cookies());
@@ -205,7 +210,7 @@ export async function signInWithGoogle(redirectTo?: string): Promise<void> {
   const origin = await requestOrigin();
   const callbackUrl = new URL(`${origin}/auth/callback`);
   if (redirectTo?.startsWith("/")) {
-    callbackUrl.searchParams.set("next", redirectTo);
+    callbackUrl.searchParams.set("next", rewriteLegacyWorkspacePath(redirectTo));
   }
 
   const supabase = createClient(await cookies());

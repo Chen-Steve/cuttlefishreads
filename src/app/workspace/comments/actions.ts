@@ -5,6 +5,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { getAdminAccess, type AdminAccess } from "@/lib/access";
 import { novelCommentsCacheTag } from "@/lib/data";
 import { notifyComment } from "@/lib/notifications/data";
+import { WORKSPACE_BASE } from "@/lib/workspace";
 import { createAdminClient } from "@/utils/supabase/admin";
 import type { NovelComment } from "@/types";
 
@@ -95,7 +96,7 @@ export async function replyToComment(
   ]);
 
   updateTag(novelCommentsCacheTag(parent.novel_slug));
-  revalidatePath("/admin/comments");
+  revalidatePath(`${WORKSPACE_BASE.translations}/comments`);
 
   return {
     reply: {

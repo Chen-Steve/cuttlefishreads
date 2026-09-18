@@ -20,7 +20,7 @@ export type AdminAccess = {
   isMasterAdmin: boolean;
   // Approved translator (main catalog translations).
   isTranslator: boolean;
-  // Translator workspace (/admin) — master or approved translator.
+  // Translator workspace (/workspace) — master or approved translator.
   hasWorkspace: boolean;
 };
 

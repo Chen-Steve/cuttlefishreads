@@ -7,6 +7,7 @@ import {
   COMMUNITY_DAILY_LIMIT,
   COMMUNITY_TITLE_MAX,
 } from "@/lib/community-constants";
+import { WORKSPACE_BASE } from "@/lib/workspace";
 import type { CommunityPost, CommunityPostKind, CommunityPostStatus } from "@/types";
 import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 
@@ -18,7 +19,7 @@ export type CommunityActionState = {
 
 function revalidateCommunity() {
   revalidatePath("/community");
-  revalidatePath("/admin/community");
+  revalidatePath(`${WORKSPACE_BASE.translations}/community`);
 }
 
 function parseKind(value: string): CommunityPostKind | null {

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess, grantProfileRole } from "@/lib/access";
+import { WORKSPACE_BASE } from "@/lib/workspace";
 
 export type ReviewState = { error?: string };
 
@@ -48,7 +49,7 @@ export async function approveApplication(
 
   if (error) return { error: error.message };
 
-  revalidatePath("/admin/applications");
+  revalidatePath(`${WORKSPACE_BASE.translations}/applications`);
   return {};
 }
 
@@ -71,7 +72,7 @@ export async function rejectApplication(
 
   if (error) return { error: error.message };
 
-  revalidatePath("/admin/applications");
+  revalidatePath(`${WORKSPACE_BASE.translations}/applications`);
   return {};
 }
 

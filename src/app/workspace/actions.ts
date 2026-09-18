@@ -95,7 +95,7 @@ export async function updateSupportLinks(
 
   // Global note and support links are cached inside the novel-detail entries.
   revalidatePublicPaths();
-  revalidatePath("/admin/settings");
+  revalidatePath(`${WORKSPACE_BASE.translations}/settings`);
   return { message: "Settings saved." };
 }
 

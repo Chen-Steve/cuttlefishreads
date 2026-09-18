@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AuthForm } from "../_components/auth-form";
 import { login, signInWithGoogle } from "../actions";
+import { rewriteLegacyWorkspacePath } from "@/lib/workspace";
 
 export const metadata: Metadata = {
   title: "Login",
@@ -13,7 +14,9 @@ export default async function LoginPage({
 }) {
   const { redirect: redirectTo } = await searchParams;
   const safeRedirect =
-    redirectTo?.startsWith("/") ? redirectTo : undefined;
+    redirectTo?.startsWith("/")
+      ? rewriteLegacyWorkspacePath(redirectTo)
+      : undefined;
 
   return (
     <AuthForm

@@ -10,6 +10,7 @@ import {
   passwordRecoveryCookieOptions,
 } from "@/lib/password-recovery";
 import { ensureOAuthProfile } from "@/lib/profile";
+import { rewriteLegacyWorkspacePath } from "@/lib/workspace";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -18,7 +19,9 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/";
-  const safeNext = next.startsWith("/") ? next : "/";
+  const safeNext = rewriteLegacyWorkspacePath(
+    next.startsWith("/") ? next : "/",
+  );
   const host = request.headers.get("host");
 
   if (code) {

@@ -9,6 +9,20 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "20mb",
     },
   },
+  async redirects() {
+    return [
+      {
+        source: "/admin",
+        destination: "/workspace",
+        permanent: true,
+      },
+      {
+        source: "/admin/:path*",
+        destination: "/workspace/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {
