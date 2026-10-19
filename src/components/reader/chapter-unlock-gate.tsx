@@ -49,9 +49,7 @@ export function ChapterUnlockGate({
       const result = await unlockChapter(novelSlug, chapterNumber);
       if (result.error) {
         setError(result.error);
-        return;
       }
-      router.refresh();
     });
   }
 

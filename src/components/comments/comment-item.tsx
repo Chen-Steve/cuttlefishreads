@@ -60,6 +60,7 @@ function CommentReplyItem({
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <Link
           href={`/u/${reply.username}`}
+          prefetch={false}
           className="text-sm font-semibold text-foreground transition-colors hover:text-accent"
         >
           {reply.username}
@@ -233,6 +234,7 @@ export function CommentItem({
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <Link
               href={`/u/${comment.username}`}
+              prefetch={false}
               className="text-sm font-semibold text-foreground transition-colors hover:text-accent"
             >
               {comment.username}
@@ -258,6 +260,7 @@ export function CommentItem({
               ) : (
                 <Link
                   href={`/novels/${comment.novelSlug}/${comment.chapterNumber}`}
+                  prefetch={false}
                   className="text-xs font-medium text-accent transition-colors hover:text-accent-hover"
                 >
                   Chapter {comment.chapterNumber}

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Heart } from "lucide-react";
 
 import { toggleCommentLike } from "@/app/(main)/novels/actions";
@@ -17,7 +16,6 @@ export function CommentLikeButton({
   initialCount: number;
   isLoggedIn: boolean;
 }) {
-  const router = useRouter();
   const [liked, setLiked] = useState(initialLiked);
   const [count, setCount] = useState(initialCount);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +52,6 @@ export function CommentLikeButton({
         return;
       }
       setLiked(Boolean(result.liked));
-      router.refresh();
     });
   }
 

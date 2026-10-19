@@ -38,6 +38,7 @@ export function TranslatorNote({
       {username ? (
         <Link
           href={profileHref ?? `/u/${username}`}
+          prefetch={false}
           className="font-semibold text-foreground transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           {name}

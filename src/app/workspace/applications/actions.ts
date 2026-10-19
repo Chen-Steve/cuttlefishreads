@@ -1,9 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess, grantProfileRole } from "@/lib/access";
+import { profileCacheTag } from "@/lib/data";
 import { WORKSPACE_BASE } from "@/lib/workspace";
 
 export type ReviewState = { error?: string };
@@ -49,6 +50,7 @@ export async function approveApplication(
 
   if (error) return { error: error.message };
 
+  if (application.username) updateTag(profileCacheTag(application.username));
   revalidatePath(`${WORKSPACE_BASE.translations}/applications`);
   return {};
 }

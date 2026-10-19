@@ -2,7 +2,6 @@
 
 import { useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Bell,
   BookOpen,
@@ -88,7 +87,6 @@ export function NotificationsList({
 }: {
   notifications: AppNotification[];
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const unreadCount = notifications.filter(
     (notification) => notification.readAt == null,
@@ -98,40 +96,27 @@ export function NotificationsList({
     if (notification.readAt != null) return;
     startTransition(async () => {
       await markNotificationRead(notification.id);
-      router.refresh();
     });
   }
 
   function handleMarkAll() {
     startTransition(async () => {
       const result = await markAllNotificationsRead();
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      router.refresh();
+      if (result.error) toast.error(result.error);
     });
   }
 
   function handleDelete(notificationId: string) {
     startTransition(async () => {
       const result = await deleteNotification(notificationId);
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      router.refresh();
+      if (result.error) toast.error(result.error);
     });
   }
 
   function handleClearAll() {
     startTransition(async () => {
       const result = await deleteAllNotifications();
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      router.refresh();
+      if (result.error) toast.error(result.error);
     });
   }
 

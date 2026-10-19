@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BookOpen, LogIn, Library, Search, ShoppingBag } from "lucide-react";
 
+import cuttleLogo from "@/assets/cuttle-logo.webp";
 import { AccountDropdown } from "@/components/account-dropdown";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useImmersiveHidesSiteHeader } from "@/hooks/use-immersive-hides-site-header";
@@ -204,12 +205,13 @@ export function SiteHeader({
       <div className="relative mx-auto flex h-16 max-w-6xl items-center gap-3 overflow-visible px-4 sm:gap-6 sm:px-6 lg:px-8">
         <Link
           href="/"
+          prefetch={false}
           aria-label={`${SITE.name} home`}
           className="relative z-0 inline-flex h-9 shrink-0 items-center overflow-hidden rounded-lg outline-offset-2 transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-accent sm:overflow-visible"
         >
           <span className="relative flex h-9 w-12 shrink-0 items-center overflow-hidden sm:overflow-visible">
             <Image
-              src="/cuttle.png"
+              src={cuttleLogo}
               alt=""
               width={24}
               height={24}
@@ -239,6 +241,7 @@ export function SiteHeader({
         >
           <Link
             href="/novels"
+            prefetch={false}
             aria-label="All novels"
             className={cn(navIconLinkClass, "sm:hidden")}
           >
@@ -252,6 +255,7 @@ export function SiteHeader({
                 <Link
                   key={`mobile-${href}`}
                   href={href}
+                  prefetch={false}
                   aria-label={label}
                   className={cn(navIconLinkClass, "sm:hidden")}
                 >
@@ -269,6 +273,7 @@ export function SiteHeader({
               <Link
                 key={href}
                 href={href}
+                prefetch={false}
                 aria-label={label}
                 className={className}
               >

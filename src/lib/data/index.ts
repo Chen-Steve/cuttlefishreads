@@ -198,14 +198,32 @@ export const NOVEL_RATINGS_CACHE_TAG = "novel-ratings";
 export function novelCommentsCacheTag(slug: string): string {
   return `novel-comments:${slug}`;
 }
+/** Chapter metadata + bodies for one novel. */
+export function novelChaptersCacheTag(novelId: string): string {
+  return `novel-chapters:${novelId}`;
+}
+/** Public profile row for /u/<username>. */
+export function profileCacheTag(username: string): string {
+  return `profile:${username.trim().toLowerCase()}`;
+}
+/** Bookmarked novel slugs for one user. */
+export function userBookmarksCacheTag(userId: string): string {
+  return `bookmarks:${userId}`;
+}
 
 const CATALOG_REVALIDATE_SECONDS = 60 * 5;
-const COMMENTS_REVALIDATE_SECONDS = 60;
+// Chapters only change through workspace actions, which bust by tag.
+const CHAPTER_REVALIDATE_SECONDS = 60 * 60 * 24;
+const COMMENTS_REVALIDATE_SECONDS = 60 * 15;
 
-/** Bust shared novel-list caches after create/update/delete/publish. */
-export function revalidateNovelsDataCache() {
+/**
+ * Bust shared novel-list caches after create/update/delete/publish. Pass the
+ * novel id when its chapters changed so only that novel's chapters refetch.
+ */
+export function revalidateNovelsDataCache(novelId?: string) {
   revalidateTag(NOVELS_CATALOG_CACHE_TAG, "max");
   revalidateTag(RECENTLY_UPDATED_NOVELS_CACHE_TAG, "max");
+  if (novelId) revalidateTag(novelChaptersCacheTag(novelId), "max");
 }
 
 const fetchNovelRows = unstable_cache(
@@ -249,8 +267,8 @@ async function fetchDbChapterMetas(novelId: string): Promise<DbChapterMeta[]> {
     },
     ["chapter-metas", novelId],
     {
-      revalidate: CATALOG_REVALIDATE_SECONDS,
-      tags: [NOVELS_CATALOG_CACHE_TAG],
+      revalidate: CHAPTER_REVALIDATE_SECONDS,
+      tags: [novelChaptersCacheTag(novelId)],
     },
   )();
 }
@@ -313,8 +331,8 @@ async function fetchDbChapterContent(
     },
     ["chapter-body", novelId, String(chapterNumber)],
     {
-      revalidate: CATALOG_REVALIDATE_SECONDS,
-      tags: [NOVELS_CATALOG_CACHE_TAG],
+      revalidate: CHAPTER_REVALIDATE_SECONDS,
+      tags: [novelChaptersCacheTag(novelId)],
     },
   )();
 }
@@ -641,39 +659,44 @@ export const getRecentlyUpdatedNovels = cache(
   },
 );
 
+/**
+ * Bookmarked slugs for one user. Bookmarks are publicly readable (for
+ * /u/<username> profiles), so the service role sees the same rows. Bookmark
+ * mutations call `updateTag(userBookmarksCacheTag(userId))`.
+ */
+async function fetchUserBookmarkSlugs(userId: string): Promise<string[]> {
+  return unstable_cache(
+    async () => {
+      const admin = createAdminClient();
+      const { data, error } = await admin
+        .from("bookmarks")
+        .select("novel_slug")
+        .eq("user_id", userId);
+
+      if (error) {
+        console.error("fetchUserBookmarkSlugs:", error);
+        return [];
+      }
+      return (data ?? []).map((r) => r.novel_slug as string);
+    },
+    ["user-bookmark-slugs", userId],
+    {
+      revalidate: CATALOG_REVALIDATE_SECONDS,
+      tags: [userBookmarksCacheTag(userId)],
+    },
+  )();
+}
+
 export const getBookmarkedSlugs = cache(async (): Promise<Set<string>> => {
   const claims = await getAuthClaims();
   if (!claims) return new Set();
-
-  // Bookmarks are publicly readable (for /u/<username> profiles), so always
-  // scope personal-library reads to the signed-in user.
-  const supabase = await getServerSupabase();
-  const { data, error } = await supabase
-    .from("bookmarks")
-    .select("novel_slug")
-    .eq("user_id", claims.sub);
-
-  if (error) {
-    console.error("getBookmarkedSlugs:", error);
-    return new Set();
-  }
-  return new Set((data ?? []).map((r) => r.novel_slug));
+  return new Set(await fetchUserBookmarkSlugs(claims.sub));
 });
 
 export const isNovelBookmarked = cache(
   async (slug: string): Promise<boolean> => {
-    const claims = await getAuthClaims();
-    if (!claims) return false;
-
-    const supabase = await getServerSupabase();
-    const { data } = await supabase
-      .from("bookmarks")
-      .select("id")
-      .eq("user_id", claims.sub)
-      .eq("novel_slug", slug)
-      .maybeSingle();
-
-    return Boolean(data);
+    const bookmarked = await getBookmarkedSlugs();
+    return bookmarked.has(slug);
   },
 );
 
@@ -696,15 +719,42 @@ export type PublicProfile = {
   patreonUrl: string | null;
 };
 
-export async function getPublicProfile(
+type DbPublicProfile = {
+  id: string;
+  username: string | null;
+  role: string | null;
+  avatar_url: string | null;
+  kofi_url: string | null;
+  patreon_url: string | null;
+};
+
+async function fetchPublicProfileRow(
   username: string,
-): Promise<PublicProfile | null> {
-  const supabase = await getServerSupabase();
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, username, role, avatar_url, kofi_url, patreon_url")
-    .eq("username", username.trim().toLowerCase())
-    .maybeSingle();
+): Promise<DbPublicProfile | null> {
+  return unstable_cache(
+    async () => {
+      const admin = createAdminClient();
+      const { data, error } = await admin
+        .from("profiles")
+        .select("id, username, role, avatar_url, kofi_url, patreon_url")
+        .eq("username", username)
+        .maybeSingle();
+
+      if (error) console.error("fetchPublicProfileRow:", error);
+      return (data as DbPublicProfile | null) ?? null;
+    },
+    ["public-profile", username],
+    {
+      revalidate: CATALOG_REVALIDATE_SECONDS,
+      tags: [profileCacheTag(username)],
+    },
+  )();
+}
+
+export const getPublicProfile = cache(async (
+  username: string,
+): Promise<PublicProfile | null> => {
+  const data = await fetchPublicProfileRow(username.trim().toLowerCase());
 
   if (!data?.username) return null;
   const roles = parseProfileRoles({
@@ -721,23 +771,12 @@ export async function getPublicProfile(
     kofiUrl: data.kofi_url?.trim() || null,
     patreonUrl: data.patreon_url?.trim() || null,
   };
-}
+});
 
 export async function getUserBookmarkedNovels(
   userId: string,
 ): Promise<Novel[]> {
-  const supabase = await getServerSupabase();
-  const { data, error } = await supabase
-    .from("bookmarks")
-    .select("novel_slug")
-    .eq("user_id", userId);
-
-  if (error) {
-    console.error("getUserBookmarkedNovels:", error);
-    return [];
-  }
-
-  const slugs = new Set((data ?? []).map((r) => r.novel_slug));
+  const slugs = new Set(await fetchUserBookmarkSlugs(userId));
   if (slugs.size === 0) return [];
 
   const novels = await getNovels();
@@ -745,22 +784,8 @@ export async function getUserBookmarkedNovels(
 }
 
 export async function getUserCreatedNovels(userId: string): Promise<Novel[]> {
-  // Use the admin client so chapters(count) isn't zeroed out by RLS
-  // (public chapter reads go through the service role elsewhere too).
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("novels")
-    .select(NOVEL_LIST_COLUMNS)
-    .eq("publisher_id", userId)
-    .eq("publication_type", "translation")
-    .order("updated_at", { ascending: false });
-
-  if (error) {
-    console.error("getUserCreatedNovels:", error);
-    return [];
-  }
-
-  return ((data ?? []) as DbNovel[]).map(mapNovel);
+  const novels = await getNovels();
+  return novels.filter((novel) => novel.publisherId === userId);
 }
 
 /** Chapter list/TOC metadata without body content. */

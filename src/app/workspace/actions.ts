@@ -1,11 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess, type AdminAccess } from "@/lib/access";
-import { revalidateNovelsDataCache } from "@/lib/data";
+import { profileCacheTag, revalidateNovelsDataCache } from "@/lib/data";
 import { notifyBookmarkersOfChapter, notifyBookmarkersOfChapters } from "@/lib/notifications/data";
 import { validateCoverFile } from "@/lib/cover-file";
 import { slugify } from "@/lib/utils";
@@ -23,9 +23,10 @@ import {
 
 // Public catalog data is tag-cached (see lib/data). Path-level revalidation
 // of "/" or "/novels" would also drop unrelated entries (e.g. the hourly GA4
-// report) via Next's implicit route tags, so bust by tag only.
-function revalidatePublicPaths() {
-  revalidateNovelsDataCache();
+// report) via Next's implicit route tags, so bust by tag only. Pass the novel
+// id whenever its chapters changed.
+function revalidatePublicPaths(novelId?: string) {
+  revalidateNovelsDataCache(novelId);
 }
 
 export type AdminState = { error?: string; success?: string };
@@ -95,6 +96,7 @@ export async function updateSupportLinks(
 
   // Global note and support links are cached inside the novel-detail entries.
   revalidatePublicPaths();
+  if (auth.access.username) updateTag(profileCacheTag(auth.access.username));
   revalidatePath(`${WORKSPACE_BASE.translations}/settings`);
   return { message: "Settings saved." };
 }
@@ -480,7 +482,7 @@ export async function deleteNovel(novelId: string): Promise<AdminState> {
 
   const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));
-  revalidatePublicPaths();
+  revalidatePublicPaths(novelId);
   revalidatePath(`/novels/${existing.slug}`);
   redirect(workspaceBase);
 }
@@ -581,7 +583,7 @@ export async function createChapter(
 
   const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));
-  revalidatePublicPaths();
+  revalidatePublicPaths(novelId);
   redirect(`${workspaceBase}/novels/${novelId}/chapters`);
 }
 
@@ -730,7 +732,7 @@ export async function bulkCreateChapters(
 
   const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));
-  revalidatePublicPaths();
+  revalidatePublicPaths(id);
   redirect(`${workspaceBase}/novels/${id}/chapters`);
 }
 
@@ -792,7 +794,7 @@ export async function setChapterPublished(
       `${workspaceBase}/novels/${existing.novel_id}/chapters`,
     ),
   );
-  revalidatePublicPaths();
+  revalidatePublicPaths(existing.novel_id);
   return {};
 }
 
@@ -850,7 +852,7 @@ export async function publishAllChapters(novelId: string): Promise<AdminState> {
   revalidatePath(
     workspaceInternalPath(`${workspaceBase}/novels/${novelId}/chapters`),
   );
-  revalidatePublicPaths();
+  revalidatePublicPaths(novelId);
   return {};
 }
 
@@ -884,7 +886,7 @@ export async function deleteChapter(chapterId: string): Promise<AdminState> {
       `${workspaceBase}/novels/${existing.novel_id}/chapters`,
     ),
   );
-  revalidatePublicPaths();
+  revalidatePublicPaths(existing.novel_id);
   return {};
 }
 
@@ -936,7 +938,7 @@ export async function deleteChapters(
   revalidatePath(
     workspaceInternalPath(`${workspaceBase}/novels/${id}/chapters`),
   );
-  revalidatePublicPaths();
+  revalidatePublicPaths(id);
   return {};
 }
 
@@ -1093,7 +1095,7 @@ export async function updateChapter(
       `${workspaceBase}/novels/${existing.novel_id}/chapters/${chapterId}/edit`,
     ),
   );
-  revalidatePublicPaths();
+  revalidatePublicPaths(existing.novel_id);
   return { success: "Chapter saved." };
 }
 

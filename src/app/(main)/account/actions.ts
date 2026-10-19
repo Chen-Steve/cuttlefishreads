@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 
+import { profileCacheTag } from "@/lib/data";
 import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 import {
@@ -93,7 +94,7 @@ export async function updateUsername(
   }
 
   revalidatePath("/account");
-  revalidatePath(`/u/${username}`);
+  updateTag(profileCacheTag(username));
   return { message: "Username updated." };
 }
 
@@ -155,7 +156,7 @@ export async function updateAvatar(
 
   revalidatePath("/account");
   if (existing?.username) {
-    revalidatePath(`/u/${existing.username}`);
+    updateTag(profileCacheTag(existing.username));
   }
 
   return { message: "Profile picture updated." };
@@ -225,7 +226,7 @@ export async function removeAvatar(): Promise<AvatarState> {
 
   revalidatePath("/account");
   if (existing.username) {
-    revalidatePath(`/u/${existing.username}`);
+    updateTag(profileCacheTag(existing.username));
   }
 
   return { message: "Profile picture removed." };

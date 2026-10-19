@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { ArrowRight, Cookie, X } from "lucide-react";
 
 import { bulkUnlockChapters } from "@/app/(main)/novels/actions";
@@ -22,7 +22,6 @@ export function BulkBuyChapters({
   userCoins: number;
   isLoggedIn: boolean;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
   const returnPath = pathname || `/novels/${novelSlug}`;
   const [error, setError] = useState<string | null>(null);
@@ -47,9 +46,7 @@ export function BulkBuyChapters({
           return;
         }
         setError(result.error);
-        return;
       }
-      router.refresh();
     });
   }
 

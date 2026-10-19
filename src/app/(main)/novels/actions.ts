@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
+import { refresh, updateTag } from "next/cache";
 
 import { notifyComment } from "@/lib/notifications/data";
 import {
@@ -8,6 +8,7 @@ import {
   isChapterReadable,
   NOVEL_RATINGS_CACHE_TAG,
   novelCommentsCacheTag,
+  userBookmarksCacheTag,
 } from "@/lib/data";
 import type { NovelComment } from "@/types";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -64,8 +65,7 @@ export async function unlockChapter(
     return { error: error.message };
   }
 
-  revalidatePath(`/novels/${novelSlug}/${chapterNumber}`);
-  revalidatePath(`/novels/${novelSlug}`);
+  refresh();
   return { unlocked: data === true };
 }
 
@@ -95,7 +95,7 @@ export async function bulkUnlockChapters(
   }
 
   const result = data as { unlocked_count: number; coins_spent: number } | null;
-  revalidatePath(`/novels/${novelSlug}`);
+  refresh();
 
   return {
     unlockedCount: result?.unlocked_count ?? 0,
@@ -145,8 +145,7 @@ export async function toggleBookmark(
       .eq("user_id", userId);
     if (error) return { error: error.message };
 
-    revalidatePath(`/novels/${novelSlug}`);
-    revalidatePath("/library");
+    updateTag(userBookmarksCacheTag(userId));
     return { bookmarked: false };
   }
 
@@ -157,8 +156,7 @@ export async function toggleBookmark(
   });
   if (error) return { error: error.message };
 
-  revalidatePath(`/novels/${novelSlug}`);
-  revalidatePath("/library");
+  updateTag(userBookmarksCacheTag(userId));
   return { bookmarked: true };
 }
 
@@ -187,10 +185,7 @@ export async function removeBookmarks(
 
   if (error) return { error: error.message };
 
-  for (const slug of slugs) {
-    revalidatePath(`/novels/${slug}`);
-  }
-  revalidatePath("/library");
+  updateTag(userBookmarksCacheTag(claims.sub));
   return { removed: slugs.length };
 }
 

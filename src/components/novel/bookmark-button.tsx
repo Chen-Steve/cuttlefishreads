@@ -47,7 +47,6 @@ export function BookmarkButton({
         return;
       }
       setBookmarked(Boolean(result.bookmarked));
-      router.refresh();
     });
   }
 

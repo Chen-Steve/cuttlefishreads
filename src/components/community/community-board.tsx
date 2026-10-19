@@ -257,6 +257,7 @@ function CommunityPostCard({
           ) : (
             <Link
               href={`/u/${post.username}`}
+              prefetch={false}
               className="font-medium text-foreground/80 transition-colors hover:text-accent"
             >
               {post.username}

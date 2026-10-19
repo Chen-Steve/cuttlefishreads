@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -151,7 +150,6 @@ export function LibraryGrid({
   bookmarked?: NovelCardData[];
   loggedIn?: boolean;
 }) {
-  const router = useRouter();
   const [mode, setMode] = useState<LibraryMode>("bookmarked");
   const [items, setItems] = useState(bookmarked);
   const [viewed, setViewed] = useState<ViewedItem[]>([]);
@@ -226,7 +224,6 @@ export function LibraryGrid({
         return;
       }
 
-      router.refresh();
       toast(`Removed "${title}"`, {
         action: {
           label: "Undo",
@@ -239,9 +236,7 @@ export function LibraryGrid({
                   current.filter((item) => item.slug !== slug),
                 );
                 toast.error(undo.error);
-                return;
               }
-              router.refresh();
             });
           },
         },

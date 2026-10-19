@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Feather } from "lucide-react";
+import cuttleLogo from "@/assets/cuttle-logo.webp";
 import { DiscordIcon } from "@/components/discord-icon";
 import { SITE } from "@/lib/constants";
 
@@ -41,12 +42,13 @@ export function SiteFooter() {
           <div className="max-w-xs">
             <Link
               href="/"
+              prefetch={false}
               aria-label={`${SITE.name} home`}
               className="inline-flex items-center overflow-visible rounded-lg outline-offset-2 transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-accent"
             >
               <span className="relative flex h-9 w-12 shrink-0 items-center overflow-visible">
                 <Image
-                  src="/cuttle.png"
+                  src={cuttleLogo}
                   alt=""
                   width={24}
                   height={24}
@@ -64,6 +66,7 @@ export function SiteFooter() {
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <Link
                 href="/apply"
+                prefetch={false}
                 className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent transition-colors hover:bg-accent/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
                 <Feather className="size-3.5" strokeWidth={1.75} aria-hidden />
@@ -93,6 +96,7 @@ export function SiteFooter() {
                     <li key={link.href}>
                       <Link
                         href={link.href}
+                        prefetch={false}
                         className="text-sm text-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                       >
                         {link.label}

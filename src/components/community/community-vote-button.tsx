@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ChevronUp } from "lucide-react";
 
@@ -22,7 +21,6 @@ export function CommunityVoteButton({
   isLoggedIn: boolean;
   returnPath: string;
 }) {
-  const router = useRouter();
   const [voted, setVoted] = useState(initialVoted);
   const [count, setCount] = useState(initialCount);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +61,6 @@ export function CommunityVoteButton({
         return;
       }
       setVoted(Boolean(result.voted));
-      router.refresh();
     });
   }
 
