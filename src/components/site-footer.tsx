@@ -12,7 +12,6 @@ const linkGroups = [
       { href: "/novels", label: "All novels" },
       { href: "/library", label: "My library" },
       { href: "/search", label: "Search" },
-      { href: "/community", label: "Request a novel" },
     ],
   },
   {

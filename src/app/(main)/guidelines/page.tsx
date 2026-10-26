@@ -26,8 +26,8 @@ export default function GuidelinesPage() {
         <Section title="1. Purpose">
           <p>
             These Community Guidelines explain how we expect people to behave on{" "}
-            {SITE.name} — including novel comments, the novel request / idea
-            board, and related community spaces such as our Discord. They work
+            {SITE.name} — including novel comments and related community spaces
+            such as our Discord. They work
             together with our{" "}
             <Link
               href="/terms"
@@ -63,11 +63,6 @@ export default function GuidelinesPage() {
               Novel comments should relate to the story, translation, or reading
               experience. Off-topic spam, advertising, and repeated low-effort
               posts may be removed.
-            </li>
-            <li>
-              Novel requests and idea-board posts should be genuine suggestions.
-              Do not flood the board, impersonate staff decisions, or use it to
-              advertise.
             </li>
             <li>
               Spoilers for later chapters should be marked when practical, and

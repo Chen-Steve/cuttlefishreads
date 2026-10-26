@@ -63,7 +63,6 @@ export function AdminNav({ isMasterAdmin }: { isMasterAdmin: boolean }) {
     ? [
         ...baseLinks,
         { href: `${base}/applications`, label: "Applications" },
-        { href: `${base}/community`, label: "Community" },
       ]
     : baseLinks;
   const homeHref = "/";

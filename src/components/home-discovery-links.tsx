@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Dices, MessagesSquare } from "lucide-react";
+import { Dices } from "lucide-react";
 
 import { getRandomTranslationHref } from "@/app/(main)/home-actions";
 import { DiscordIcon } from "@/components/discord-icon";
@@ -15,7 +14,7 @@ function TileBackground({ src }: { src: string }) {
     <>
       <DitheredImageBackground
         src={src}
-        sizes="(max-width: 640px) 33vw, 12rem"
+        sizes="(max-width: 640px) 50vw, 18rem"
         className="-z-20"
       />
       <span
@@ -50,7 +49,7 @@ export function HomeDiscoveryLinks({
 
   return (
     <section
-      className="mt-4 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3"
+      className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3"
       aria-label="Quick links"
     >
       <button
@@ -79,14 +78,6 @@ export function HomeDiscoveryLinks({
           <span className="sr-only"> (opens in a new tab)</span>
         </span>
       </a>
-
-      <Link href="/community" className={`${tileClass} hover:text-accent`}>
-        <TileBackground src="/background1.jpg" />
-        <span className="relative z-10 inline-flex flex-col items-center gap-1.5">
-          <MessagesSquare className="size-4 sm:size-5" strokeWidth={1.75} aria-hidden />
-          Community
-        </span>
-      </Link>
     </section>
   );
 }
