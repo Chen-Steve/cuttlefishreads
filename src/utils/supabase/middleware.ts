@@ -7,6 +7,7 @@ import {
   mergeAuthCookieOptions,
 } from "@/lib/auth-cookies";
 import {
+  authSessionNeedsRefresh,
   clearSupabaseAuthCookies,
   isStaleAuthSessionError,
   isSupabaseAuthCookie,
@@ -32,10 +33,9 @@ export const updateSession = async (
       request,
     });
 
-  const hasAuthCookie = request.cookies
-    .getAll()
-    .some((cookie) => isSupabaseAuthCookie(cookie.name));
-  if (!hasAuthCookie) {
+  const cookies = request.cookies.getAll();
+  const hasAuthCookie = cookies.some((cookie) => isSupabaseAuthCookie(cookie.name));
+  if (!hasAuthCookie || !authSessionNeedsRefresh(cookies)) {
     return supabaseResponse;
   }
 

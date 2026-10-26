@@ -115,7 +115,7 @@ export function ImmersiveChapterShell({
         data-reader-chrome={immersive ? "" : undefined}
         className={cn(
           immersive
-            ? "fixed inset-x-0 top-0 z-40 border-b border-border/70 bg-background/90 px-4 py-3 backdrop-blur-md transition-transform duration-200 sm:px-6"
+            ? "fixed inset-x-0 top-0 z-40 border-b border-border/70 bg-background px-4 py-3 transition-transform duration-200 sm:px-6"
             : "mb-3",
           chromeHidden && "pointer-events-none -translate-y-full",
         )}
@@ -151,7 +151,7 @@ export function ImmersiveChapterShell({
         <div
           data-reader-chrome=""
           className={cn(
-            "fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/90 px-4 py-3 backdrop-blur-md transition-transform duration-200 sm:px-6",
+            "fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background px-4 py-3 transition-transform duration-200 sm:px-6",
             chromeHidden && "pointer-events-none translate-y-full",
           )}
         >

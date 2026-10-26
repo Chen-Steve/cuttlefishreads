@@ -18,7 +18,7 @@ export function ChapterContentFrame({ children }: { children: ReactNode }) {
   return (
     <div
       className={cn(
-        "flex flex-col select-none",
+        "chapter-prose flex flex-col select-none",
         padded && "rounded-xl px-4 py-5 sm:px-6 sm:py-6",
       )}
       style={style}

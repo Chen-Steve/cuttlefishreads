@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { ArrowRight, Library } from "lucide-react";
 import { DiscordIcon } from "@/components/discord-icon";
@@ -11,6 +12,7 @@ import {
   PaginatedRecentlyUpdatedList,
 } from "@/components/novel";
 import { PageContainer } from "@/components/page-container";
+import { LoadingStatus, Skeleton } from "@/components/skeleton";
 import {
   getCompletedNovels,
   getFeaturedNovels,
@@ -30,27 +32,7 @@ export const metadata: Metadata = publicPageMetadata({
   path: "/",
 });
 
-export default async function Home() {
-  const [catalog, recentlyUpdated] = await Promise.all([
-    getNovels(),
-    getRecentlyUpdatedNovels(),
-  ]);
-
-  // Section sorts are in-memory once the catalog is loaded.
-  const [featured, newlyAdded, completed] = await Promise.all([
-    getFeaturedNovels(catalog),
-    getNewlyAddedNovels(catalog),
-    getCompletedNovels(catalog),
-  ]);
-  const underrated = await getUnderratedNovels(
-    [
-      ...featured.map((novel) => novel.slug),
-      ...newlyAdded.map((novel) => novel.slug),
-    ],
-    undefined,
-    catalog,
-  );
-
+export default function Home() {
   return (
     <PageContainer className="pt-3 pb-6 sm:py-8 lg:py-10">
       <h1 className="sr-only sm:hidden">{SITE.name}</h1>
@@ -98,12 +80,59 @@ export default async function Home() {
 
       <ContinueReadingSection className="mt-0 sm:mt-5" />
 
+      <div className="mt-6 peer-data-[state=closed]/continue:mt-2 sm:mt-8 sm:peer-data-[state=closed]/continue:mt-2.5">
+        <Suspense fallback={<HomeCatalogFallback />}>
+          <HomeCatalog />
+        </Suspense>
+      </div>
+    </PageContainer>
+  );
+}
+
+function HomeCatalogFallback() {
+  return (
+    <LoadingStatus label="Loading novels">
+      <div className="flex gap-3 overflow-hidden">
+        {Array.from({ length: 6 }, (_, index) => (
+          <Skeleton
+            key={index}
+            className="aspect-[3/4] w-[7.5rem] shrink-0 rounded-lg"
+          />
+        ))}
+      </div>
+    </LoadingStatus>
+  );
+}
+
+async function HomeCatalog() {
+  const [catalog, recentlyUpdated] = await Promise.all([
+    getNovels(),
+    getRecentlyUpdatedNovels(),
+  ]);
+
+  // Section sorts are in-memory once the catalog is loaded.
+  const [featured, newlyAdded, completed] = await Promise.all([
+    getFeaturedNovels(catalog),
+    getNewlyAddedNovels(catalog),
+    getCompletedNovels(catalog),
+  ]);
+  const underrated = await getUnderratedNovels(
+    [
+      ...featured.map((novel) => novel.slug),
+      ...newlyAdded.map((novel) => novel.slug),
+    ],
+    undefined,
+    catalog,
+  );
+
+  return (
+    <>
       <HomeSection
         title="Featured"
         storageKey="cf-home-section-featured"
         href={novelsBrowseHref({ sort: "views-desc" })}
         linkLabel="View all"
-        className="mt-6 sm:mt-8 peer-data-[state=closed]/continue:mt-2 sm:peer-data-[state=closed]/continue:mt-2.5"
+        className="mt-0"
         header="rail"
       >
         <FeaturedNovels novels={featured} />
@@ -165,6 +194,6 @@ export default async function Home() {
           />
         </HomeSection>
       ) : null}
-    </PageContainer>
+    </>
   );
 }

@@ -5,6 +5,8 @@ import {
   authCookieOptionsForHost,
 } from "@/lib/auth-cookies";
 
+export { authSessionNeedsRefresh } from "@/lib/auth-session-refresh";
+
 /** Supabase auth session cookie (including chunked `sb-*-auth-token.N`). */
 export function isSupabaseAuthCookie(name: string): boolean {
   return name.startsWith("sb-") && name.includes("auth-token");

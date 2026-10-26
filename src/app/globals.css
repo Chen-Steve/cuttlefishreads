@@ -53,6 +53,12 @@ html {
   }
 }
 
+/* Offscreen chapter paragraphs skip layout until they near the viewport. */
+.chapter-prose > p {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 3lh;
+}
+
 /* Highlight the active footnote / return target after navigating. */
 [id^="cf-fn"]:target,
 [id^="cf-fnref"]:target {

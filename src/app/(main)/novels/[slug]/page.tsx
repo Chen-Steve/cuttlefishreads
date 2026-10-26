@@ -18,12 +18,13 @@ import { COVER_SIZES_DETAIL } from "@/components/novel/novel-cover";
 import { getBulkBuyState } from "@/lib/bulk-buy";
 import { PageContainer } from "@/components/page-container";
 import { StarRating } from "@/components/reviews";
+import { Skeleton } from "@/components/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
   getChapterListItems,
   getNovel,
   getNovelRatingSummary,
-  getNovels,
+  getPublicChapterListItems,
   isNovelBookmarked,
 } from "@/lib/data";
 import { getSessionProfile } from "@/lib/session-profile";
@@ -61,29 +62,29 @@ export default async function NovelDetailPage({
   params,
 }: PageProps<"/novels/[slug]">) {
   const { slug } = await params;
-  const [novel, catalog, chapters, bookmarked, session, rating] =
-    await Promise.all([
-      getNovel(slug),
-      getNovels(),
-      getChapterListItems(slug),
-      isNovelBookmarked(slug),
-      getSessionProfile(),
-      getNovelRatingSummary(slug),
-    ]);
-  const isLoggedIn = Boolean(session);
-  const userCoins = session?.coins ?? 0;
+  const readerAccess = getChapterListItems(slug)
+    .then((items) =>
+      items.map(({ id, locked, adminAccess }) => ({
+        id,
+        locked,
+        adminAccess,
+      })),
+    )
+    .catch((error: unknown) => {
+      console.error("reader chapter access:", error);
+      return [];
+    });
+  const [novel, chapters] = await Promise.all([
+    getNovel(slug),
+    getPublicChapterListItems(slug),
+  ]);
 
   if (!novel) {
     notFound();
   }
 
-  const viewCount =
-    catalog.find((item) => item.slug === novel.slug)?.viewCount ??
-    novel.viewCount ??
-    0;
-
+  const viewCount = novel.viewCount ?? 0;
   const firstChapter = chapters[0];
-  const bulkBuy = getBulkBuyState(chapters);
 
   const authorLine =
     novel.translator || novel.originalAuthor ? (
@@ -133,37 +134,6 @@ export default async function NovelDetailPage({
         <Badge key={genre}>{genre}</Badge>
       ))}
     </div>
-  );
-
-  const viewCountDisplay = (
-    <p className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted sm:text-sm">
-      <span className="inline-flex items-center gap-1.5">
-        <Eye className="size-3.5 shrink-0 sm:size-4" strokeWidth={1.75} aria-hidden />
-        {viewCount.toLocaleString()} views
-      </span>
-      {rating.count > 0 ? (
-        <span className="inline-flex items-center gap-1.5">
-          <StarRating value={rating.average} starClassName="size-3.5" />
-          {rating.average.toFixed(1)} ({rating.count})
-        </span>
-      ) : null}
-    </p>
-  );
-
-  const actionButtons = (
-    <>
-      {firstChapter ? (
-        <StartReadingButton
-          slug={novel.slug}
-          firstChapterNumber={firstChapter.number}
-        />
-      ) : null}
-      <BookmarkButton
-        novelSlug={novel.slug}
-        initialBookmarked={bookmarked}
-        isLoggedIn={isLoggedIn}
-      />
-    </>
   );
 
   const supportLinks =
@@ -216,12 +186,15 @@ export default async function NovelDetailPage({
             <div className="flex min-w-0 flex-1 flex-col gap-2 sm:hidden">
               {authorLine}
               {statusAndGenres}
-              {viewCountDisplay}
+              <NovelViewCount viewCount={viewCount} slug={novel.slug} />
             </div>
           </div>
           {/* Desktop buttons below cover */}
           <div className="mt-1 hidden w-full flex-col gap-3 sm:flex">
-            {actionButtons}
+            <NovelActions
+              slug={novel.slug}
+              firstChapterNumber={firstChapter?.number}
+            />
             {supportLinks}
           </div>
         </div>
@@ -235,7 +208,7 @@ export default async function NovelDetailPage({
           <div className="mt-1 hidden flex-col gap-4 sm:flex">
             {authorLine}
             {statusAndGenres}
-            {viewCountDisplay}
+            <NovelViewCount viewCount={viewCount} slug={novel.slug} />
           </div>
 
           {novel.synopsis ? <NovelDescription synopsis={novel.synopsis} /> : null}
@@ -244,7 +217,10 @@ export default async function NovelDetailPage({
           {/* Mobile buttons */}
           <div className="mt-3 flex flex-col gap-3 sm:hidden">
             <div className="flex items-start gap-2">
-              {actionButtons}
+              <NovelActions
+                slug={novel.slug}
+                firstChapterNumber={firstChapter?.number}
+              />
             </div>
             {supportLinks}
           </div>
@@ -252,17 +228,14 @@ export default async function NovelDetailPage({
       </div>
 
       <section className="mt-2">
-        {bulkBuy.eligible ? (
-          <div className="mb-2 flex justify-end">
-            <BulkBuyChapters
-              novelSlug={novel.slug}
-              chapters={chapters}
-              userCoins={userCoins}
-              isLoggedIn={isLoggedIn}
-            />
-          </div>
-        ) : null}
-        <ChapterList slug={novel.slug} chapters={chapters} />
+        <Suspense fallback={null}>
+          <NovelBulkBuy slug={novel.slug} />
+        </Suspense>
+        <ChapterList
+          slug={novel.slug}
+          chapters={chapters}
+          readerAccess={readerAccess}
+        />
       </section>
 
       <section className="mt-4" aria-label="Comments">
@@ -280,5 +253,101 @@ export default async function NovelDetailPage({
         </Suspense>
       </section>
     </PageContainer>
+  );
+}
+
+function NovelViewCount({
+  viewCount,
+  slug,
+}: {
+  viewCount: number;
+  slug: string;
+}) {
+  return (
+    <p className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted sm:text-sm">
+      <span className="inline-flex items-center gap-1.5">
+        <Eye className="size-3.5 shrink-0 sm:size-4" strokeWidth={1.75} aria-hidden />
+        {viewCount.toLocaleString()} views
+      </span>
+      <Suspense fallback={null}>
+        <NovelRating slug={slug} />
+      </Suspense>
+    </p>
+  );
+}
+
+async function NovelRating({ slug }: { slug: string }) {
+  const rating = await getNovelRatingSummary(slug);
+  if (rating.count === 0) return null;
+
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <StarRating value={rating.average} starClassName="size-3.5" />
+      {rating.average.toFixed(1)} ({rating.count})
+    </span>
+  );
+}
+
+function NovelActions({
+  slug,
+  firstChapterNumber,
+}: {
+  slug: string;
+  firstChapterNumber?: number;
+}) {
+  return (
+    <>
+      {firstChapterNumber != null ? (
+        <StartReadingButton
+          slug={slug}
+          firstChapterNumber={firstChapterNumber}
+        />
+      ) : null}
+      <Suspense fallback={<BookmarkButtonFallback />}>
+        <NovelBookmarkButton slug={slug} />
+      </Suspense>
+    </>
+  );
+}
+
+function BookmarkButtonFallback() {
+  return (
+    <div className="w-auto shrink-0 sm:w-full" aria-hidden>
+      <Skeleton className="h-11 w-11 rounded-xl sm:w-full" />
+    </div>
+  );
+}
+
+async function NovelBookmarkButton({ slug }: { slug: string }) {
+  const [bookmarked, session] = await Promise.all([
+    isNovelBookmarked(slug),
+    getSessionProfile(),
+  ]);
+
+  return (
+    <BookmarkButton
+      novelSlug={slug}
+      initialBookmarked={bookmarked}
+      isLoggedIn={Boolean(session)}
+    />
+  );
+}
+
+async function NovelBulkBuy({ slug }: { slug: string }) {
+  const [chapters, session] = await Promise.all([
+    getChapterListItems(slug),
+    getSessionProfile(),
+  ]);
+  if (!getBulkBuyState(chapters).eligible) return null;
+
+  return (
+    <div className="mb-2 flex justify-end">
+      <BulkBuyChapters
+        novelSlug={slug}
+        chapters={chapters}
+        userCoins={session?.coins ?? 0}
+        isLoggedIn={Boolean(session)}
+      />
+    </div>
   );
 }

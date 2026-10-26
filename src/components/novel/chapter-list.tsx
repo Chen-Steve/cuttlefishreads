@@ -85,25 +85,90 @@ export function ChapterOrderToggle({ className }: { className?: string }) {
   );
 }
 
+type ChapterAccessPatch = Pick<
+  ChapterListItem,
+  "id" | "locked" | "adminAccess"
+>;
+
+function applyChapterAccess(
+  chapters: ChapterListItem[],
+  access: ChapterAccessPatch[],
+): ChapterListItem[] | null {
+  if (access.length !== chapters.length) return null;
+
+  let changed = false;
+  const next: ChapterListItem[] = [];
+  for (let index = 0; index < chapters.length; index++) {
+    const chapter = chapters[index]!;
+    const update = access[index];
+    if (!update || update.id !== chapter.id) return null;
+    if (
+      chapter.locked === update.locked &&
+      chapter.adminAccess === update.adminAccess
+    ) {
+      next.push(chapter);
+      continue;
+    }
+    changed = true;
+    next.push({
+      ...chapter,
+      locked: update.locked,
+      adminAccess: update.adminAccess,
+    });
+  }
+
+  return changed ? next : null;
+}
+
 export function ChapterList({
   slug,
   chapters,
+  readerAccess,
   catalogBase = "novels",
   hideLockBadges = false,
 }: {
   slug: string;
   chapters: ChapterListItem[];
+  /** Purchased and admin access, applied after the public list is on screen. */
+  readerAccess?: Promise<ChapterAccessPatch[]>;
   catalogBase?: import("@/lib/catalog-paths").CatalogBase;
   /** When true, skip lock UI on chapter rows. */
   hideLockBadges?: boolean;
 }) {
   const newestFirst = useChapterOrderPreference();
   const [page, setPage] = useState(0);
+  const [accessChapters, setAccessChapters] = useState<ChapterListItem[] | null>(
+    null,
+  );
+  const [accessFor, setAccessFor] = useState(chapters);
+  if (accessFor !== chapters) {
+    setAccessFor(chapters);
+    setAccessChapters(null);
+  }
+  const visibleChapters = accessChapters ?? chapters;
+
+  useEffect(() => {
+    if (!readerAccess) return;
+    let cancelled = false;
+    readerAccess.then(
+      (access) => {
+        if (cancelled) return;
+        setAccessChapters((current) => {
+          const merged = applyChapterAccess(current ?? chapters, access);
+          return merged ?? current;
+        });
+      },
+      () => {},
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [chapters, readerAccess]);
 
   const rows = useMemo(() => {
-    const sorted = [...chapters].sort((a, b) => a.number - b.number);
+    const sorted = [...visibleChapters].sort((a, b) => a.number - b.number);
     return newestFirst ? sorted.reverse() : sorted;
-  }, [chapters, newestFirst]);
+  }, [visibleChapters, newestFirst]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / CHAPTER_PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
@@ -116,7 +181,7 @@ export function ChapterList({
     setPage(0);
   }, [newestFirst]);
 
-  const hasChapters = chapters.length > 0;
+  const hasChapters = visibleChapters.length > 0;
 
   return (
     <TabPanelShell
@@ -124,7 +189,7 @@ export function ChapterList({
         <h2 className="flex h-9 items-center px-4 text-sm font-semibold tracking-tight text-foreground">
           Chapters:
           <span className="ml-1.5 text-xs font-normal text-muted">
-            {chapters.length}
+            {visibleChapters.length}
           </span>
         </h2>
       }

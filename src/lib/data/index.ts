@@ -790,6 +790,18 @@ export async function getUserCreatedNovels(userId: string): Promise<Novel[]> {
   return novels.filter((novel) => novel.publisherId === userId);
 }
 
+/** Chapter list with public lock state. No auth or unlock lookup. */
+export const getPublicChapterListItems = cache(
+  async (slug: string): Promise<ChapterListItem[]> => {
+    const novel = await fetchNovelIdBySlug(slug);
+    if (!novel) return [];
+
+    const rows = await fetchDbChapterMetas(novel.id);
+    const unlocked = new Set<number>();
+    return rows.map((row) => mapChapterListItem(slug, row, unlocked, false));
+  },
+);
+
 /** Chapter list/TOC metadata without body content. */
 export const getChapterListItems = cache(
   async (slug: string): Promise<ChapterListItem[]> => {
