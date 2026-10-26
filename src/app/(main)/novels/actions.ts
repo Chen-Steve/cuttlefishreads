@@ -239,7 +239,23 @@ export async function createComment(
     return { error: "Novel not found." };
   }
 
-  const { data: inserted, error } = await supabase
+  // Comment writes go through the service role; the Data API roles have no
+  // INSERT/UPDATE on novel_comments, so these checks can't be bypassed.
+  const admin = createAdminClient();
+
+  // One rating per reader per novel: a new rating replaces the old one.
+  if (ratingValue != null) {
+    const { error: clearError } = await admin
+      .from("novel_comments")
+      .update({ rating: null })
+      .eq("user_id", claims.sub)
+      .eq("novel_slug", novelSlug)
+      .is("parent_id", null)
+      .not("rating", "is", null);
+    if (clearError) return { error: clearError.message };
+  }
+
+  const { data: inserted, error } = await admin
     .from("novel_comments")
     .insert({
       user_id: claims.sub,
@@ -255,6 +271,9 @@ export async function createComment(
     .single();
 
   if (error || !inserted) {
+    if (error?.code === "23505") {
+      return { error: "Your rating changed while posting. Please try again." };
+    }
     return { error: error?.message ?? "Failed to post comment." };
   }
 
@@ -326,7 +345,7 @@ export async function replyToComment(
 
   const userId = claims.sub as string;
 
-  const { data: inserted, error } = await supabase
+  const { data: inserted, error } = await createAdminClient()
     .from("novel_comments")
     .insert({
       user_id: userId,
@@ -411,7 +430,7 @@ export async function updateComment(
     return { error: "Comment not found." };
   }
 
-  const { error } = await supabase
+  const { error } = await createAdminClient()
     .from("novel_comments")
     .update({
       body: body.trim(),

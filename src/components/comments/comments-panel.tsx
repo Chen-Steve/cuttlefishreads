@@ -58,7 +58,14 @@ export function CommentsPanel({
         chapterNumber={chapterNumber}
         readableChapters={readableChapters}
         onCommentCreated={(comment) =>
-          setComments((prev) => [comment, ...prev])
+          setComments((prev) => [
+            comment,
+            ...(comment.rating != null
+              ? prev.map((c) =>
+                  c.isOwn && c.rating != null ? { ...c, rating: null } : c,
+                )
+              : prev),
+          ])
         }
       />
 
