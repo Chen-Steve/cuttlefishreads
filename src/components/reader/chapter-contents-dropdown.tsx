@@ -21,22 +21,79 @@ function chapterListLabel(chapter: ChapterSummary): string {
   return `Chapter ${chapter.number}: ${chapter.title}`;
 }
 
+type ChapterAccess = { bypass: boolean; unlocked: number[] };
+
+const LIST_TTL_MS = 60_000;
+const listCache = new Map<string, { at: number; chapters: ChapterSummary[] }>();
+const listInflight = new Map<string, Promise<ChapterSummary[]>>();
+
+function applyAccess(
+  chapters: ChapterSummary[],
+  access: ChapterAccess,
+): ChapterSummary[] {
+  if (!access.bypass && access.unlocked.length === 0) return chapters;
+  const unlocked = new Set(access.unlocked);
+  return chapters.map((chapter) => ({
+    ...chapter,
+    locked: access.bypass ? false : chapter.locked && !unlocked.has(chapter.number),
+  }));
+}
+
+function loadPublicChapters(slug: string): Promise<ChapterSummary[]> {
+  const cached = listCache.get(slug);
+  if (cached && Date.now() - cached.at < LIST_TTL_MS) {
+    return Promise.resolve(cached.chapters);
+  }
+
+  const pending = listInflight.get(slug);
+  if (pending) return pending;
+
+  const request = fetch(`/api/novels/${encodeURIComponent(slug)}/chapters`)
+    .then(async (response) => {
+      if (!response.ok) throw new Error("Couldn't load chapters.");
+      const body = (await response.json()) as { chapters?: ChapterSummary[] };
+      const chapters = body.chapters ?? [];
+      listCache.set(slug, { at: Date.now(), chapters });
+      return chapters;
+    })
+    .finally(() => {
+      listInflight.delete(slug);
+    });
+
+  listInflight.set(slug, request);
+  return request;
+}
+
+function loadChapterAccess(slug: string): Promise<ChapterAccess> {
+  return fetch(`/api/novels/${encodeURIComponent(slug)}/unlocks`)
+    .then(async (response) => {
+      if (!response.ok) return { bypass: false, unlocked: [] };
+      const body = (await response.json()) as Partial<ChapterAccess>;
+      return {
+        bypass: Boolean(body.bypass),
+        unlocked: Array.isArray(body.unlocked) ? body.unlocked : [],
+      };
+    })
+    .catch(() => ({ bypass: false, unlocked: [] }));
+}
+
 export function ChapterContentsDropdown({
   slug,
-  chapters,
   currentChapter,
   placement = "down",
   catalogBase = "novels",
   navRef,
 }: {
   slug: string;
-  chapters: ChapterSummary[];
   currentChapter: number;
   placement?: "up" | "down";
   catalogBase?: import("@/lib/catalog-paths").CatalogBase;
   navRef: RefObject<HTMLElement | null>;
 }) {
   const [open, setOpen] = useState(false);
+  const [chapters, setChapters] = useState<ChapterSummary[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [panelStyle, setPanelStyle] = useState<CSSProperties | undefined>();
   const ref = useRef<HTMLDivElement>(null);
   const currentRef = useRef<HTMLAnchorElement>(null);
@@ -63,7 +120,29 @@ export function ChapterContentsDropdown({
     if (open) {
       currentRef.current?.scrollIntoView({ block: "nearest" });
     }
-  }, [open]);
+  }, [open, chapters]);
+
+  async function loadMenu() {
+    setLoadError(false);
+    if (!chapters) setLoading(true);
+    try {
+      const [list, access] = await Promise.all([
+        loadPublicChapters(slug),
+        loadChapterAccess(slug),
+      ]);
+      setChapters(applyAccess(list, access));
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function onToggle() {
+    const next = !open;
+    setOpen(next);
+    if (next) void loadMenu();
+  }
 
   // Match the chapter nav bar width and position on all screen sizes.
   useLayoutEffect(() => {
@@ -100,7 +179,7 @@ export function ChapterContentsDropdown({
     <div ref={ref} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={onToggle}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label="Chapter contents"
@@ -127,7 +206,18 @@ export function ChapterContentsDropdown({
           style={panelStyle}
           className="fixed z-30 max-h-72 overflow-y-auto rounded-2xl border border-border bg-surface shadow-lg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         >
-          {chapters.map((chapter) => {
+          {loading && !chapters ? (
+            <p className="px-3.5 py-2.5 text-sm text-muted">Loading chapters…</p>
+          ) : null}
+          {loadError && !chapters ? (
+            <p className="px-3.5 py-2.5 text-sm text-muted">
+              Couldn&apos;t load chapters.
+            </p>
+          ) : null}
+          {chapters && chapters.length === 0 ? (
+            <p className="px-3.5 py-2.5 text-sm text-muted">No chapters yet.</p>
+          ) : null}
+          {chapters?.map((chapter) => {
             const isCurrent = chapter.number === currentChapter;
             const label = chapterListLabel(chapter);
             const fullLabel = chapter.title

@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { Chapter, ChapterSummary } from "@/types";
+import type { Chapter } from "@/types";
 import { type CatalogBase, chapterHref } from "@/lib/catalog-paths";
 import { cn } from "@/lib/utils";
 import { ChapterContentsDropdown } from "./chapter-contents-dropdown";
@@ -22,7 +22,6 @@ export function ReaderNav({
   slug,
   previous,
   next,
-  chapters,
   currentChapter,
   menuPlacement = "down",
   showSettings = false,
@@ -33,7 +32,6 @@ export function ReaderNav({
   slug: string;
   previous?: Pick<Chapter, "number">;
   next?: Pick<Chapter, "number">;
-  chapters: ChapterSummary[];
   currentChapter: number;
   menuPlacement?: "up" | "down";
   showSettings?: boolean;
@@ -100,7 +98,6 @@ export function ReaderNav({
       <div className="flex min-w-0 flex-1 items-center justify-center gap-0.5">
         <ChapterContentsDropdown
           slug={slug}
-          chapters={chapters}
           currentChapter={currentChapter}
           placement={menuPlacement}
           catalogBase={catalogBase}

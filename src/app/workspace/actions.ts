@@ -163,11 +163,31 @@ function resolveCoverFile(formData: FormData): File | null {
   return null;
 }
 
+function coverPathFromUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const marker = "/storage/v1/object/public/covers/";
+  const index = url.indexOf(marker);
+  if (index === -1) return null;
+  const path = url.slice(index + marker.length).split("?")[0] ?? "";
+  if (!path) return null;
+  return decodeURIComponent(path);
+}
+
+async function deleteCoverObject(
+  admin: ReturnType<typeof createAdminClient>,
+  url: string | null | undefined,
+) {
+  const path = coverPathFromUrl(url);
+  if (!path) return;
+  const { error } = await admin.storage.from("covers").remove([path]);
+  if (error) console.error("deleteCoverObject:", error);
+}
+
 async function uploadCover(
   admin: ReturnType<typeof createAdminClient>,
   slug: string,
   file: File | null,
-): Promise<string | null> {
+): Promise<{ url: string; path: string } | null> {
   if (!file || file.size === 0) return null;
 
   const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
@@ -186,7 +206,7 @@ async function uploadCover(
   const {
     data: { publicUrl },
   } = admin.storage.from("covers").getPublicUrl(path);
-  return publicUrl;
+  return { url: publicUrl, path };
 }
 
 export async function createNovel(
@@ -295,9 +315,9 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
     slug = `${base}-${i}`;
   }
 
-  let coverUrl: string | null = null;
+  let uploadedCover: { url: string; path: string } | null = null;
   try {
-    coverUrl = await uploadCover(
+    uploadedCover = await uploadCover(
       admin,
       slug,
       cover,
@@ -312,7 +332,7 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
     original_author: originalAuthor || null,
     translator: translator || null,
     description: description || null,
-    cover_url: coverUrl,
+    cover_url: uploadedCover?.url ?? null,
     genres,
     tags,
     status,
@@ -323,6 +343,9 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
   });
 
   if (error) {
+    if (uploadedCover) {
+      await admin.storage.from("covers").remove([uploadedCover.path]);
+    }
     return { error: error.message };
   }
 
@@ -424,10 +447,11 @@ export async function updateNovel(
   }
 
   let coverUrl = existing.cover_url;
+  let uploadedCover: { url: string; path: string } | null = null;
   if (cover) {
     try {
-      const uploaded = await uploadCover(admin, existing.slug, cover);
-      if (uploaded) coverUrl = uploaded;
+      uploadedCover = await uploadCover(admin, existing.slug, cover);
+      if (uploadedCover) coverUrl = uploadedCover.url;
     } catch (err) {
       return { error: err instanceof Error ? err.message : "Cover upload failed." };
     }
@@ -452,7 +476,14 @@ export async function updateNovel(
     .eq("id", novelId);
 
   if (error) {
+    if (uploadedCover) {
+      await admin.storage.from("covers").remove([uploadedCover.path]);
+    }
     return { error: error.message };
+  }
+
+  if (uploadedCover && existing.cover_url && existing.cover_url !== coverUrl) {
+    await deleteCoverObject(admin, existing.cover_url);
   }
 
   const workspaceBase = WORKSPACE_BASE.translations;
@@ -470,7 +501,7 @@ export async function deleteNovel(novelId: string): Promise<AdminState> {
 
   const { data: existing } = await admin
     .from("novels")
-    .select("slug, publisher_id")
+    .select("slug, publisher_id, cover_url")
     .eq("id", novelId)
     .maybeSingle();
 
@@ -484,6 +515,8 @@ export async function deleteNovel(novelId: string): Promise<AdminState> {
   if (error) {
     return { error: error.message };
   }
+
+  await deleteCoverObject(admin, existing.cover_url);
 
   const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));

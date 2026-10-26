@@ -13,9 +13,9 @@ import {
 } from "@/components/reader";
 import {
   getChapter,
-  getChapterSummaries,
   getNovel,
   getPublicChapterMeta,
+  getPublicChapterNeighbors,
 } from "@/lib/data";
 import { getSessionProfile } from "@/lib/session-profile";
 import { publicPageMetadata } from "@/lib/seo";
@@ -56,31 +56,23 @@ export default async function ChapterReaderPage({
   const { slug, chapter } = await params;
   const chapterNumber = Number(chapter);
 
-  const [novel, current, chapters] = await Promise.all([
+  const [novel, current, neighbors] = await Promise.all([
     getNovel(slug),
     getChapter(slug, chapterNumber),
-    getChapterSummaries(slug),
+    getPublicChapterNeighbors(slug, chapterNumber),
   ]);
 
   if (!novel || !current || Number.isNaN(chapterNumber)) {
     notFound();
   }
 
-  const index = chapters.findIndex((c) => c.number === chapterNumber);
   const previous =
-    index > 0 ? { number: chapters[index - 1]!.number } : undefined;
-  const next =
-    index >= 0 && index < chapters.length - 1
-      ? { number: chapters[index + 1]!.number }
-      : undefined;
+    neighbors.previous != null ? { number: neighbors.previous } : undefined;
+  const next = neighbors.next != null ? { number: neighbors.next } : undefined;
 
   const session = current.locked ? await getSessionProfile() : null;
   const userCoins = session?.coins ?? 0;
   const isLoggedIn = Boolean(session);
-
-  const chapterTitles = Object.fromEntries(
-    chapters.map((c) => [c.number, c.title || `Chapter ${c.number}`]),
-  );
 
   return (
     <PageContainer as="article" width="narrow" className="pt-4 sm:pt-6 lg:pt-6">
@@ -107,7 +99,6 @@ export default async function ChapterReaderPage({
           slug,
           previous,
           next,
-          chapters,
           currentChapter: chapterNumber,
         }}
       >
@@ -147,7 +138,6 @@ export default async function ChapterReaderPage({
                 mode="chapter"
                 novelSlug={slug}
                 chapterNumber={chapterNumber}
-                chapterTitles={chapterTitles}
               />
             </Suspense>
           </section>

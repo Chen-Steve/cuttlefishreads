@@ -13,7 +13,7 @@ import { useReaderSettings } from "@/hooks/use-reader-settings";
 import type { CatalogBase } from "@/lib/catalog-paths";
 import { readerContentStyle } from "@/lib/reader-settings";
 import { cn } from "@/lib/utils";
-import type { Chapter, ChapterSummary } from "@/types";
+import type { Chapter } from "@/types";
 
 import { ReaderNav } from "./reader-nav";
 
@@ -21,7 +21,6 @@ type ChapterReaderNavConfig = {
   slug: string;
   previous?: Pick<Chapter, "number">;
   next?: Pick<Chapter, "number">;
-  chapters: ChapterSummary[];
   currentChapter: number;
   catalogBase?: CatalogBase;
   /** Bottom prev/next bar. Default true. */
@@ -44,7 +43,7 @@ export function ImmersiveChapterShell({
 }: {
   header: ReactNode;
   children: ReactNode;
-  /** Single chapters payload shared by top and bottom nav. */
+  /** Prev/next stay on the page. The contents menu loads the chapter list on open. */
   nav?: ChapterReaderNavConfig;
 }) {
   const { settings } = useReaderSettings();
@@ -80,7 +79,6 @@ export function ImmersiveChapterShell({
       slug={nav.slug}
       previous={nav.previous}
       next={nav.next}
-      chapters={nav.chapters}
       currentChapter={nav.currentChapter}
       showSettings
       catalogBase={nav.catalogBase}
@@ -95,7 +93,6 @@ export function ImmersiveChapterShell({
         slug={nav.slug}
         previous={nav.previous}
         next={nav.next}
-        chapters={nav.chapters}
         currentChapter={nav.currentChapter}
         menuPlacement="up"
         catalogBase={nav.catalogBase}

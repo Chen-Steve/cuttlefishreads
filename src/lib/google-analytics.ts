@@ -316,8 +316,7 @@ async function persistCatalogViewCounts(
 
 /**
  * One GA report for the whole translation catalog, cached an hour.
- * Public pages read `novels.view_count` instead of calling this directly.
- * The catalog refresh and the workspace dashboard share this entry.
+ * The workspace dashboard reads this entry. Public pages read novels.view_count.
  */
 async function loadCatalogAllTimeViews(): Promise<Record<string, number>> {
   if (!getConfiguration()) return {};
@@ -357,6 +356,33 @@ async function loadCatalogAllTimeViews(): Promise<Record<string, number>> {
     );
     return {};
   }
+}
+
+/**
+ * Write fresh GA4 totals onto novels.view_count.
+ * Called from the daily cron. Public pages read the column and do not call GA.
+ * Also selects a novel row when Analytics is not configured, so a quiet week
+ * still counts as database activity and the free project is less likely to pause.
+ */
+export async function refreshCatalogViewCounts(): Promise<{ updated: boolean }> {
+  const admin = createAdminClient();
+
+  if (!getConfiguration()) {
+    const { error } = await admin.from("novels").select("id").limit(1);
+    if (error) throw new Error(error.message);
+    return { updated: false };
+  }
+
+  const { data, error } = await admin
+    .from("novels")
+    .select("slug")
+    .eq("publication_type", "translation");
+  if (error) throw new Error(error.message);
+
+  const slugs = (data ?? []).map((row) => row.slug as string);
+  const totals = await fetchAllTimeViewsBySlug(slugs);
+  await persistCatalogViewCounts(totals);
+  return { updated: true };
 }
 
 /**

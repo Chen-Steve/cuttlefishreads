@@ -34,16 +34,11 @@ export async function CommentSection({
   if (mode === "chapter") {
     if (chapterNumber == null) return null;
 
-    const [isLoggedIn, comments, summaries] = await Promise.all([
+    // Chapter comments don't render titles. Skip the full chapter list.
+    const [isLoggedIn, comments] = await Promise.all([
       isUserAuthenticated(),
       getChapterComments(novelSlug, chapterNumber),
-      chapterTitlesProp
-        ? Promise.resolve(null)
-        : getChapterSummaries(novelSlug),
     ]);
-
-    const chapterTitles =
-      chapterTitlesProp ?? titlesFromSummaries(summaries ?? []);
 
     return (
       <CommentsPanel
@@ -54,7 +49,7 @@ export async function CommentSection({
         initialHasMore={false}
         isLoggedIn={isLoggedIn}
         chapterNumber={chapterNumber}
-        chapterTitles={chapterTitles}
+        chapterTitles={{}}
       />
     );
   }

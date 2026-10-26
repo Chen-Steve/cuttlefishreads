@@ -225,26 +225,6 @@ export function revalidateNovelsDataCache(novelId?: string) {
   if (novelId) revalidateTag(novelChaptersCacheTag(novelId), "max");
 }
 
-/**
- * Stamp GA4 totals onto catalog rows. The Analytics client loads only when
- * this cache misses (about every five minutes), not on chapter reads.
- */
-async function overlayCatalogViewCounts(rows: DbNovel[]): Promise<DbNovel[]> {
-  if (rows.length === 0) return rows;
-  try {
-    const { getAllTimeViewsBySlug } = await import("@/lib/google-analytics");
-    const views = await getAllTimeViewsBySlug(rows.map((row) => row.slug));
-    if (Object.keys(views).length === 0) return rows;
-    return rows.map((row) => ({
-      ...row,
-      view_count: views[row.slug] ?? row.view_count ?? 0,
-    }));
-  } catch (error) {
-    console.error("overlayCatalogViewCounts:", error);
-    return rows;
-  }
-}
-
 const fetchNovelRows = unstable_cache(
   async (): Promise<DbNovel[]> => {
     const admin = createAdminClient();
@@ -258,7 +238,9 @@ const fetchNovelRows = unstable_cache(
       console.error("fetchNovelRows:", error);
       return [];
     }
-    return overlayCatalogViewCounts((data ?? []) as DbNovel[]);
+    // view_count is mirrored from GA4 by the daily cron and the workspace
+    // dashboard. Public pages must not call the Analytics API themselves.
+    return (data ?? []) as DbNovel[];
   },
   ["novels-catalog-rows-v2"],
   {
@@ -830,6 +812,67 @@ export const getChapterListItems = cache(
   },
 );
 
+/** TOC rows with public lock state only. No auth or unlock lookup. */
+export const getPublicChapterSummaries = cache(
+  async (slug: string): Promise<ChapterSummary[]> => {
+    const novel = await fetchNovelIdBySlug(slug);
+    if (!novel) return [];
+
+    const rows = await fetchDbChapterMetas(novel.id);
+    return rows.map((row) => ({
+      number: row.number,
+      title: row.title,
+      locked: !isNaturallyFree(row),
+    }));
+  },
+);
+
+/** Previous and next chapter numbers. Stays on the server; the contents menu loads the full list on open. */
+export const getPublicChapterNeighbors = cache(
+  async (
+    slug: string,
+    chapterNumber: number,
+  ): Promise<{ previous?: number; next?: number }> => {
+    const novel = await fetchNovelIdBySlug(slug);
+    if (!novel) return {};
+
+    const rows = await fetchDbChapterMetas(novel.id);
+    const index = rows.findIndex((row) => row.number === chapterNumber);
+    if (index < 0) return {};
+
+    return {
+      previous: index > 0 ? rows[index - 1]!.number : undefined,
+      next:
+        index < rows.length - 1 ? rows[index + 1]!.number : undefined,
+    };
+  },
+);
+
+/**
+ * Purchased chapters and admin/publisher bypass for one novel.
+ * Used when the contents menu opens, not on every chapter view.
+ */
+export const getChapterAccess = cache(
+  async (
+    slug: string,
+  ): Promise<{ bypass: boolean; unlocked: number[] }> => {
+    const novel = await fetchNovelIdBySlug(slug);
+    if (!novel) return { bypass: false, unlocked: [] };
+
+    const currentUser = await getCurrentUser();
+    if (!currentUser) return { bypass: false, unlocked: [] };
+
+    const isPublisher =
+      novel.publisher_id !== null && currentUser.id === novel.publisher_id;
+    if (currentUser.isAdmin || isPublisher) {
+      return { bypass: true, unlocked: [] };
+    }
+
+    const unlocked = await getUnlockedChapterNumbers(slug);
+    return { bypass: false, unlocked: [...unlocked] };
+  },
+);
+
 export const getChapterSummaries = cache(
   async (slug: string): Promise<ChapterSummary[]> => {
     const novel = await fetchNovelIdBySlug(slug);
@@ -862,17 +905,25 @@ export const getChapter = cache(
     const novel = await fetchNovelIdBySlug(slug);
     if (!novel) return undefined;
 
+    const row = await fetchDbChapterMeta(novel.id, chapterNumber);
+    if (!row) return undefined;
+
+    // Free chapters are the same for every visitor. Skip auth and unlock
+    // lookups so a cached body does not touch Auth or Postgres.
+    if (isNaturallyFree(row)) {
+      const listItem = mapChapterListItem(slug, row, new Set(), false);
+      const body = await fetchDbChapterContent(novel.id, chapterNumber);
+      return {
+        ...listItem,
+        content: splitContent(body ?? ""),
+      };
+    }
+
     const currentUser = await getCurrentUser();
     const isPublisher =
       novel.publisher_id !== null && currentUser?.id === novel.publisher_id;
     const bypassLock = currentUser?.isAdmin === true || isPublisher;
-
-    const [row, unlocked] = await Promise.all([
-      fetchDbChapterMeta(novel.id, chapterNumber),
-      getUnlockedChapterNumbers(slug),
-    ]);
-    if (!row) return undefined;
-
+    const unlocked = await getUnlockedChapterNumbers(slug);
     const listItem = mapChapterListItem(slug, row, unlocked, bypassLock);
     if (listItem.locked) {
       return listItem;
