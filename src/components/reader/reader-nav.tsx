@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { PrefetchKind } from "next/dist/client/components/router-reducer/router-reducer-types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Chapter } from "@/types";
 import { type CatalogBase, chapterHref } from "@/lib/catalog-paths";
@@ -49,6 +50,13 @@ export function ReaderNav({
   const nextHref = next
     ? chapterHref(slug, next.number, catalogBase)
     : undefined;
+
+  useEffect(() => {
+    // One full prefetch of the following chapter. `prefetch={true}` on the
+    // link follows viewport visibility and is cancelled when reader chrome hides.
+    if (!enableKeyboard || !nextHref) return;
+    router.prefetch(nextHref, { kind: PrefetchKind.FULL });
+  }, [enableKeyboard, nextHref, router]);
 
   useEffect(() => {
     if (!enableKeyboard) return;
