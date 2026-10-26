@@ -78,7 +78,7 @@ export function ChapterUnlockGate({
           className={`flex flex-col items-center gap-2 ${scheduled && countdownLabel ? "mt-5" : ""}`}
         >
           {!isLoggedIn ? (
-            <Link href={loginHref(returnPath)} className={btnClass}>
+            <Link href={loginHref(returnPath)} prefetch={false} className={btnClass}>
               Sign in to unlock
             </Link>
           ) : canAfford ? (
@@ -98,7 +98,7 @@ export function ChapterUnlockGate({
               )}
             </button>
           ) : (
-            <Link href={shopHref(returnPath)} className={btnClass}>
+            <Link href={shopHref(returnPath)} prefetch={false} className={btnClass}>
               Buy cookies
             </Link>
           )}

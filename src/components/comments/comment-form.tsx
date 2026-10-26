@@ -121,6 +121,7 @@ export function CommentForm({
   ) : (
     <Link
       href="/login"
+      prefetch={false}
       className="inline-flex h-9 items-center justify-center gap-2 px-4 text-sm font-semibold text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
     >
       <LogIn className="size-4" strokeWidth={1.75} aria-hidden />

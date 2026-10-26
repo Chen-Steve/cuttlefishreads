@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# scripts/reencode-covers.mjs rollback logs
+cover-reencode-*.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

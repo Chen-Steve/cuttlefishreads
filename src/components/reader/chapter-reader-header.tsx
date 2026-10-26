@@ -19,6 +19,7 @@ export function ChapterReaderHeader({
     <div className="flex w-full max-w-lg flex-col items-center gap-1.5 text-center">
       <Link
         href={novelHref(slug, catalogBase)}
+        prefetch={false}
         title={novelTitle}
         className="max-w-full truncate text-[11px] font-medium tracking-[0.14em] text-muted uppercase transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >

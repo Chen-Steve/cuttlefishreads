@@ -8,6 +8,9 @@ export type ChapterScrapeBait = {
   rng: () => number;
   phrases: string[];
   decoyParagraphs: string[];
+  /** Carried across paragraphs so short paragraphs still get inline bait. */
+  wordsUntilBait: number;
+  phraseIndex: number;
 };
 
 function mulberry32(seed: number): () => number {
@@ -72,9 +75,12 @@ export function createChapterScrapeBait(
     rng,
     phrases,
     decoyParagraphs,
+    wordsUntilBait: nextBaitEvery(rng),
+    phraseIndex: Math.floor(rng() * 64),
   };
 }
 
+/** Every inline bait span costs render time and page bytes on each view. */
 export function nextBaitEvery(rng: () => number): number {
-  return 2 + Math.floor(rng() * 3);
+  return 15 + Math.floor(rng() * 26);
 }

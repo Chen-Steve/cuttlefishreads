@@ -164,7 +164,7 @@ function ReaderLink({
   }
 
   return (
-    <Link href={href} className={classes} title={label}>
+    <Link href={href} prefetch={false} className={classes} title={label}>
       {content}
     </Link>
   );

@@ -17,12 +17,13 @@ import {
   type InlineStyle,
 } from "@/lib/inline-markdown";
 
-function styledText(text: string, style: InlineStyle): ReactNode {
+function styledText(text: string, style: InlineStyle, key: string): ReactNode {
+  if (!style.underline && !style.italic && !style.bold) return text;
   let node: ReactNode = text;
   if (style.underline) node = <u>{node}</u>;
   if (style.italic) node = <em>{node}</em>;
   if (style.bold) node = <strong>{node}</strong>;
-  return node;
+  return <Fragment key={key}>{node}</Fragment>;
 }
 
 function baitSpan(bait: ChapterScrapeBait, key: string, phraseIndex: number) {
@@ -43,30 +44,28 @@ function renderSegments(
   keyPrefix = "s",
 ): ReactNode[] {
   if (!bait) {
-    return segments.map((segment, index) => (
-      <Fragment key={index}>{styledText(segment.text, segment.style)}</Fragment>
-    ));
+    return segments.map((segment, index) =>
+      styledText(segment.text, segment.style, `${keyPrefix}-${index}`),
+    );
   }
 
   const nodes: ReactNode[] = [];
-  let wordsUntilBait = nextBaitEvery(bait.rng);
-  let phraseIndex = Math.floor(bait.rng() * 64);
   let key = 0;
 
   for (const segment of segments) {
-    const parts = segment.text.split(/(\s+)/);
-    for (const part of parts) {
-      if (!part) continue;
-      nodes.push(
-        <Fragment key={`${keyPrefix}-${key++}`}>
-          {styledText(part, segment.style)}
-        </Fragment>,
-      );
-      if (/^\s+$/.test(part)) continue;
-      wordsUntilBait -= 1;
-      if (wordsUntilBait > 0) continue;
-      nodes.push(baitSpan(bait, `${keyPrefix}-b-${key++}`, phraseIndex++));
-      wordsUntilBait = nextBaitEvery(bait.rng);
+    const { text, style } = segment;
+    let start = 0;
+    for (const word of text.matchAll(/\S+/g)) {
+      bait.wordsUntilBait -= 1;
+      if (bait.wordsUntilBait > 0) continue;
+      const end = word.index + word[0].length;
+      nodes.push(styledText(text.slice(start, end), style, `${keyPrefix}-${key++}`));
+      nodes.push(baitSpan(bait, `${keyPrefix}-b-${key++}`, bait.phraseIndex++));
+      bait.wordsUntilBait = nextBaitEvery(bait.rng);
+      start = end;
+    }
+    if (start < text.length) {
+      nodes.push(styledText(text.slice(start), style, `${keyPrefix}-${key++}`));
     }
   }
 

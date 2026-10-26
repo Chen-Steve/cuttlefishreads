@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   },
   description: SITE.seoDescription,
   icons: {
-    icon: "/cuttle.ico",
+    icon: "/favicon.ico",
     apple: "/cuttle.png",
   },
   verification: {

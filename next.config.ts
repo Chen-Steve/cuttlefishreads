@@ -34,6 +34,15 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        source: "/:icon(favicon\\.ico|cuttle\\.png)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=2592000, stale-while-revalidate=86400",
+          },
+        ],
+      },
     ];
   },
   images: {
