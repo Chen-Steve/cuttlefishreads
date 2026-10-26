@@ -130,9 +130,11 @@ export async function updateAvatar(
     : "jpg";
   const path = `${userId}-${Date.now()}.${ext}`;
 
-  const { error: uploadError } = await admin.storage
-    .from("avatars")
-    .upload(path, file, { contentType: file.type || undefined, upsert: false });
+  const { error: uploadError } = await admin.storage.from("avatars").upload(path, file, {
+    contentType: file.type || undefined,
+    upsert: false,
+    cacheControl: "31536000",
+  });
 
   if (uploadError) {
     return { error: `Upload failed: ${uploadError.message}` };

@@ -15,6 +15,7 @@ import {
   getChapter,
   getChapterSummaries,
   getNovel,
+  getPublicChapterMeta,
 } from "@/lib/data";
 import { getSessionProfile } from "@/lib/session-profile";
 import { publicPageMetadata } from "@/lib/seo";
@@ -24,11 +25,10 @@ export async function generateMetadata({
 }: PageProps<"/novels/[slug]/[chapter]">): Promise<Metadata> {
   const { slug, chapter } = await params;
   const chapterNumber = Number(chapter);
-  const [novel, summaries] = await Promise.all([
+  const [novel, current] = await Promise.all([
     getNovel(slug),
-    getChapterSummaries(slug),
+    getPublicChapterMeta(slug, chapterNumber),
   ]);
-  const current = summaries.find((entry) => entry.number === chapterNumber);
   if (!novel || !current) {
     return {
       title: "Chapter not found",

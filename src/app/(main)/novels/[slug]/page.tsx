@@ -23,9 +23,9 @@ import {
   getChapterListItems,
   getNovel,
   getNovelRatingSummary,
+  getNovels,
   isNovelBookmarked,
 } from "@/lib/data";
-import { getNovelPageViews } from "@/lib/google-analytics";
 import { getSessionProfile } from "@/lib/session-profile";
 import { publicPageMetadata, novelDescription } from "@/lib/seo";
 
@@ -61,13 +61,13 @@ export default async function NovelDetailPage({
   params,
 }: PageProps<"/novels/[slug]">) {
   const { slug } = await params;
-  const [novel, chapters, bookmarked, session, viewCount, rating] =
+  const [novel, catalog, chapters, bookmarked, session, rating] =
     await Promise.all([
       getNovel(slug),
+      getNovels(),
       getChapterListItems(slug),
       isNovelBookmarked(slug),
       getSessionProfile(),
-      getNovelPageViews(slug),
       getNovelRatingSummary(slug),
     ]);
   const isLoggedIn = Boolean(session);
@@ -76,6 +76,11 @@ export default async function NovelDetailPage({
   if (!novel) {
     notFound();
   }
+
+  const viewCount =
+    catalog.find((item) => item.slug === novel.slug)?.viewCount ??
+    novel.viewCount ??
+    0;
 
   const firstChapter = chapters[0];
   const bulkBuy = getBulkBuyState(chapters);

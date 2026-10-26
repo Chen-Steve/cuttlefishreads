@@ -7,6 +7,11 @@ export const MAX_IMPORT_CHAPTERS = 200;
 export const MAX_IMPORT_FILE_BYTES = 15 * 1024 * 1024;
 export const MAX_IMPORT_TOTAL_BYTES = 80 * 1024 * 1024;
 
+/**
+ * Stay under Vercel's 4.5MB request-body cap. One server action sends one chunk.
+ */
+export const MAX_BULK_ACTION_BYTES = 3 * 1024 * 1024;
+
 const SKIP_PATH_RE = /(^|\/)(\.|__macosx\/|thumbs\.db$|desktop\.ini$)/i;
 
 export function extensionOf(filename: string): string {
@@ -187,6 +192,40 @@ export function assignChapterNumbers(
       warning,
     };
   });
+}
+
+function utf8Bytes(value: string): number {
+  return new TextEncoder().encode(value).length;
+}
+
+export function chunkBulkChapters<
+  T extends { number: number; title: string; content: string },
+>(
+  chapters: T[],
+  maxBytes = MAX_BULK_ACTION_BYTES,
+): { chunks: T[][]; oversizedNumber: number | null } {
+  const chunks: T[][] = [];
+  let current: T[] = [];
+  let bytes = 2;
+
+  for (const chapter of chapters) {
+    const size = utf8Bytes(JSON.stringify(chapter));
+    if (size > maxBytes) {
+      return { chunks: [], oversizedNumber: chapter.number };
+    }
+    const extra = size + (current.length > 0 ? 1 : 0);
+    if (current.length > 0 && bytes + extra > maxBytes) {
+      chunks.push(current);
+      current = [chapter];
+      bytes = 2 + size;
+      continue;
+    }
+    current.push(chapter);
+    bytes += extra;
+  }
+
+  if (current.length > 0) chunks.push(current);
+  return { chunks, oversizedNumber: null };
 }
 
 const UNSAFE_FILENAME_RE = /[<>:"/\\|?*\u0000-\u001f]+/g;

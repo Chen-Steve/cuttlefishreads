@@ -9,7 +9,10 @@ import { profileCacheTag, revalidateNovelsDataCache } from "@/lib/data";
 import { notifyBookmarkersOfChapter, notifyBookmarkersOfChapters } from "@/lib/notifications/data";
 import { validateCoverFile } from "@/lib/cover-file";
 import { slugify } from "@/lib/utils";
-import { MAX_IMPORT_CHAPTERS } from "@/lib/chapter-import";
+import {
+  MAX_BULK_ACTION_BYTES,
+  MAX_IMPORT_CHAPTERS,
+} from "@/lib/chapter-import";
 import {
   WORKSPACE_BASE,
   workspaceInternalPath,
@@ -170,9 +173,11 @@ async function uploadCover(
   const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
   const path = `${slug}-${Date.now()}.${ext}`;
 
-  const { error } = await admin.storage
-    .from("covers")
-    .upload(path, file, { contentType: file.type || undefined, upsert: false });
+  const { error } = await admin.storage.from("covers").upload(path, file, {
+    contentType: file.type || undefined,
+    upsert: false,
+    cacheControl: "31536000",
+  });
 
   if (error) {
     throw new Error(`Cover upload failed: ${error.message}`);
@@ -601,6 +606,8 @@ export async function bulkCreateChapters(
     access: "free" | "paid";
     coinCost: number;
     publish: boolean;
+    /** Last chunk redirects back to the chapter list. */
+    finalize?: boolean;
   },
 ): Promise<AdminState> {
   const auth = await requireWorkspace();
@@ -610,6 +617,14 @@ export async function bulkCreateChapters(
   if (!id) return { error: "Choose a novel." };
   if (!Array.isArray(chapters) || chapters.length === 0) {
     return { error: "Add at least one chapter file." };
+  }
+  if (
+    new TextEncoder().encode(JSON.stringify(chapters)).length >
+    MAX_BULK_ACTION_BYTES
+  ) {
+    return {
+      error: "That batch is too large. Upload fewer chapters at a time.",
+    };
   }
   if (chapters.length > MAX_IMPORT_CHAPTERS) {
     return { error: `You can import at most ${MAX_IMPORT_CHAPTERS} chapters at once.` };
@@ -708,6 +723,7 @@ export async function bulkCreateChapters(
   for (let i = 0; i < rows.length; i += chunkSize) {
     const { error } = await admin.from("chapters").insert(rows.slice(i, i + chunkSize));
     if (error) {
+      if (i > 0) revalidatePublicPaths(id);
       if (error.code === "23505") {
         return { error: "A chapter number in this upload already exists." };
       }
@@ -733,6 +749,7 @@ export async function bulkCreateChapters(
   const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));
   revalidatePublicPaths(id);
+  if (options.finalize === false) return {};
   redirect(`${workspaceBase}/novels/${id}/chapters`);
 }
 

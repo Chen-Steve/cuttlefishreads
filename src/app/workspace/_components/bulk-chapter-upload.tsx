@@ -11,7 +11,7 @@ import {
   prepareChapterImports,
   type PreparedChapterImport,
 } from "@/lib/chapter-import-browser";
-import { MAX_IMPORT_CHAPTERS } from "@/lib/chapter-import";
+import { chunkBulkChapters, MAX_IMPORT_CHAPTERS } from "@/lib/chapter-import";
 import {
   formatSuggestedUnlockPreview,
   getSuggestedUnlockAt,
@@ -228,13 +228,31 @@ export function BulkChapterUpload({
       unlockAt: dates[index]?.toISOString() ?? null,
     }));
 
+    const { chunks, oversizedNumber } = chunkBulkChapters(payload);
+    if (oversizedNumber != null) {
+      toast.error(
+        `Chapter ${oversizedNumber} is too large to upload in one request.`,
+      );
+      return;
+    }
+
     startTransition(async () => {
-      const result = await bulkCreateChapters(novelId, payload, {
-        access,
-        coinCost,
-        publish,
-      });
-      if (result?.error) toast.error(result.error);
+      for (let index = 0; index < chunks.length; index += 1) {
+        const result = await bulkCreateChapters(novelId, chunks[index]!, {
+          access,
+          coinCost,
+          publish,
+          finalize: index === chunks.length - 1,
+        });
+        if (result?.error) {
+          toast.error(
+            index > 0
+              ? `${result.error} Earlier chapters in this upload were saved.`
+              : result.error,
+          );
+          return;
+        }
+      }
     });
   }
 

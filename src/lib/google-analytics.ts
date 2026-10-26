@@ -299,9 +299,25 @@ async function fetchAllTimeViewsBySlug(
   }
 }
 
+async function persistCatalogViewCounts(
+  totals: Record<string, number>,
+): Promise<void> {
+  const slugs = Object.keys(totals);
+  if (slugs.length === 0) return;
+
+  const admin = createAdminClient();
+  const { error } = await admin.rpc("set_novel_view_counts", {
+    p_counts: totals,
+  });
+  if (error) {
+    console.error("[google-analytics] Unable to store view counts:", error);
+  }
+}
+
 /**
  * One GA report for the whole translation catalog, cached an hour.
- * Home, /novels, novel pages, and the dashboard all read this same entry.
+ * Public pages read `novels.view_count` instead of calling this directly.
+ * The catalog refresh and the workspace dashboard share this entry.
  */
 async function loadCatalogAllTimeViews(): Promise<Record<string, number>> {
   if (!getConfiguration()) return {};
@@ -324,9 +340,11 @@ async function loadCatalogAllTimeViews(): Promise<Record<string, number>> {
         }
 
         const slugs = (data ?? []).map((row) => row.slug as string);
-        return fetchAllTimeViewsBySlug(slugs);
+        const totals = await fetchAllTimeViewsBySlug(slugs);
+        await persistCatalogViewCounts(totals);
+        return totals;
       },
-      ["ga4-all-time-views-catalog-v1"],
+      ["ga4-all-time-views-catalog-v2"],
       {
         revalidate: GA_REVALIDATE_SECONDS,
         tags: ["ga4-all-time-views"],
@@ -354,14 +372,4 @@ export async function getAllTimeViewsBySlug(
   const totals: Record<string, number> = {};
   for (const slug of unique) totals[slug] = all[slug] ?? 0;
   return totals;
-}
-
-/**
- * All-time novel detail + chapter page views for a single novel
- * (GA4 screenPageViews for `/novels/{slug}` and `/novels/{slug}/{n}`).
- */
-export async function getNovelPageViews(slug: string): Promise<number> {
-  if (!slug) return 0;
-  const totals = await loadCatalogAllTimeViews();
-  return totals[slug] ?? 0;
 }

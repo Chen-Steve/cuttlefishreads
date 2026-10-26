@@ -7,7 +7,6 @@ import {
   parseProfileRoles,
   type ProfileRole,
 } from "@/lib/roles";
-import { getAllTimeViewsBySlug } from "@/lib/google-analytics";
 import type {
   Chapter,
   ChapterListItem,
@@ -226,6 +225,26 @@ export function revalidateNovelsDataCache(novelId?: string) {
   if (novelId) revalidateTag(novelChaptersCacheTag(novelId), "max");
 }
 
+/**
+ * Stamp GA4 totals onto catalog rows. The Analytics client loads only when
+ * this cache misses (about every five minutes), not on chapter reads.
+ */
+async function overlayCatalogViewCounts(rows: DbNovel[]): Promise<DbNovel[]> {
+  if (rows.length === 0) return rows;
+  try {
+    const { getAllTimeViewsBySlug } = await import("@/lib/google-analytics");
+    const views = await getAllTimeViewsBySlug(rows.map((row) => row.slug));
+    if (Object.keys(views).length === 0) return rows;
+    return rows.map((row) => ({
+      ...row,
+      view_count: views[row.slug] ?? row.view_count ?? 0,
+    }));
+  } catch (error) {
+    console.error("overlayCatalogViewCounts:", error);
+    return rows;
+  }
+}
+
 const fetchNovelRows = unstable_cache(
   async (): Promise<DbNovel[]> => {
     const admin = createAdminClient();
@@ -239,9 +258,9 @@ const fetchNovelRows = unstable_cache(
       console.error("fetchNovelRows:", error);
       return [];
     }
-    return (data ?? []) as DbNovel[];
+    return overlayCatalogViewCounts((data ?? []) as DbNovel[]);
   },
-  ["novels-catalog-rows"],
+  ["novels-catalog-rows-v2"],
   {
     revalidate: CATALOG_REVALIDATE_SECONDS,
     tags: [NOVELS_CATALOG_CACHE_TAG],
@@ -456,17 +475,18 @@ async function fetchNovelSynopses(
   )();
 }
 
-/** Homepage featured ranking by GA4 all-time page views. */
+/**
+ * Homepage featured ranking. View totals are already on the catalog rows
+ * (mirrored from GA4 when that cache refreshes).
+ */
 export async function getFeaturedNovels(
   novels?: Novel[],
 ): Promise<Novel[]> {
   const catalog = novels ?? (await getNovels());
   if (catalog.length === 0) return [];
 
-  const viewsBySlug = await getAllTimeViewsBySlug(catalog.map((n) => n.slug));
-
   const ranked = [...catalog]
-    .sort((a, b) => (viewsBySlug[b.slug] ?? 0) - (viewsBySlug[a.slug] ?? 0))
+    .sort((a, b) => (b.viewCount ?? 0) - (a.viewCount ?? 0))
     .slice(0, FEATURED_LIMIT);
 
   const synopses = await fetchNovelSynopses(ranked.map((novel) => novel.slug));
