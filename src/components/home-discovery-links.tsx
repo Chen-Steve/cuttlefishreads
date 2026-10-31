@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Dices } from "lucide-react";
 
@@ -8,20 +8,20 @@ import { getRandomTranslationHref } from "@/app/(main)/home-actions";
 import { DiscordIcon } from "@/components/discord-icon";
 import { DitheredImageBackground } from "@/components/dithered-image-background";
 import { SITE } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+
+const tileClass =
+  "relative isolate inline-flex min-h-16 w-full flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border border-border bg-surface px-1.5 py-2 text-center text-[11px] leading-tight font-semibold text-foreground transition-colors hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:gap-1.5 sm:px-3 sm:py-3 sm:text-sm sm:leading-normal";
 
 function TileBackground({ src }: { src: string }) {
   return (
-    <>
+    <span className="pointer-events-none absolute inset-0 -z-10" aria-hidden>
       <DitheredImageBackground
         src={src}
-        sizes="(max-width: 640px) 50vw, 18rem"
-        className="-z-20"
+        sizes="(max-width: 640px) 46vw, (max-width: 1152px) calc(50vw - 2rem), 34rem"
       />
-      <span
-        className="pointer-events-none absolute inset-0 -z-10 bg-surface/50"
-        aria-hidden
-      />
-    </>
+      <span className="absolute inset-0 bg-surface/50" />
+    </span>
   );
 }
 
@@ -31,21 +31,15 @@ export function HomeDiscoveryLinks({
   hasNovels: boolean;
 }) {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
+  const [pending, startTransition] = useTransition();
 
-  async function openRandomNovel() {
-    if (!hasNovels || busy) return;
-    setBusy(true);
-    try {
-      const href = await getRandomTranslationHref();
+  function openRandomNovel() {
+    if (!hasNovels) return;
+    startTransition(async () => {
+      const href = await getRandomTranslationHref().catch(() => null);
       if (href) router.push(href);
-    } finally {
-      setBusy(false);
-    }
+    });
   }
-
-  const tileClass =
-    "relative isolate inline-flex min-h-16 w-full flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border border-border bg-surface px-1.5 py-2 text-center text-[11px] leading-tight font-semibold text-foreground transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:gap-1.5 sm:px-3 sm:py-3 sm:text-sm sm:leading-normal";
 
   return (
     <section
@@ -54,9 +48,13 @@ export function HomeDiscoveryLinks({
     >
       <button
         type="button"
-        onClick={() => void openRandomNovel()}
-        disabled={!hasNovels || busy}
-        className={`${tileClass} hover:text-accent disabled:cursor-not-allowed disabled:opacity-50`}
+        onClick={openRandomNovel}
+        disabled={!hasNovels || pending}
+        aria-busy={pending}
+        className={cn(
+          tileClass,
+          "disabled:cursor-not-allowed disabled:opacity-50",
+        )}
       >
         <TileBackground src="/background1.jpg" />
         <span className="relative z-10 inline-flex flex-col items-center gap-1.5">
@@ -69,7 +67,7 @@ export function HomeDiscoveryLinks({
         href={SITE.discordUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className={`${tileClass} hover:text-accent`}
+        className={tileClass}
       >
         <TileBackground src="/background2.jpg" />
         <span className="relative z-10 inline-flex flex-col items-center gap-1.5">

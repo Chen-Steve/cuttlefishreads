@@ -7,6 +7,11 @@ const widthClass = {
   narrow: "max-w-2xl",
 } as const;
 
+/** Caller-supplied pt/pb/py should replace the default vertical padding. */
+function hasOwnVerticalPadding(className?: string) {
+  return /(?:^|\s)(?:[\w-]+:)*(?:p[tyb]|py)-/.test(className ?? "");
+}
+
 export type PageWidth = keyof typeof widthClass;
 
 /**
@@ -28,7 +33,8 @@ export function PageContainer({
   return (
     <Tag
       className={cn(
-        "mx-auto w-full px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12",
+        "mx-auto w-full px-4 sm:px-6 lg:px-8",
+        !hasOwnVerticalPadding(className) && "py-8 sm:py-10 lg:py-12",
         widthClass[width],
         className,
       )}

@@ -52,10 +52,11 @@ export default function RootLayout({
         <InlineScript html={themeInitScript} />
         <InlineScript html={gtagInitScript(GA_MEASUREMENT_ID)} />
       </head>
+      {/* After idle, so gtag.js is not preloaded ahead of the first paint. The inline stub above queues the page view. */}
       <Script
         async
         src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-        strategy="afterInteractive"
+        strategy="lazyOnload"
       />
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <GoogleAnalyticsPageViews />
