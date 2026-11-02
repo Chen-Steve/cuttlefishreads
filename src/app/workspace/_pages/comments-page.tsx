@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
 import { getAdminAccess } from "@/lib/access";
 import { createAdminClient } from "@/utils/supabase/admin";
-import type { WorkspaceKind } from "@/lib/workspace";
 import type { NovelComment } from "@/types";
 
 import {
@@ -29,11 +28,7 @@ const COMMENT_COLUMNS =
 /** Newest top-level comments loaded for the workspace comments page. */
 const TOP_COMMENTS_LIMIT = 100;
 
-export async function WorkspaceCommentsPage({
-  workspace,
-}: {
-  workspace: WorkspaceKind;
-}) {
+export async function WorkspaceCommentsPage() {
   const access = await getAdminAccess();
   if (!access) notFound();
 

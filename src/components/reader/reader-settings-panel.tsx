@@ -3,10 +3,8 @@
 import {
   useEffect,
   useId,
-  useLayoutEffect,
   useRef,
   useState,
-  type CSSProperties,
   type ReactNode,
 } from "react";
 import { Check, ChevronDown, Minus, Plus, RotateCcw, Settings } from "lucide-react";
@@ -22,6 +20,7 @@ import {
   clampToRange,
   type ReaderFontFamily,
 } from "@/lib/reader-settings";
+import { useReaderPanelPosition } from "@/hooks/use-reader-panel-position";
 import { cn } from "@/lib/utils";
 import { readerChromeIconBtnClass } from "./reader-chrome";
 
@@ -41,7 +40,7 @@ export function ReaderSettingsPanel({
   navRef: React.RefObject<HTMLElement | null>;
 }) {
   const [open, setOpen] = useState(false);
-  const [panelStyle, setPanelStyle] = useState<CSSProperties | undefined>();
+  const panelStyle = useReaderPanelPosition(open, placement, navRef);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -60,6 +59,7 @@ export function ReaderSettingsPanel({
     if (!open) return;
 
     const panel = panelRef.current;
+    const trigger = triggerRef.current;
     const previouslyFocused = document.activeElement as HTMLElement | null;
 
     // Move focus into the panel once it mounts.
@@ -111,40 +111,10 @@ export function ReaderSettingsPanel({
       if (previouslyFocused && document.contains(previouslyFocused)) {
         previouslyFocused.focus();
       } else {
-        triggerRef.current?.focus();
+        trigger?.focus();
       }
     };
   }, [open]);
-
-  useLayoutEffect(() => {
-    if (!open) {
-      setPanelStyle(undefined);
-      return;
-    }
-
-    function updatePosition() {
-      const nav = navRef.current;
-      if (!nav) return;
-
-      const rect = nav.getBoundingClientRect();
-      const gap = 8;
-      setPanelStyle({
-        width: rect.width,
-        left: rect.left,
-        ...(placement === "up"
-          ? { bottom: window.innerHeight - rect.top + gap, top: "auto" }
-          : { top: rect.bottom + gap, bottom: "auto" }),
-      });
-    }
-
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-    };
-  }, [open, placement, navRef]);
 
   return (
     <div ref={ref} className="relative">

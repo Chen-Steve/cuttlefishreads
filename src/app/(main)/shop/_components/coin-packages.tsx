@@ -29,13 +29,21 @@ export function CoinPackages({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const stripeStatus = searchParams.get("stripe");
   const returnPath = safeReturnPath(searchParams.get("return"));
   const { ready, startPurchase } = usePayPal(clientId);
 
   const [customCoins, setCustomCoins] = useState<number | "">(MIN_COINS);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [stripePendingId, setStripePendingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    stripeStatus === "cancel" ? "Stripe checkout was canceled." : null,
+  );
+  const [previousStripeStatus, setPreviousStripeStatus] = useState(stripeStatus);
+  if (previousStripeStatus !== stripeStatus) {
+    setPreviousStripeStatus(stripeStatus);
+    if (stripeStatus === "cancel") setError("Stripe checkout was canceled.");
+  }
   const [success, setSuccess] = useState<string | null>(null);
 
   const validCustomCoins =
@@ -60,7 +68,6 @@ export function CoinPackages({
     const sessionId = searchParams.get("session_id");
 
     if (status === "cancel") {
-      setError("Stripe checkout was canceled.");
       router.replace(shopPath, { scroll: false });
       return;
     }

@@ -7,11 +7,7 @@ import { ChevronLeft, ChevronRight, Home } from "lucide-react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
-import {
-  WORKSPACE_BASE,
-  WORKSPACE_LABELS,
-  workspaceKindFromPathname,
-} from "@/lib/workspace";
+import { WORKSPACE_BASE, WORKSPACE_LABELS } from "@/lib/workspace";
 
 type NavLink = { href: string; label: string };
 
@@ -50,11 +46,10 @@ function ScrollArrow({
 
 export function AdminNav({ isMasterAdmin }: { isMasterAdmin: boolean }) {
   const pathname = usePathname();
-  const kind = workspaceKindFromPathname(pathname);
-  const base = WORKSPACE_BASE[kind];
+  const base = WORKSPACE_BASE;
 
   const baseLinks: NavLink[] = [
-    { href: base, label: WORKSPACE_LABELS[kind].novels },
+    { href: base, label: WORKSPACE_LABELS.novels },
     { href: `${base}/dashboard`, label: "Stats" },
     { href: `${base}/comments`, label: "Comments" },
     { href: `${base}/settings`, label: "Settings" },

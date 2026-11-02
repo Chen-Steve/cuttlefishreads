@@ -1,5 +1,4 @@
 import type { NovelCardData, NovelRatingSummary } from "@/types";
-import type { CatalogBase } from "@/lib/catalog-paths";
 import { cn } from "@/lib/utils";
 import { NovelCard } from "./novel-card";
 
@@ -12,7 +11,6 @@ export function NovelCarousel({
   showChapterCount = false,
   showRatingMeta = false,
   ratingsBySlug,
-  catalogBase = "novels",
   emptyLabel = "No novels found.",
 }: {
   novels: NovelCardData[];
@@ -24,7 +22,6 @@ export function NovelCarousel({
   showChapterCount?: boolean;
   showRatingMeta?: boolean;
   ratingsBySlug?: Record<string, NovelRatingSummary>;
-  catalogBase?: CatalogBase;
   emptyLabel?: string;
 }) {
   if (novels.length === 0) {
@@ -68,7 +65,6 @@ export function NovelCarousel({
             showChapterCount={showChapterCount}
             showRatingMeta={showRatingMeta}
             rating={ratingsBySlug?.[novel.slug]}
-            catalogBase={catalogBase}
           />
         </div>
       ))}

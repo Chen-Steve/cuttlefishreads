@@ -4,11 +4,7 @@ import Link from "next/link";
 import { TabPanelShell } from "@/components/tab-panel-shell";
 import { NovelCover, COVER_SIZES_RECENT } from "./novel-cover";
 import type { RecentlyUpdatedNovel } from "@/types";
-import {
-  type CatalogBase,
-  chapterHref,
-  novelHref,
-} from "@/lib/catalog-paths";
+import { chapterHref, novelHref } from "@/lib/catalog-paths";
 import { cn } from "@/lib/utils";
 
 function truncateLabel(value: string, maxChars: number) {
@@ -18,11 +14,9 @@ function truncateLabel(value: string, maxChars: number) {
 
 export function RecentlyUpdatedCard({
   novel,
-  catalogBase = "novels",
   framed = true,
 }: {
   novel: RecentlyUpdatedNovel;
-  catalogBase?: CatalogBase;
   framed?: boolean;
 }) {
   return (
@@ -33,7 +27,7 @@ export function RecentlyUpdatedCard({
       )}
     >
       <Link
-        href={novelHref(novel.slug, catalogBase)}
+        href={novelHref(novel.slug)}
         aria-label={novel.title}
         className="group/cover shrink-0 outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent"
       >
@@ -48,7 +42,7 @@ export function RecentlyUpdatedCard({
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <Link
-          href={novelHref(novel.slug, catalogBase)}
+          href={novelHref(novel.slug)}
           className="outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent"
         >
           <h3 className="line-clamp-1 text-sm font-semibold leading-snug text-foreground transition-colors hover:text-accent sm:text-base">
@@ -64,7 +58,7 @@ export function RecentlyUpdatedCard({
           {novel.recentChapters.slice(0, 3).map((chapter) => (
             <li key={chapter.number}>
               <Link
-                href={chapterHref(novel.slug, chapter.number, catalogBase)}
+                href={chapterHref(novel.slug, chapter.number)}
                 prefetch={false}
                 className="group/chapter block truncate text-xs text-muted outline-offset-2 transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-accent sm:text-sm"
               >
@@ -88,13 +82,11 @@ export function RecentlyUpdatedCard({
 
 export function RecentlyUpdatedList({
   novels,
-  catalogBase = "novels",
   firstCardHeader,
   firstCardRightTab,
   lastCardFooter,
 }: {
   novels: RecentlyUpdatedNovel[];
-  catalogBase?: CatalogBase;
   firstCardHeader?: ReactNode;
   firstCardRightTab?: ReactNode;
   lastCardFooter?: ReactNode;
@@ -133,7 +125,6 @@ export function RecentlyUpdatedList({
             <RecentlyUpdatedCard
               key={novel.slug}
               novel={novel}
-              catalogBase={catalogBase}
             />
           );
         }
@@ -148,7 +139,6 @@ export function RecentlyUpdatedList({
           >
             <RecentlyUpdatedCard
               novel={novel}
-              catalogBase={catalogBase}
               framed={false}
             />
           </TabPanelShell>

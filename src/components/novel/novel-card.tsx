@@ -2,11 +2,7 @@ import Link from "next/link";
 import type { NovelCardData, NovelRatingSummary } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { StarRating } from "@/components/reviews";
-import {
-  type CatalogBase,
-  novelHref,
-  novelPublicHref,
-} from "@/lib/catalog-paths";
+import { novelPublicHref } from "@/lib/catalog-paths";
 import {
   genresExcludingCoverBadges,
   NovelCover,
@@ -28,7 +24,6 @@ export function NovelCard({
   /** Cover + title + rating + by username (no status/genres). */
   showRatingMeta = false,
   rating,
-  catalogBase,
 }: {
   novel: NovelCardData;
   /** Title and genres only — hides author and status. */
@@ -40,15 +35,11 @@ export function NovelCard({
   showChapterCount?: boolean;
   showRatingMeta?: boolean;
   rating?: NovelRatingSummary;
-  /** Override automatic publication-aware routing. */
-  catalogBase?: CatalogBase;
 }) {
   const cardGenres = genresExcludingCoverBadges(novel.genres);
   const showMeta =
     !showRatingMeta && (cardGenres.length > 0 || (!dense && !compact));
-  const href = catalogBase
-    ? novelHref(novel.slug, catalogBase)
-    : novelPublicHref(novel);
+  const href = novelPublicHref(novel);
   const byline =
     novel.translatorUsername?.trim() ||
     novel.translator?.trim() ||

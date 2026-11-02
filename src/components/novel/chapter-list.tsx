@@ -124,19 +124,22 @@ export function ChapterList({
   slug,
   chapters,
   readerAccess,
-  catalogBase = "novels",
   hideLockBadges = false,
 }: {
   slug: string;
   chapters: ChapterListItem[];
   /** Purchased and admin access, applied after the public list is on screen. */
   readerAccess?: Promise<ChapterAccessPatch[]>;
-  catalogBase?: import("@/lib/catalog-paths").CatalogBase;
   /** When true, skip lock UI on chapter rows. */
   hideLockBadges?: boolean;
 }) {
   const newestFirst = useChapterOrderPreference();
   const [page, setPage] = useState(0);
+  const [pageOrder, setPageOrder] = useState(newestFirst);
+  if (pageOrder !== newestFirst) {
+    setPageOrder(newestFirst);
+    setPage(0);
+  }
   const [accessChapters, setAccessChapters] = useState<ChapterListItem[] | null>(
     null,
   );
@@ -176,10 +179,6 @@ export function ChapterList({
     safePage * CHAPTER_PAGE_SIZE,
     safePage * CHAPTER_PAGE_SIZE + CHAPTER_PAGE_SIZE,
   );
-
-  useEffect(() => {
-    setPage(0);
-  }, [newestFirst]);
 
   const hasChapters = visibleChapters.length > 0;
 

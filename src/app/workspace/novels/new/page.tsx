@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function CreateNovelPage() {
-  return <WorkspaceNovelNewPage workspace="translations" />;
+  return <WorkspaceNovelNewPage />;
 }

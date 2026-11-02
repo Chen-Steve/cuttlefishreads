@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useId } from "react";
 import Link from "next/link";
 
 import type { AccountComment } from "@/lib/data";
@@ -10,6 +10,7 @@ import {
   centsToAmountString,
 } from "@/lib/coin-packages";
 import { cn } from "@/lib/utils";
+import { useHydratedState } from "@/hooks/use-hydrated-state";
 import { AccountComments } from "./account-comments";
 
 type TabId = "purchases" | "unlocks" | "comments";
@@ -66,17 +67,16 @@ export function AccountActivity({
   novelTitles: Record<string, string>;
   comments: AccountComment[];
 }) {
-  const [tab, setTab] = useState<TabId>("purchases");
-  const baseId = useId();
-
-  useEffect(() => {
+  const [tab, setTab] = useHydratedState<TabId>(() => {
     try {
       const raw = localStorage.getItem(TAB_STORAGE_KEY);
-      if (isTabId(raw)) setTab(raw);
+      if (isTabId(raw)) return raw;
     } catch {
       // private mode / blocked storage
     }
-  }, []);
+    return "purchases";
+  }, "purchases");
+  const baseId = useId();
 
   function selectTab(next: TabId) {
     setTab(next);

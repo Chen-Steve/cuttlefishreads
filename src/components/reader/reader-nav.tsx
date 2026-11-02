@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Chapter } from "@/types";
-import { type CatalogBase, chapterHref } from "@/lib/catalog-paths";
+import { chapterHref } from "@/lib/catalog-paths";
 import { cn } from "@/lib/utils";
 import { ChapterContentsDropdown } from "./chapter-contents-dropdown";
 import { ReaderSettingsPanel } from "./reader-settings-panel";
@@ -25,7 +25,6 @@ export function ReaderNav({
   currentChapter,
   menuPlacement = "down",
   showSettings = false,
-  catalogBase = "novels",
   enableKeyboard = false,
   framed = true,
   onNextIntent,
@@ -36,7 +35,6 @@ export function ReaderNav({
   currentChapter: number;
   menuPlacement?: "up" | "down";
   showSettings?: boolean;
-  catalogBase?: CatalogBase;
   /** Only one nav instance should own keyboard shortcuts. */
   enableKeyboard?: boolean;
   /** Standalone pill. False when the nav hangs off TabPanelShell. */
@@ -46,10 +44,10 @@ export function ReaderNav({
   const navRef = useRef<HTMLElement>(null);
   const router = useRouter();
   const previousHref = previous
-    ? chapterHref(slug, previous.number, catalogBase)
+    ? chapterHref(slug, previous.number)
     : undefined;
   const nextHref = next
-    ? chapterHref(slug, next.number, catalogBase)
+    ? chapterHref(slug, next.number)
     : undefined;
 
   useEffect(() => {
@@ -102,7 +100,6 @@ export function ReaderNav({
           slug={slug}
           currentChapter={currentChapter}
           placement={menuPlacement}
-          catalogBase={catalogBase}
           navRef={navRef}
         />
         {showSettings ? (

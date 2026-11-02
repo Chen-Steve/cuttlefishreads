@@ -1,7 +1,7 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useHydratedState } from "@/hooks/use-hydrated-state";
 
 import { THEME_STORAGE_KEY, type Theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -30,11 +30,7 @@ export function ThemeToggle({
   /** `menu` styles the control as an account-dropdown row. */
   variant?: "icon" | "menu";
 }) {
-  const [theme, setTheme] = useState<Theme | null>(null);
-
-  useEffect(() => {
-    setTheme(getPreferredTheme());
-  }, []);
+  const [theme, setTheme] = useHydratedState<Theme | null>(getPreferredTheme, null);
 
   function toggle() {
     const next: Theme = theme === "dark" ? "light" : "dark";

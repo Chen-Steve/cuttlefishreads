@@ -96,7 +96,7 @@ export async function replyToComment(
   ]);
 
   updateTag(novelCommentsCacheTag(parent.novel_slug));
-  revalidatePath(`${WORKSPACE_BASE.translations}/comments`);
+  revalidatePath(`${WORKSPACE_BASE}/comments`);
 
   return {
     reply: {

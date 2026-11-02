@@ -185,11 +185,17 @@ export function NovelsBrowser({
     initialFilters.status !== "all" || initialFilters.genre !== null,
   );
 
-  useEffect(() => {
+  const [previousFilters, setPreviousFilters] = useState(initialFilters);
+  if (
+    previousFilters.status !== initialFilters.status ||
+    previousFilters.genre !== initialFilters.genre ||
+    previousFilters.sort !== initialFilters.sort
+  ) {
+    setPreviousFilters(initialFilters);
     setStatus(initialFilters.status);
     setGenre(initialFilters.genre);
     setSort(initialFilters.sort);
-  }, [initialFilters.status, initialFilters.genre, initialFilters.sort]);
+  }
 
   function commitFilters(next: {
     status: NovelStatusFilter;

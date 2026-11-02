@@ -13,7 +13,7 @@ import { PrefetchKind } from "next/dist/client/components/router-reducer/router-
 
 import { TabRail } from "@/components/tab-panel-shell";
 import { useReaderSettings } from "@/hooks/use-reader-settings";
-import { chapterHref, type CatalogBase } from "@/lib/catalog-paths";
+import { chapterHref } from "@/lib/catalog-paths";
 import { observeChapterProgress } from "@/lib/reader-prefetch";
 import { readerContentStyle } from "@/lib/reader-settings";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,6 @@ type ChapterReaderNavConfig = {
   previous?: Pick<Chapter, "number">;
   next?: Pick<Chapter, "number">;
   currentChapter: number;
-  catalogBase?: CatalogBase;
   /** Bottom prev/next bar. Default true. */
   showBottomNav?: boolean;
   /** Locked pages must not speculate beyond the unlock gate. */
@@ -59,14 +58,18 @@ export function ImmersiveChapterShell({
     chapterBackground && chapterBackground !== "transparent"
       ? chapterBackground
       : "var(--background)";
-  const [showChrome, setShowChrome] = useState(true);
-  const immersiveEnabledRef = useRef(false);
+  const [showChrome, setShowChrome] = useState(!immersive);
+  const [previousImmersive, setPreviousImmersive] = useState(immersive);
+  if (previousImmersive !== immersive) {
+    setPreviousImmersive(immersive);
+    if (!immersive) setShowChrome(true);
+  }
   const showBottomNav = Boolean(nav && nav.showBottomNav !== false);
   const router = useRouter();
   const chapterBodyRef = useRef<HTMLDivElement>(null);
   const prefetchedHref = useRef<string | null>(null);
   const nextHref = nav?.next && nav.enablePrefetch !== false
-    ? chapterHref(nav.slug, nav.next.number, nav.catalogBase)
+    ? chapterHref(nav.slug, nav.next.number)
     : null;
   const prefetchNext = useCallback(() => {
     if (!nextHref || prefetchedHref.current === nextHref || document.visibilityState === "hidden") return;
@@ -89,15 +92,6 @@ export function ImmersiveChapterShell({
     return observeChapterProgress(chapterBodyRef.current, prefetchNext);
   }, [nextHref, prefetchNext]);
 
-  useEffect(() => {
-    if (!immersiveEnabledRef.current) {
-      immersiveEnabledRef.current = true;
-      if (immersive) setShowChrome(false);
-      return;
-    }
-    if (!immersive) setShowChrome(true);
-  }, [immersive]);
-
   function onContentClick(event: MouseEvent<HTMLDivElement>) {
     if (!immersive) return;
     if (isInteractiveTarget(event.target)) return;
@@ -113,7 +107,6 @@ export function ImmersiveChapterShell({
       next={nav.next}
       currentChapter={nav.currentChapter}
       showSettings
-      catalogBase={nav.catalogBase}
       enableKeyboard
       framed={immersive}
       onNextIntent={prefetchNext}
@@ -128,7 +121,6 @@ export function ImmersiveChapterShell({
         next={nav.next}
         currentChapter={nav.currentChapter}
         menuPlacement="up"
-        catalogBase={nav.catalogBase}
         framed={immersive}
         onNextIntent={prefetchNext}
       />

@@ -53,13 +53,11 @@ export function PaginatedRecentlyUpdatedList({
   pageSize = 8,
   /** Caps client payload / pagination depth (e.g. 5 → at most 5 pages). */
   maxPages,
-  catalogBase = "novels",
   className = "mt-4 sm:mt-5",
 }: {
   novels: RecentlyUpdatedNovel[];
   pageSize?: number;
   maxPages?: number;
-  catalogBase?: import("@/lib/catalog-paths").CatalogBase;
   className?: string;
 }) {
   const limited =
@@ -184,7 +182,6 @@ export function PaginatedRecentlyUpdatedList({
         <div id={panelId}>
           <RecentlyUpdatedList
             novels={pageNovels}
-            catalogBase={catalogBase}
             firstCardHeader={titleTab}
             firstCardRightTab={viewAll}
             lastCardFooter={pagination}

@@ -6,10 +6,7 @@ import { ArrowRight } from "lucide-react";
 
 import type { Novel } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import {
-  novelHref,
-  type CatalogBase,
-} from "@/lib/catalog-paths";
+import { novelHref } from "@/lib/catalog-paths";
 import { NovelCover, COVER_SIZES_DENSE } from "./novel-cover";
 
 const PREVIEW_LENGTH = 220;
@@ -71,13 +68,11 @@ function FeaturedCoverButton({
 function FeaturedDetails({
   novel,
   panelId,
-  catalogBase,
 }: {
   novel: Novel;
   panelId: string;
-  catalogBase: CatalogBase;
 }) {
-  const detailHref = novelHref(novel.slug, catalogBase);
+  const detailHref = novelHref(novel.slug);
   const synopsisPreview = novel.synopsis ? previewSynopsis(novel.synopsis) : "";
 
   return (
@@ -127,11 +122,9 @@ function FeaturedDetails({
 
 export function FeaturedNovels({
   novels,
-  catalogBase = "novels",
   emptyLabel = "No novels found.",
 }: {
   novels: Novel[];
-  catalogBase?: CatalogBase;
   emptyLabel?: string;
 }) {
   const panelId = useId();
@@ -173,7 +166,6 @@ export function FeaturedNovels({
       <FeaturedDetails
         novel={selected}
         panelId={panelId}
-        catalogBase={catalogBase}
       />
     </div>
   );

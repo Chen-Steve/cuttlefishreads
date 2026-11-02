@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function CommentsPage() {
-  return <WorkspaceCommentsPage workspace="translations" />;
+  return <WorkspaceCommentsPage />;
 }

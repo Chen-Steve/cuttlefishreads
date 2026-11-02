@@ -1,11 +1,7 @@
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
-import {
-  WORKSPACE_BASE,
-  WORKSPACE_LABELS,
-  type WorkspaceKind,
-} from "@/lib/workspace";
+import { WORKSPACE_BASE, WORKSPACE_LABELS } from "@/lib/workspace";
 import {
   NovelsGrid,
   type NovelRow,
@@ -42,15 +38,11 @@ function buildPublisherOptions(novels: NovelRow[]): TranslatorOption[] {
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
-export async function WorkspaceNovelsPage({
-  workspace,
-}: {
-  workspace: WorkspaceKind;
-}) {
+export async function WorkspaceNovelsPage() {
   const access = await getAdminAccess();
   const admin = createAdminClient();
-  const base = WORKSPACE_BASE[workspace];
-  const labels = WORKSPACE_LABELS[workspace];
+  const base = WORKSPACE_BASE;
+  const labels = WORKSPACE_LABELS;
 
   let query = admin
     .from("novels")

@@ -2,7 +2,6 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
@@ -12,7 +11,7 @@ import {
   formatSuggestedUnlockPreview,
   getSuggestedUnlockAt,
 } from "@/lib/suggested-unlock-at";
-import { WORKSPACE_BASE, workspaceKindFromPathname } from "@/lib/workspace";
+import { WORKSPACE_BASE } from "@/lib/workspace";
 import { createChapter, updateChapter, type AdminState } from "../actions";
 
 const inputClass =
@@ -169,8 +168,7 @@ export function ChapterForm({
   nextChapter?: ChapterSibling | null;
 }) {
   const isEdit = Boolean(initial);
-  const pathname = usePathname();
-  const base = WORKSPACE_BASE[workspaceKindFromPathname(pathname)];
+  const base = WORKSPACE_BASE;
 
   const boundAction = isEdit
     ? updateChapter.bind(null, initial!.chapterId)

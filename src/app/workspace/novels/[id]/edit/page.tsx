@@ -12,5 +12,5 @@ export default async function EditNovelPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <WorkspaceNovelEditPage workspace="translations" novelId={id} />;
+  return <WorkspaceNovelEditPage novelId={id} />;
 }

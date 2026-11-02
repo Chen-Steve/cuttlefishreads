@@ -3,17 +3,15 @@ import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
-import { WORKSPACE_BASE, type WorkspaceKind } from "@/lib/workspace";
+import { WORKSPACE_BASE } from "@/lib/workspace";
 import { NovelForm } from "../_components/novel-form";
 
 export async function WorkspaceNovelEditPage({
-  workspace,
   novelId,
 }: {
-  workspace: WorkspaceKind;
   novelId: string;
 }) {
-  const base = WORKSPACE_BASE[workspace];
+  const base = WORKSPACE_BASE;
 
   const access = await getAdminAccess();
   const admin = createAdminClient();

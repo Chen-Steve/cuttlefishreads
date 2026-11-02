@@ -12,10 +12,7 @@ import {
   type GoogleAnalyticsDashboard,
   type ViewsMode,
 } from "@/lib/google-analytics";
-import {
-  WORKSPACE_BASE,
-  type WorkspaceKind,
-} from "@/lib/workspace";
+import { WORKSPACE_BASE } from "@/lib/workspace";
 
 type NovelStat = {
   id: string;
@@ -37,10 +34,8 @@ function formatCoins(value: number): string {
 }
 
 export async function WorkspaceDashboardPage({
-  workspace,
   view,
 }: {
-  workspace: WorkspaceKind;
   view?: string;
 }) {
   const mode: ViewsMode =
@@ -48,7 +43,7 @@ export async function WorkspaceDashboardPage({
   const access = await getAdminAccess();
   if (!access) notFound();
 
-  const base = WORKSPACE_BASE[workspace];
+  const base = WORKSPACE_BASE;
   const showEarnings = true;
 
   const admin = createAdminClient();

@@ -2,13 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { BookOpen, ChevronDown, Pencil, PlusCircle, Search, User } from "lucide-react";
 
 import { TabPanelShell } from "@/components/tab-panel-shell";
 import { NovelCover } from "@/components/novel/novel-cover";
 import { cn } from "@/lib/utils";
-import { WORKSPACE_BASE, workspaceKindFromPathname } from "@/lib/workspace";
+import { WORKSPACE_BASE } from "@/lib/workspace";
 
 export type NovelRow = {
   id: string;
@@ -162,9 +161,7 @@ export function NovelsGrid({
   createHref: string;
   createLabel: string;
 }) {
-  const pathname = usePathname();
-  const kind = workspaceKindFromPathname(pathname);
-  const base = WORKSPACE_BASE[kind];
+  const base = WORKSPACE_BASE;
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [translatorFilter, setTranslatorFilter] = useState("all");

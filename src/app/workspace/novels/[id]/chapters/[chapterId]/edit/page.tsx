@@ -14,7 +14,6 @@ export default async function EditChapterPage({
   const { id, chapterId } = await params;
   return (
     <WorkspaceChapterEditPage
-      workspace="translations"
       novelId={id}
       chapterId={chapterId}
     />

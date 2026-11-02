@@ -1,6 +1,5 @@
 import type { NovelCardData, NovelRatingSummary } from "@/types";
 import { cn } from "@/lib/utils";
-import type { CatalogBase } from "@/lib/catalog-paths";
 import { NovelCard } from "./novel-card";
 
 /** Max cards shown in a dense fill-row grid (matches xl:grid-cols-7). */
@@ -17,7 +16,6 @@ export function NovelGrid({
   showChapterCount = false,
   showRatingMeta = false,
   ratingsBySlug,
-  catalogBase,
 }: {
   novels: NovelCardData[];
   compact?: boolean;
@@ -33,7 +31,6 @@ export function NovelGrid({
   showChapterCount?: boolean;
   showRatingMeta?: boolean;
   ratingsBySlug?: Record<string, NovelRatingSummary>;
-  catalogBase?: CatalogBase;
 }) {
   if (novels.length === 0) {
     return (
@@ -73,7 +70,6 @@ export function NovelGrid({
           showChapterCount={showChapterCount}
           showRatingMeta={showRatingMeta}
           rating={ratingsBySlug?.[novel.slug]}
-          catalogBase={catalogBase}
         />
       ))}
     </div>

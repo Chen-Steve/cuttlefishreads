@@ -12,5 +12,5 @@ export default async function DashboardPage({
   searchParams: Promise<{ view?: string }>;
 }) {
   const { view } = await searchParams;
-  return <WorkspaceDashboardPage workspace="translations" view={view} />;
+  return <WorkspaceDashboardPage view={view} />;
 }

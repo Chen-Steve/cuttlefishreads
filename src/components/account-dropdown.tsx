@@ -244,7 +244,7 @@ export function AccountDropdown({
           ) : null}
 
           {showTranslatorWorkspace ? (
-            <MenuLink href={WORKSPACE_BASE.translations} onClick={close}>
+            <MenuLink href={WORKSPACE_BASE} onClick={close}>
               {isMasterAdmin ? (
                 <Settings
                   className="size-4 shrink-0 text-muted"

@@ -12,5 +12,5 @@ export default async function AddChapterPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <WorkspaceChapterNewPage workspace="translations" novelId={id} />;
+  return <WorkspaceChapterNewPage novelId={id} />;
 }

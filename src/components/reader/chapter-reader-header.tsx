@@ -1,24 +1,22 @@
 import Link from "next/link";
 
-import { type CatalogBase, novelHref } from "@/lib/catalog-paths";
+import { novelHref } from "@/lib/catalog-paths";
 
 export function ChapterReaderHeader({
   slug,
   novelTitle,
   chapterNumber,
   chapterTitle,
-  catalogBase = "novels",
 }: {
   slug: string;
   novelTitle: string;
   chapterNumber: number;
   chapterTitle: string;
-  catalogBase?: CatalogBase;
 }) {
   return (
     <div className="flex w-full max-w-lg flex-col items-center gap-1.5 text-center">
       <Link
-        href={novelHref(slug, catalogBase)}
+        href={novelHref(slug)}
         prefetch={false}
         title={novelTitle}
         className="max-w-full truncate text-[11px] font-medium tracking-[0.14em] text-muted uppercase transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"

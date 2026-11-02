@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminSettingsPage() {
-  return <WorkspaceSettingsPage workspace="translations" />;
+  return <WorkspaceSettingsPage />;
 }

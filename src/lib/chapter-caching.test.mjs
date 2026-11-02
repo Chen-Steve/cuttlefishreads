@@ -94,7 +94,7 @@ function fixture() {
     "@/lib/access": { getAdminAccess: async () => ({ isMasterAdmin: true, userId: "publisher" }) },
     "@/lib/notifications/data": { notifyBookmarkersOfChapter: async () => {}, notifyBookmarkersOfChapters: async () => {} },
     "@/lib/cover-file": {}, "@/lib/chapter-import": {},
-    "@/lib/workspace": { WORKSPACE_BASE: { translations: "/workspace" }, workspaceInternalPath: (path) => path },
+    "@/lib/workspace": { WORKSPACE_BASE: "/workspace" },
     "@/lib/constants": {},
   };
   const data = loadTs("./data/index.ts", mocks);

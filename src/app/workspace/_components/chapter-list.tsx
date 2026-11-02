@@ -2,7 +2,6 @@
 
 import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   ArrowDownUp,
   CheckSquare,
@@ -14,7 +13,7 @@ import {
 
 import { TabPanelShell } from "@/components/tab-panel-shell";
 import { cn } from "@/lib/utils";
-import { WORKSPACE_BASE, workspaceKindFromPathname } from "@/lib/workspace";
+import { WORKSPACE_BASE } from "@/lib/workspace";
 import {
   ChapterRowActions,
   DeleteSelectedButton,
@@ -137,8 +136,7 @@ export function ChapterList({
   bulkHref: string;
   draftCount: number;
 }) {
-  const pathname = usePathname();
-  const base = WORKSPACE_BASE[workspaceKindFromPathname(pathname)];
+  const base = WORKSPACE_BASE;
   const newestFirst = useSyncExternalStore(
     subscribeChapterOrder,
     readChapterOrderPreference,

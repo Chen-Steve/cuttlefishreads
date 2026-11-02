@@ -3,14 +3,9 @@ import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
-import type { WorkspaceKind } from "@/lib/workspace";
 import { SupportLinksForm } from "../_components/support-links-form";
 
-export async function WorkspaceSettingsPage({
-  workspace,
-}: {
-  workspace: WorkspaceKind;
-}) {
+export async function WorkspaceSettingsPage() {
   const access = await getAdminAccess();
   if (!access) notFound();
 

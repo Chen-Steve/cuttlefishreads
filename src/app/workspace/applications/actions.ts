@@ -51,7 +51,7 @@ export async function approveApplication(
   if (error) return { error: error.message };
 
   if (application.username) updateTag(profileCacheTag(application.username));
-  revalidatePath(`${WORKSPACE_BASE.translations}/applications`);
+  revalidatePath(`${WORKSPACE_BASE}/applications`);
   return {};
 }
 
@@ -74,7 +74,7 @@ export async function rejectApplication(
 
   if (error) return { error: error.message };
 
-  revalidatePath(`${WORKSPACE_BASE.translations}/applications`);
+  revalidatePath(`${WORKSPACE_BASE}/applications`);
   return {};
 }
 

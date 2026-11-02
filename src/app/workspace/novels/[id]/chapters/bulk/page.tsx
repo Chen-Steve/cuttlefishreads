@@ -12,5 +12,5 @@ export default async function BulkUploadChaptersPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <WorkspaceChapterBulkPage workspace="translations" novelId={id} />;
+  return <WorkspaceChapterBulkPage novelId={id} />;
 }

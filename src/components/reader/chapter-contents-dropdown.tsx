@@ -2,15 +2,14 @@
 
 import {
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
-  type CSSProperties,
   type RefObject,
 } from "react";
 import Link from "next/link";
 import { ChevronDown, List, Lock } from "lucide-react";
 
+import { useReaderPanelPosition } from "@/hooks/use-reader-panel-position";
 import { cn } from "@/lib/utils";
 import type { ChapterSummary } from "@/types";
 import { chapterHref } from "@/lib/catalog-paths";
@@ -81,20 +80,18 @@ export function ChapterContentsDropdown({
   slug,
   currentChapter,
   placement = "down",
-  catalogBase = "novels",
   navRef,
 }: {
   slug: string;
   currentChapter: number;
   placement?: "up" | "down";
-  catalogBase?: import("@/lib/catalog-paths").CatalogBase;
   navRef: RefObject<HTMLElement | null>;
 }) {
   const [open, setOpen] = useState(false);
   const [chapters, setChapters] = useState<ChapterSummary[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  const [panelStyle, setPanelStyle] = useState<CSSProperties | undefined>();
+  const panelStyle = useReaderPanelPosition(open, placement, navRef);
   const ref = useRef<HTMLDivElement>(null);
   const currentRef = useRef<HTMLAnchorElement>(null);
 
@@ -143,37 +140,6 @@ export function ChapterContentsDropdown({
     setOpen(next);
     if (next) void loadMenu();
   }
-
-  // Match the chapter nav bar width and position on all screen sizes.
-  useLayoutEffect(() => {
-    if (!open) {
-      setPanelStyle(undefined);
-      return;
-    }
-
-    function updatePosition() {
-      const nav = navRef.current;
-      if (!nav) return;
-
-      const rect = nav.getBoundingClientRect();
-      const gap = 8;
-      setPanelStyle({
-        width: rect.width,
-        left: rect.left,
-        ...(placement === "up"
-          ? { bottom: window.innerHeight - rect.top + gap, top: "auto" }
-          : { top: rect.bottom + gap, bottom: "auto" }),
-      });
-    }
-
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-    };
-  }, [open, placement, navRef]);
 
   return (
     <div ref={ref} className="relative">
@@ -228,7 +194,7 @@ export function ChapterContentsDropdown({
                 key={chapter.number}
                 ref={isCurrent ? currentRef : undefined}
                 prefetch={false}
-                href={chapterHref(slug, chapter.number, catalogBase)}
+                href={chapterHref(slug, chapter.number)}
                 role="option"
                 aria-selected={isCurrent}
                 title={fullLabel}

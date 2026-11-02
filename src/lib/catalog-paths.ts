@@ -1,15 +1,12 @@
 /** Path helpers for the novel catalog (/novels). */
 
-export type CatalogBase = "novels";
-
-export function novelHref(slug: string, _base: CatalogBase = "novels") {
+export function novelHref(slug: string) {
   return `/novels/${slug}`;
 }
 
 export function chapterHref(
   slug: string,
   chapter: number | string,
-  _base: CatalogBase = "novels",
 ) {
   return `/novels/${slug}/${chapter}`;
 }

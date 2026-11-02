@@ -1054,11 +1054,6 @@ export async function getClosestNovelTitleMatch(query: string): Promise<NovelTit
   return findClosestNovelTitle(await getNovelSearchIndex(), query);
 }
 
-export const getUserCoins = cache(async (): Promise<number> => {
-  const session = await getSessionProfile();
-  return session?.coins ?? 0;
-});
-
 export const isUserAuthenticated = cache(async (): Promise<boolean> => {
   return Boolean(await getAuthClaims());
 });
@@ -1393,18 +1388,6 @@ export type ReadableChapter = {
   number: number;
   title: string;
 };
-
-export async function getReadableChapters(
-  slug: string,
-): Promise<ReadableChapter[]> {
-  const chapters = await getChapterSummaries(slug);
-  return chapters
-    .filter((chapter) => !chapter.locked)
-    .map((chapter) => ({
-      number: chapter.number,
-      title: chapter.title,
-    }));
-}
 
 // -----------------------------------------------------------------------------
 // Ratings from comments (optional stars on top-level comments)

@@ -1,26 +1,22 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId } from "react";
 import { useRouter } from "next/navigation";
 import { TriangleAlert } from "lucide-react";
+import { useHydratedState } from "@/hooks/use-hydrated-state";
 
 const STORAGE_KEY = "cf-adult-content-acknowledged";
 
 export function AdultContentWarning() {
   const router = useRouter();
   const titleId = useId();
-  const [open, setOpen] = useState(false);
-  const [checked, setChecked] = useState(false);
-
-  useEffect(() => {
+  const [open, setOpen] = useHydratedState<boolean | null>(() => {
     try {
-      const acknowledged = localStorage.getItem(STORAGE_KEY) === "1";
-      setOpen(!acknowledged);
+      return localStorage.getItem(STORAGE_KEY) !== "1";
     } catch {
-      setOpen(true);
+      return true;
     }
-    setChecked(true);
-  }, []);
+  }, null);
 
   useEffect(() => {
     if (!open) return;
@@ -48,7 +44,7 @@ export function AdultContentWarning() {
     router.push("/novels");
   };
 
-  if (!checked) {
+  if (open === null) {
     return (
       <div
         className="fixed inset-0 z-50 bg-background/80 backdrop-blur-[3px]"

@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminPage() {
-  return <WorkspaceNovelsPage workspace="translations" />;
+  return <WorkspaceNovelsPage />;
 }

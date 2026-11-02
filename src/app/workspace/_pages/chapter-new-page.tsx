@@ -3,14 +3,11 @@ import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
-import type { WorkspaceKind } from "@/lib/workspace";
 import { ChapterForm } from "../_components/chapter-form";
 
 export async function WorkspaceChapterNewPage({
-  workspace: _workspace,
   novelId,
 }: {
-  workspace: WorkspaceKind;
   novelId: string;
 }) {
   const access = await getAdminAccess();

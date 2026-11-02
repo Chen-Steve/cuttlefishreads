@@ -20,10 +20,7 @@ import {
   MAX_BULK_ACTION_BYTES,
   MAX_IMPORT_CHAPTERS,
 } from "@/lib/chapter-import";
-import {
-  WORKSPACE_BASE,
-  workspaceInternalPath,
-} from "@/lib/workspace";
+import { WORKSPACE_BASE } from "@/lib/workspace";
 import {
   GENRES,
   type Genre,
@@ -130,7 +127,7 @@ export async function updateSupportLinks(
   // Global note and support links are cached inside the novel-detail entries.
   await revalidatePublicPaths();
   if (auth.access.username) updateTag(profileCacheTag(auth.access.username));
-  revalidatePath(`${WORKSPACE_BASE.translations}/settings`);
+  revalidatePath(`${WORKSPACE_BASE}/settings`);
   return { message: "Settings saved." };
 }
 
@@ -192,6 +189,44 @@ function resolveCoverFile(formData: FormData): File | null {
   const fromForm = formData.get("cover");
   if (fromForm instanceof File && fromForm.size > 0) return fromForm;
   return null;
+}
+
+function parseNovelFields(formData: FormData) {
+  const statusRaw = String(formData.get("status") ?? "ongoing");
+  const status: NovelStatus = NOVEL_STATUSES.includes(statusRaw as NovelStatus)
+    ? (statusRaw as NovelStatus)
+    : "ongoing";
+  const languageRaw = String(formData.get("language") ?? "Chinese");
+  const language: Language = (LANGUAGES as readonly string[]).includes(languageRaw)
+    ? (languageRaw as Language)
+    : "Chinese";
+
+  return {
+    title: String(formData.get("title") ?? "").trim(),
+    description: String(formData.get("description") ?? "").trim(),
+    status,
+    language,
+    genres: parseGenres(formData),
+    tags: parseTags(String(formData.get("tags") ?? "")),
+  };
+}
+
+// Kept separate so create/edit retain their existing authorization/error order.
+function parseNovelAssets(formData: FormData) {
+  const cover = resolveCoverFile(formData);
+  if (cover) {
+    const error = validateCoverFile(cover);
+    if (error) return { error };
+  }
+  const novelupdatesUrl = parseSupportLink(
+    String(formData.get("novelupdatesUrl") ?? ""),
+    "NovelUpdates",
+    "novelupdates.com",
+  );
+  if (novelupdatesUrl && typeof novelupdatesUrl === "object") {
+    return { error: novelupdatesUrl.error };
+  }
+  return { cover, novelupdatesUrl };
 }
 
 function coverPathFromUrl(url: string | null | undefined): string | null {
@@ -271,34 +306,16 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
   const auth = await requireWorkspace();
   if (!auth.access) return { error: auth.error };
 
-  const title = String(formData.get("title") ?? "").trim();
+  const { title, description, status, language, genres, tags } =
+    parseNovelFields(formData);
   if (!title) return { error: "Title is required." };
 
-  const description = String(formData.get("description") ?? "").trim();
-  const statusRaw = String(formData.get("status") ?? "ongoing");
-  const status: NovelStatus = NOVEL_STATUSES.includes(statusRaw as NovelStatus)
-    ? (statusRaw as NovelStatus)
-    : "ongoing";
-  const languageRaw = String(formData.get("language") ?? "Chinese");
-  const language: Language = (LANGUAGES as readonly string[]).includes(languageRaw)
-    ? (languageRaw as Language)
-    : "Chinese";
-  const genres = parseGenres(formData);
-  const tags = parseTags(String(formData.get("tags") ?? ""));
   const { access } = auth;
   const publishError = assertCanPublish(access);
   if (publishError) return { error: publishError };
-  const cover = resolveCoverFile(formData);
-  if (cover) {
-    const coverError = validateCoverFile(cover);
-    if (coverError) return { error: coverError };
-  }
-  const novelupdatesUrl = parseSupportLink(
-    String(formData.get("novelupdatesUrl") ?? ""),
-    "NovelUpdates",
-    "novelupdates.com",
-  );
-  if (novelupdatesUrl && typeof novelupdatesUrl === "object") return { error: novelupdatesUrl.error };
+  const assets = parseNovelAssets(formData);
+  if ("error" in assets) return { error: assets.error };
+  const { cover, novelupdatesUrl } = assets;
 
   const admin = createAdminClient();
 
@@ -369,7 +386,7 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
     status,
     language,
     publisher_id: publisherId,
-    novelupdates_url: (novelupdatesUrl as string | null) ?? null,
+    novelupdates_url: novelupdatesUrl,
     publication_type: "translation",
   });
 
@@ -380,8 +397,8 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
     return { error: error.message };
   }
 
-  const workspaceBase = WORKSPACE_BASE.translations;
-  revalidatePath(workspaceInternalPath(workspaceBase));
+  const workspaceBase = WORKSPACE_BASE;
+  revalidatePath(workspaceBase);
   await revalidatePublicPaths();
   redirect(workspaceBase);
 }
@@ -395,29 +412,13 @@ export async function updateNovel(
   if (!auth.access) return { error: auth.error };
   const { access } = auth;
 
-  const title = String(formData.get("title") ?? "").trim();
+  const { title, description, status, language, genres, tags } =
+    parseNovelFields(formData);
   if (!title) return { error: "Title is required." };
 
-  const description = String(formData.get("description") ?? "").trim();
-  const statusRaw = String(formData.get("status") ?? "ongoing");
-  const status: NovelStatus = NOVEL_STATUSES.includes(statusRaw as NovelStatus)
-    ? (statusRaw as NovelStatus)
-    : "ongoing";
-  const languageRaw = String(formData.get("language") ?? "Chinese");
-  const language: Language = (LANGUAGES as readonly string[]).includes(languageRaw)
-    ? (languageRaw as Language)
-    : "Chinese";
-  const cover = resolveCoverFile(formData);
-  if (cover) {
-    const coverError = validateCoverFile(cover);
-    if (coverError) return { error: coverError };
-  }
-  const novelupdatesUrl = parseSupportLink(
-    String(formData.get("novelupdatesUrl") ?? ""),
-    "NovelUpdates",
-    "novelupdates.com",
-  );
-  if (novelupdatesUrl && typeof novelupdatesUrl === "object") return { error: novelupdatesUrl.error };
+  const assets = parseNovelAssets(formData);
+  if ("error" in assets) return { error: assets.error };
+  const { cover, novelupdatesUrl } = assets;
 
   const admin = createAdminClient();
 
@@ -434,9 +435,6 @@ export async function updateNovel(
     return { error: "You can only manage your own novels." };
   }
 
-  // Keep existing catalog novels as translations.
-  const genres = parseGenres(formData);
-  const tags = parseTags(String(formData.get("tags") ?? ""));
   const publishError = assertCanPublish(access);
   if (publishError) return { error: publishError };
 
@@ -501,7 +499,7 @@ export async function updateNovel(
       status,
       language,
       publisher_id: publisherId,
-      novelupdates_url: (novelupdatesUrl as string | null) ?? null,
+      novelupdates_url: novelupdatesUrl,
       updated_at: new Date().toISOString(),
     })
     .eq("id", novelId);
@@ -517,8 +515,8 @@ export async function updateNovel(
     await deleteCoverObject(admin, existing.cover_url);
   }
 
-  const workspaceBase = WORKSPACE_BASE.translations;
-  revalidatePath(workspaceInternalPath(workspaceBase));
+  const workspaceBase = WORKSPACE_BASE;
+  revalidatePath(workspaceBase);
   await revalidatePublicPaths(novelId, [], existing.slug);
   revalidatePath(`/novels/${existing.slug}`);
   redirect(workspaceBase);
@@ -549,8 +547,8 @@ export async function deleteNovel(novelId: string): Promise<AdminState> {
 
   await deleteCoverObject(admin, existing.cover_url);
 
-  const workspaceBase = WORKSPACE_BASE.translations;
-  revalidatePath(workspaceInternalPath(workspaceBase));
+  const workspaceBase = WORKSPACE_BASE;
+  revalidatePath(workspaceBase);
   await revalidatePublicPaths(novelId, "all", existing.slug);
   revalidatePath(`/novels/${existing.slug}`);
   redirect(workspaceBase);
@@ -650,8 +648,8 @@ export async function createChapter(
     excludeUserId: auth.access.userId,
   });
 
-  const workspaceBase = WORKSPACE_BASE.translations;
-  revalidatePath(workspaceInternalPath(workspaceBase));
+  const workspaceBase = WORKSPACE_BASE;
+  revalidatePath(workspaceBase);
   await revalidatePublicPaths(novelId, [number]);
   redirect(`${workspaceBase}/novels/${novelId}/chapters`);
 }
@@ -810,8 +808,8 @@ export async function bulkCreateChapters(
     });
   }
 
-  const workspaceBase = WORKSPACE_BASE.translations;
-  revalidatePath(workspaceInternalPath(workspaceBase));
+  const workspaceBase = WORKSPACE_BASE;
+  revalidatePath(workspaceBase);
   await revalidatePublicPaths(id, prepared.map((chapter) => chapter.number));
   if (options.finalize === false) return {};
   redirect(`${workspaceBase}/novels/${id}/chapters`);
@@ -869,12 +867,8 @@ export async function setChapterPublished(
     });
   }
 
-  const workspaceBase = WORKSPACE_BASE.translations;
-  revalidatePath(
-    workspaceInternalPath(
-      `${workspaceBase}/novels/${existing.novel_id}/chapters`,
-    ),
-  );
+  const workspaceBase = WORKSPACE_BASE;
+  revalidatePath(`${workspaceBase}/novels/${existing.novel_id}/chapters`);
   await revalidatePublicPaths(existing.novel_id, [existing.number]);
   return {};
 }
@@ -929,10 +923,8 @@ export async function publishAllChapters(novelId: string): Promise<AdminState> {
     excludeUserId: auth.access.userId,
   });
 
-  const workspaceBase = WORKSPACE_BASE.translations;
-  revalidatePath(
-    workspaceInternalPath(`${workspaceBase}/novels/${novelId}/chapters`),
-  );
+  const workspaceBase = WORKSPACE_BASE;
+  revalidatePath(`${workspaceBase}/novels/${novelId}/chapters`);
   await revalidatePublicPaths(novelId, (drafts ?? []).map((chapter) => chapter.number));
   return {};
 }
@@ -961,12 +953,8 @@ export async function deleteChapter(chapterId: string): Promise<AdminState> {
     .update({ updated_at: new Date().toISOString() })
     .eq("id", existing.novel_id);
 
-  const workspaceBase = WORKSPACE_BASE.translations;
-  revalidatePath(
-    workspaceInternalPath(
-      `${workspaceBase}/novels/${existing.novel_id}/chapters`,
-    ),
-  );
+  const workspaceBase = WORKSPACE_BASE;
+  revalidatePath(`${workspaceBase}/novels/${existing.novel_id}/chapters`);
   await revalidatePublicPaths(existing.novel_id, [existing.number]);
   return {};
 }
@@ -1018,10 +1006,8 @@ export async function deleteChapters(
     .update({ updated_at: new Date().toISOString() })
     .eq("id", id);
 
-  const workspaceBase = WORKSPACE_BASE.translations;
-  revalidatePath(
-    workspaceInternalPath(`${workspaceBase}/novels/${id}/chapters`),
-  );
+  const workspaceBase = WORKSPACE_BASE;
+  revalidatePath(`${workspaceBase}/novels/${id}/chapters`);
   await revalidatePublicPaths(id);
   return {};
 }
@@ -1167,18 +1153,10 @@ export async function updateChapter(
     .update({ updated_at: new Date().toISOString() })
     .eq("id", existing.novel_id);
 
-  const workspaceBase = WORKSPACE_BASE.translations;
-  revalidatePath(workspaceInternalPath(workspaceBase));
-  revalidatePath(
-    workspaceInternalPath(
-      `${workspaceBase}/novels/${existing.novel_id}/chapters`,
-    ),
-  );
-  revalidatePath(
-    workspaceInternalPath(
-      `${workspaceBase}/novels/${existing.novel_id}/chapters/${chapterId}/edit`,
-    ),
-  );
+  const workspaceBase = WORKSPACE_BASE;
+  revalidatePath(workspaceBase);
+  revalidatePath(`${workspaceBase}/novels/${existing.novel_id}/chapters`);
+  revalidatePath(`${workspaceBase}/novels/${existing.novel_id}/chapters/${chapterId}/edit`);
   await revalidatePublicPaths(existing.novel_id, [existing.number, number ?? existing.number]);
   return { success: "Chapter saved." };
 }

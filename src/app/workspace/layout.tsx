@@ -23,7 +23,7 @@ export default async function AdminLayout({
   const access = await getAdminAccess();
 
   if (!access) {
-    redirect(`/login?redirect=${encodeURIComponent(WORKSPACE_BASE.translations)}`);
+    redirect(`/login?redirect=${encodeURIComponent(WORKSPACE_BASE)}`);
   }
   if (!access.isMasterAdmin && !access.isTranslator) {
     redirect("/apply");

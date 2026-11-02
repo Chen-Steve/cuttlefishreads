@@ -24,6 +24,7 @@ import {
   novelPublicHref,
 } from "@/lib/catalog-paths";
 import { cn } from "@/lib/utils";
+import { useHydratedState } from "@/hooks/use-hydrated-state";
 import type { Genre } from "@/lib/constants";
 import type { NovelCardData } from "@/types";
 
@@ -143,14 +144,24 @@ function resolveViewedItems(progress: ReadingProgressEntry[]): ViewedItem[] {
   return items;
 }
 
+const EMPTY_BOOKMARKS: NovelCardData[] = [];
+
 export function LibraryGrid({
-  bookmarked = [],
+  bookmarked = EMPTY_BOOKMARKS,
   loggedIn = false,
 }: {
   bookmarked?: NovelCardData[];
   loggedIn?: boolean;
 }) {
-  const [mode, setMode] = useState<LibraryMode>("bookmarked");
+  const [mode, setMode] = useHydratedState<LibraryMode>(() => {
+    try {
+      const raw = localStorage.getItem(MODE_STORAGE_KEY);
+      if (raw === "bookmarked" || raw === "viewed") return raw;
+    } catch {
+      // private mode / blocked storage
+    }
+    return "bookmarked";
+  }, "bookmarked");
   const [items, setItems] = useState(bookmarked);
   const [viewed, setViewed] = useState<ViewedItem[]>([]);
   const [progress, setProgress] = useState<ReadingProgressMap>({});
@@ -162,18 +173,11 @@ export function LibraryGrid({
     [bookmarked],
   );
 
-  useEffect(() => {
+  const [previousBookmarks, setPreviousBookmarks] = useState(bookmarked);
+  if (previousBookmarks !== bookmarked) {
+    setPreviousBookmarks(bookmarked);
     setItems(bookmarked);
-  }, [bookmarked]);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(MODE_STORAGE_KEY);
-      if (raw === "bookmarked" || raw === "viewed") setMode(raw);
-    } catch {
-      // private mode / blocked storage
-    }
-  }, []);
+  }
 
   useEffect(() => {
     function syncProgress() {
