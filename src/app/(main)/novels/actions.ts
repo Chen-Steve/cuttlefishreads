@@ -2,7 +2,7 @@
 
 import { refresh, updateTag } from "next/cache";
 
-import { notifyComment } from "@/lib/notifications/data";
+import { notifyUsers } from "@/lib/notifications/data";
 import {
   getNovelComments,
   getChapterComments,
@@ -377,7 +377,7 @@ export async function replyToComment(
       .maybeSingle(),
   ]);
 
-  await notifyComment([
+  await notifyUsers([
     {
       user_id: parent.user_id,
       actor_id: userId,
@@ -526,7 +526,7 @@ export async function toggleCommentLike(commentId: string): Promise<LikeState> {
   });
   if (error) return { error: error.message };
 
-  await notifyComment([
+  await notifyUsers([
     {
       user_id: comment.user_id,
       actor_id: userId,

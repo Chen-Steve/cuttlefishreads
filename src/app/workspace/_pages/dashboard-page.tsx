@@ -44,7 +44,6 @@ export async function WorkspaceDashboardPage({
   if (!access) notFound();
 
   const base = WORKSPACE_BASE;
-  const showEarnings = true;
 
   const admin = createAdminClient();
 
@@ -99,20 +98,16 @@ export async function WorkspaceDashboardPage({
 
   if (novelIds.length > 0) {
     const [unlockStatsRes, recentUnlocksRes, ga, views] = await Promise.all([
-      showEarnings
-        ? admin.rpc("novel_unlock_stats", { p_slugs: slugs })
-        : Promise.resolve({ data: null }),
-      showEarnings
-        ? admin
-            .from("chapter_unlocks")
-            .select(
-              "novel_slug, chapter_number, translator_share, created_at, user_id",
-            )
-            .in("novel_slug", slugs)
-            .eq("hidden_from_translator", false)
-            .order("created_at", { ascending: false })
-            .limit(RECENT_PURCHASES_LIMIT)
-        : Promise.resolve({ data: null }),
+      admin.rpc("novel_unlock_stats", { p_slugs: slugs }),
+      admin
+        .from("chapter_unlocks")
+        .select(
+          "novel_slug, chapter_number, translator_share, created_at, user_id",
+        )
+        .in("novel_slug", slugs)
+        .eq("hidden_from_translator", false)
+        .order("created_at", { ascending: false })
+        .limit(RECENT_PURCHASES_LIMIT),
       mode === "all"
         ? Promise.resolve(emptyAnalytics)
         : getGoogleAnalyticsDashboard(slugs, mode),
@@ -211,17 +206,11 @@ export async function WorkspaceDashboardPage({
           </h1>
         }
       >
-        <div
-          className={`grid grid-cols-2 gap-3 px-4 py-3 ${showEarnings ? "sm:grid-cols-4" : ""}`}
-        >
+        <div className="grid grid-cols-2 gap-3 px-4 py-3 sm:grid-cols-4">
           <SummaryCard icon={<Eye className="size-4" />} label={viewsLabel} value={totalViews} />
           <SummaryCard icon={<Bookmark className="size-4" />} label="Bookmarks" value={totals.bookmarks} />
-          {showEarnings ? (
-            <>
-              <SummaryCard icon={<ShoppingCart className="size-4" />} label="Purchases" value={totals.purchases} />
-              <SummaryCard icon={<Cookie className="size-4" />} label="Cookies earned" value={totals.coinsEarned} />
-            </>
-          ) : null}
+          <SummaryCard icon={<ShoppingCart className="size-4" />} label="Purchases" value={totals.purchases} />
+          <SummaryCard icon={<Cookie className="size-4" />} label="Cookies earned" value={totals.coinsEarned} />
         </div>
       </TabPanelShell>
 
@@ -247,12 +236,8 @@ export async function WorkspaceDashboardPage({
                 </th>
                 <th className="px-4 py-3 text-right font-medium">Views</th>
                 <th className="px-4 py-3 text-right font-medium">Bookmarks</th>
-                {showEarnings ? (
-                  <>
-                    <th className="px-4 py-3 text-right font-medium">Purchases</th>
-                    <th className="px-4 py-3 text-right font-medium">Cookies</th>
-                  </>
-                ) : null}
+                <th className="px-4 py-3 text-right font-medium">Purchases</th>
+                <th className="px-4 py-3 text-right font-medium">Cookies</th>
               </tr>
             </thead>
             <tbody>
@@ -267,16 +252,12 @@ export async function WorkspaceDashboardPage({
                   <td className="px-4 py-3 text-right tabular-nums text-foreground">
                     {s.bookmarks.toLocaleString()}
                   </td>
-                  {showEarnings ? (
-                    <>
-                      <td className="px-4 py-3 text-right tabular-nums text-foreground">
-                        {s.purchases.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600 dark:text-amber-400">
-                        {formatCoins(s.coinsEarned)}
-                      </td>
-                    </>
-                  ) : null}
+                  <td className="px-4 py-3 text-right tabular-nums text-foreground">
+                    {s.purchases.toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600 dark:text-amber-400">
+                    {formatCoins(s.coinsEarned)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -284,91 +265,89 @@ export async function WorkspaceDashboardPage({
         )}
       </div>
 
-      {showEarnings ? (
-        <section className="mt-10">
-          <h2 className="text-lg font-semibold tracking-tight">
-            Chapter purchases
-          </h2>
-          <p className="mt-0.5 text-sm text-muted">
-            Individual chapter unlocks per novel, with your 70% earnings.
-            {recentPurchasesTruncated
-              ? ` Showing the ${RECENT_PURCHASES_LIMIT} most recent.`
-              : null}
-          </p>
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold tracking-tight">
+          Chapter purchases
+        </h2>
+        <p className="mt-0.5 text-sm text-muted">
+          Individual chapter unlocks per novel, with your 70% earnings.
+          {recentPurchasesTruncated
+            ? ` Showing the ${RECENT_PURCHASES_LIMIT} most recent.`
+            : null}
+        </p>
 
-          {novelsWithPurchases.length === 0 ? (
-            <p className="mt-4 rounded-2xl border border-border bg-surface px-4 py-12 text-center text-sm text-muted">
-              No chapter purchases yet.
-            </p>
-          ) : (
-            <div className="mt-4 flex flex-col gap-6">
-              {novelsWithPurchases.map((n) => {
-                const purchases = purchasesByNovel.get(n.slug) ?? [];
-                const totalPurchases = purchasesBySlug.get(n.slug) ?? 0;
-                const earned = earnedBySlug.get(n.slug) ?? 0;
-                return (
-                  <div
-                    key={n.id}
-                    className="overflow-x-auto rounded-2xl border border-border bg-surface"
-                  >
-                    <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-3">
-                      <h3 className="font-medium text-foreground">{n.title}</h3>
-                      <span className="text-xs text-muted">
-                        {totalPurchases.toLocaleString()} purchase
-                        {totalPurchases === 1 ? "" : "s"} ·{" "}
-                        <span className="font-semibold text-amber-600 dark:text-amber-400">
-                          {formatCoins(earned)} cookies
-                        </span>
+        {novelsWithPurchases.length === 0 ? (
+          <p className="mt-4 rounded-2xl border border-border bg-surface px-4 py-12 text-center text-sm text-muted">
+            No chapter purchases yet.
+          </p>
+        ) : (
+          <div className="mt-4 flex flex-col gap-6">
+            {novelsWithPurchases.map((n) => {
+              const purchases = purchasesByNovel.get(n.slug) ?? [];
+              const totalPurchases = purchasesBySlug.get(n.slug) ?? 0;
+              const earned = earnedBySlug.get(n.slug) ?? 0;
+              return (
+                <div
+                  key={n.id}
+                  className="overflow-x-auto rounded-2xl border border-border bg-surface"
+                >
+                  <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-3">
+                    <h3 className="font-medium text-foreground">{n.title}</h3>
+                    <span className="text-xs text-muted">
+                      {totalPurchases.toLocaleString()} purchase
+                      {totalPurchases === 1 ? "" : "s"} ·{" "}
+                      <span className="font-semibold text-amber-600 dark:text-amber-400">
+                        {formatCoins(earned)} cookies
                       </span>
-                    </div>
-                    {purchases.length === 0 ? (
-                      <p className="px-4 py-6 text-center text-sm text-muted">
-                        No recent purchases in this list.
-                      </p>
-                    ) : (
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-border text-left text-xs text-muted">
-                            <th className="px-4 py-3 font-medium">Reader</th>
-                            <th className="px-4 py-3 text-right font-medium">
-                              Chapter
-                            </th>
-                            <th className="px-4 py-3 text-right font-medium">Date</th>
-                            <th className="px-4 py-3 text-right font-medium">
-                              Earned
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {purchases.map((p, i) => (
-                            <tr
-                              key={`${n.slug}-${p.chapterNumber}-${i}`}
-                              className="border-b border-border last:border-0"
-                            >
-                              <td className="px-4 py-3 text-foreground">
-                                {p.buyer}
-                              </td>
-                              <td className="px-4 py-3 text-right tabular-nums text-foreground">
-                                Ch. {p.chapterNumber}
-                              </td>
-                              <td className="px-4 py-3 text-right tabular-nums text-muted">
-                                {new Date(p.createdAt).toLocaleDateString()}
-                              </td>
-                              <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600 dark:text-amber-400">
-                                {formatCoins(p.earned)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      ) : null}
+                  {purchases.length === 0 ? (
+                    <p className="px-4 py-6 text-center text-sm text-muted">
+                      No recent purchases in this list.
+                    </p>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border text-left text-xs text-muted">
+                          <th className="px-4 py-3 font-medium">Reader</th>
+                          <th className="px-4 py-3 text-right font-medium">
+                            Chapter
+                          </th>
+                          <th className="px-4 py-3 text-right font-medium">Date</th>
+                          <th className="px-4 py-3 text-right font-medium">
+                            Earned
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {purchases.map((p, i) => (
+                          <tr
+                            key={`${n.slug}-${p.chapterNumber}-${i}`}
+                            className="border-b border-border last:border-0"
+                          >
+                            <td className="px-4 py-3 text-foreground">
+                              {p.buyer}
+                            </td>
+                            <td className="px-4 py-3 text-right tabular-nums text-foreground">
+                              Ch. {p.chapterNumber}
+                            </td>
+                            <td className="px-4 py-3 text-right tabular-nums text-muted">
+                              {new Date(p.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600 dark:text-amber-400">
+                              {formatCoins(p.earned)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </PageContainer>
   );
 }

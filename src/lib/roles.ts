@@ -13,8 +13,6 @@ export type StoredProfileRole = "user" | "translator";
 /** Read translator access from profiles.role. */
 export function parseProfileRoles(input: {
   role?: string | null;
-  /** @deprecated Ignored — profiles.role is the source of truth. */
-  roles?: string[] | null;
 }): ProfileRole[] {
   if (input.role === "translator") return ["translator"];
   return [];

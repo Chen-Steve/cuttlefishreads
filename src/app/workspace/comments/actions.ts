@@ -4,7 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 
 import { getAdminAccess, type AdminAccess } from "@/lib/access";
 import { novelCommentsCacheTag } from "@/lib/data";
-import { notifyComment } from "@/lib/notifications/data";
+import { notifyUsers } from "@/lib/notifications/data";
 import { WORKSPACE_BASE } from "@/lib/workspace";
 import { createAdminClient } from "@/utils/supabase/admin";
 import type { NovelComment } from "@/types";
@@ -85,7 +85,7 @@ export async function replyToComment(
     return { error: error?.message ?? "Failed to post reply." };
   }
 
-  await notifyComment([
+  await notifyUsers([
     {
       user_id: parent.user_id,
       actor_id: access.userId,

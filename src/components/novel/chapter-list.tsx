@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowDownUp, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
 
 import { TabPanelShell } from "@/components/tab-panel-shell";
+import { useChapterOrder } from "@/hooks/use-chapter-order";
 import { isScheduledUnlock } from "@/lib/unlock-countdown";
 import { cn } from "@/lib/utils";
 import type { ChapterListItem } from "@/types";
@@ -13,60 +14,15 @@ import { ChapterLockBadge } from "./chapter-lock-badge";
 const CHAPTER_ORDER_STORAGE_KEY = "cf-chapter-order";
 const CHAPTER_PAGE_SIZE = 50;
 
-const chapterOrderListeners = new Set<() => void>();
-
-function subscribeChapterOrder(onStoreChange: () => void) {
-  chapterOrderListeners.add(onStoreChange);
-  return () => {
-    chapterOrderListeners.delete(onStoreChange);
-  };
-}
-
-function notifyChapterOrderChange() {
-  for (const listener of chapterOrderListeners) {
-    listener();
-  }
-}
-
-function readChapterOrderPreference(): boolean {
-  try {
-    return localStorage.getItem(CHAPTER_ORDER_STORAGE_KEY) === "newest";
-  } catch {
-    return false;
-  }
-}
-
-function writeChapterOrderPreference(newestFirst: boolean) {
-  try {
-    localStorage.setItem(
-      CHAPTER_ORDER_STORAGE_KEY,
-      newestFirst ? "newest" : "oldest",
-    );
-    notifyChapterOrderChange();
-  } catch {
-    // Ignore private browsing / quota errors.
-  }
-}
-
-function getChapterOrderServerSnapshot() {
-  return false;
-}
-
-function useChapterOrderPreference() {
-  return useSyncExternalStore(
-    subscribeChapterOrder,
-    readChapterOrderPreference,
-    getChapterOrderServerSnapshot,
+function ChapterOrderToggle({ className }: { className?: string }) {
+  const [newestFirst, setNewestFirst] = useChapterOrder(
+    CHAPTER_ORDER_STORAGE_KEY,
   );
-}
-
-export function ChapterOrderToggle({ className }: { className?: string }) {
-  const newestFirst = useChapterOrderPreference();
 
   return (
     <button
       type="button"
-      onClick={() => writeChapterOrderPreference(!newestFirst)}
+      onClick={() => setNewestFirst(!newestFirst)}
       aria-pressed={newestFirst}
       aria-label={
         newestFirst
@@ -133,7 +89,7 @@ export function ChapterList({
   /** When true, skip lock UI on chapter rows. */
   hideLockBadges?: boolean;
 }) {
-  const newestFirst = useChapterOrderPreference();
+  const [newestFirst] = useChapterOrder(CHAPTER_ORDER_STORAGE_KEY);
   const [page, setPage] = useState(0);
   const [pageOrder, setPageOrder] = useState(newestFirst);
   if (pageOrder !== newestFirst) {

@@ -2,9 +2,6 @@ import type { NovelCardData, NovelRatingSummary } from "@/types";
 import { cn } from "@/lib/utils";
 import { NovelCard } from "./novel-card";
 
-/** Max cards shown in a dense fill-row grid (matches xl:grid-cols-7). */
-export const DENSE_FILL_ROW_LIMIT = 7;
-
 export function NovelGrid({
   novels,
   compact = false,

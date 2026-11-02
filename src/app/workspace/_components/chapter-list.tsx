@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowDownUp,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { TabPanelShell } from "@/components/tab-panel-shell";
+import { useChapterOrder } from "@/hooks/use-chapter-order";
 import { cn } from "@/lib/utils";
 import { WORKSPACE_BASE } from "@/lib/workspace";
 import {
@@ -22,45 +23,6 @@ import {
 } from "./chapter-admin-actions";
 
 const CHAPTER_ORDER_STORAGE_KEY = "cf-admin-chapter-order";
-
-const chapterOrderListeners = new Set<() => void>();
-
-function subscribeChapterOrder(onStoreChange: () => void) {
-  chapterOrderListeners.add(onStoreChange);
-  return () => {
-    chapterOrderListeners.delete(onStoreChange);
-  };
-}
-
-function notifyChapterOrderChange() {
-  for (const listener of chapterOrderListeners) {
-    listener();
-  }
-}
-
-function readChapterOrderPreference(): boolean {
-  try {
-    return localStorage.getItem(CHAPTER_ORDER_STORAGE_KEY) === "newest";
-  } catch {
-    return false;
-  }
-}
-
-function writeChapterOrderPreference(newestFirst: boolean) {
-  try {
-    localStorage.setItem(
-      CHAPTER_ORDER_STORAGE_KEY,
-      newestFirst ? "newest" : "oldest",
-    );
-    notifyChapterOrderChange();
-  } catch {
-    // Ignore private browsing / quota errors.
-  }
-}
-
-function getChapterOrderServerSnapshot() {
-  return false;
-}
 
 export type AdminChapterRow = {
   id: string;
@@ -81,17 +43,15 @@ function formatUnlockDate(value: string) {
   });
 }
 
-export function ChapterOrderToggle() {
-  const newestFirst = useSyncExternalStore(
-    subscribeChapterOrder,
-    readChapterOrderPreference,
-    getChapterOrderServerSnapshot,
+function ChapterOrderToggle() {
+  const [newestFirst, setNewestFirst] = useChapterOrder(
+    CHAPTER_ORDER_STORAGE_KEY,
   );
 
   return (
     <button
       type="button"
-      onClick={() => writeChapterOrderPreference(!newestFirst)}
+      onClick={() => setNewestFirst(!newestFirst)}
       aria-pressed={newestFirst}
       aria-label={
         newestFirst
@@ -137,11 +97,7 @@ export function ChapterList({
   draftCount: number;
 }) {
   const base = WORKSPACE_BASE;
-  const newestFirst = useSyncExternalStore(
-    subscribeChapterOrder,
-    readChapterOrderPreference,
-    getChapterOrderServerSnapshot,
-  );
+  const [newestFirst] = useChapterOrder(CHAPTER_ORDER_STORAGE_KEY);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const lastClickedId = useRef<string | null>(null);

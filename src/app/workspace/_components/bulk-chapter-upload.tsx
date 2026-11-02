@@ -15,6 +15,7 @@ import { chunkBulkChapters, MAX_IMPORT_CHAPTERS } from "@/lib/chapter-import";
 import {
   formatSuggestedUnlockPreview,
   getSuggestedUnlockAt,
+  toDatetimeLocal,
 } from "@/lib/suggested-unlock-at";
 import {
   buildUnlockSchedule,
@@ -27,14 +28,6 @@ import { bulkCreateChapters } from "../actions";
 const inputClass =
   "h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25";
 const labelClass = "text-xs font-medium text-muted";
-
-function toDatetimeLocal(value: string | Date | null): string {
-  if (!value) return "";
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 function formatUnlockChip(value: Date): string {
   return value.toLocaleDateString(undefined, {

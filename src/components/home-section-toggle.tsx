@@ -1,11 +1,10 @@
 "use client";
 
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect } from "react";
 import { ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { useHydratedState } from "@/hooks/use-hydrated-state";
-import { readStoredOpen } from "@/hooks/use-stored-open";
+import { useStoredOpen } from "@/hooks/use-stored-open";
 
 /** Client-only collapse control; panel content stays a server-rendered sibling. */
 export function HomeSectionToggle({
@@ -21,36 +20,12 @@ export function HomeSectionToggle({
   defaultOpen?: boolean;
   className?: string;
 }) {
-  const [open, setOpen] = useHydratedState(
-    () => readStoredOpen(storageKey, defaultOpen),
-    defaultOpen,
-  );
-  const [previous, setPrevious] = useState({ storageKey, panelId, defaultOpen });
-  if (
-    previous.storageKey !== storageKey ||
-    previous.panelId !== panelId ||
-    previous.defaultOpen !== defaultOpen
-  ) {
-    setPrevious({ storageKey, panelId, defaultOpen });
-    setOpen(readStoredOpen(storageKey, defaultOpen));
-  }
+  const { open, toggle } = useStoredOpen(storageKey, defaultOpen);
 
   useLayoutEffect(() => {
     const panel = document.getElementById(panelId);
     if (panel) panel.hidden = !open;
   }, [open, panelId]);
-
-  function toggle() {
-    setOpen((current) => {
-      const next = !current;
-      try {
-        localStorage.setItem(storageKey, next ? "1" : "0");
-      } catch {
-        // private mode / blocked storage
-      }
-      return next;
-    });
-  }
 
   return (
     <button

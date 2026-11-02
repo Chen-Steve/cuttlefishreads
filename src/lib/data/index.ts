@@ -106,7 +106,7 @@ function formatDate(value: string): string {
   });
 }
 
-function isNaturallyFree(chapter: {
+export function isNaturallyFree(chapter: {
   is_free: boolean;
   unlock_at: string | null;
 }): boolean {
@@ -373,24 +373,6 @@ async function fetchDbChapterContent(
       ],
     },
   )();
-}
-
-async function fetchDbChapterSummaries(
-  novelId: string,
-): Promise<
-  Pick<
-    DbChapter,
-    "number" | "title" | "is_free" | "coin_cost" | "unlock_at"
-  >[]
-> {
-  const rows = await fetchDbChapterMetas(novelId);
-  return rows.map((row) => ({
-    number: row.number,
-    title: row.title,
-    is_free: row.is_free,
-    coin_cost: row.coin_cost,
-    unlock_at: row.unlock_at,
-  }));
 }
 
 export const getNovels = cache(async (): Promise<Novel[]> => {
@@ -927,24 +909,11 @@ export const getChapterAccess = cache(
 
 export const getChapterSummaries = cache(
   async (slug: string): Promise<ChapterSummary[]> => {
-    const novel = await fetchNovelIdBySlug(slug);
-    if (!novel) return [];
-
-    const currentUser = await getCurrentUser();
-    const isPublisher =
-      novel.publisher_id !== null && currentUser?.id === novel.publisher_id;
-    const bypassLock = currentUser?.isAdmin === true || isPublisher;
-
-    const [rows, unlocked] = await Promise.all([
-      fetchDbChapterSummaries(novel.id),
-      getUnlockedChapterNumbers(slug),
-    ]);
-
-    return rows.map((row) => ({
-      number: row.number,
-      title: row.title,
-      locked:
-        !isNaturallyFree(row) && !unlocked.has(row.number) && !bypassLock,
+    const chapters = await getChapterListItems(slug);
+    return chapters.map(({ number, title, locked }) => ({
+      number,
+      title,
+      locked,
     }));
   },
 );

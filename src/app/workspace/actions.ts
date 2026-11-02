@@ -5,7 +5,11 @@ import { redirect } from "next/navigation";
 
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess, type AdminAccess } from "@/lib/access";
-import { profileCacheTag, revalidateNovelsDataCache } from "@/lib/data";
+import {
+  isNaturallyFree,
+  profileCacheTag,
+  revalidateNovelsDataCache,
+} from "@/lib/data";
 import {
   chapterBodyCacheTag,
   novelChapterBodiesCacheTag,
@@ -13,7 +17,7 @@ import {
   novelDetailCacheTag,
   NOVEL_DETAILS_CACHE_TAG,
 } from "@/lib/chapter-cache-tags";
-import { notifyBookmarkersOfChapter, notifyBookmarkersOfChapters } from "@/lib/notifications/data";
+import { notifyBookmarkersOfChapters } from "@/lib/notifications/data";
 import { validateCoverFile } from "@/lib/cover-file";
 import { slugify } from "@/lib/utils";
 import {
@@ -639,12 +643,10 @@ export async function createChapter(
     .update({ updated_at: new Date().toISOString() })
     .eq("id", novelId);
 
-  const released =
-    isFree || (unlockAt != null && new Date(unlockAt).getTime() <= Date.now());
-  await notifyBookmarkersOfChapter({
+  const released = isNaturallyFree({ is_free: isFree, unlock_at: unlockAt });
+  await notifyBookmarkersOfChapters({
     novelId,
-    chapterNumber: number,
-    released,
+    chapters: [{ chapterNumber: number, released }],
     excludeUserId: auth.access.userId,
   });
 
@@ -798,12 +800,13 @@ export async function bulkCreateChapters(
   if (publish) {
     await notifyBookmarkersOfChapters({
       novelId: id,
-      chapters: prepared.map((chapter) => {
-        const released =
-          isFree ||
-          (chapter.unlockAt != null && new Date(chapter.unlockAt).getTime() <= Date.now());
-        return { chapterNumber: chapter.number, released };
-      }),
+      chapters: prepared.map((chapter) => ({
+        chapterNumber: chapter.number,
+        released: isNaturallyFree({
+          is_free: isFree,
+          unlock_at: chapter.unlockAt,
+        }),
+      })),
       excludeUserId: auth.access.userId,
     });
   }
@@ -855,14 +858,14 @@ export async function setChapterPublished(
     .eq("id", existing.novel_id);
 
   if (published) {
-    const released =
-      existing.is_free ||
-      (existing.unlock_at != null &&
-        new Date(existing.unlock_at).getTime() <= Date.now());
-    await notifyBookmarkersOfChapter({
+    await notifyBookmarkersOfChapters({
       novelId: existing.novel_id,
-      chapterNumber: existing.number,
-      released,
+      chapters: [
+        {
+          chapterNumber: existing.number,
+          released: isNaturallyFree(existing),
+        },
+      ],
       excludeUserId: auth.access.userId,
     });
   }
@@ -910,16 +913,10 @@ export async function publishAllChapters(novelId: string): Promise<AdminState> {
 
   await notifyBookmarkersOfChapters({
     novelId,
-    chapters: (drafts ?? []).map((chapter) => {
-      const released =
-        chapter.is_free ||
-        (chapter.unlock_at != null &&
-          new Date(chapter.unlock_at).getTime() <= Date.now());
-      return {
-        chapterNumber: chapter.number as number,
-        released,
-      };
-    }),
+    chapters: (drafts ?? []).map((chapter) => ({
+      chapterNumber: chapter.number as number,
+      released: isNaturallyFree(chapter),
+    })),
     excludeUserId: auth.access.userId,
   });
 

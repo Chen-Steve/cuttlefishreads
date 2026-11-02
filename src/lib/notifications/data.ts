@@ -56,35 +56,6 @@ export async function notifyUsers(rows: NotifyRow[]) {
   }
 }
 
-/** @deprecated Use notifyUsers */
-export async function notifyComment(
-  rows: Array<{
-    user_id: string;
-    actor_id: string;
-    type: "reply" | "like";
-    comment_id: string;
-    reply_id?: string | null;
-  }>,
-) {
-  await notifyUsers(rows);
-}
-
-export async function notifyBookmarkersOfChapter(opts: {
-  novelId: string;
-  chapterNumber: number;
-  /** Free now (is_free or unlock_at already due). */
-  released: boolean;
-  excludeUserId?: string | null;
-}) {
-  await notifyBookmarkersOfChapters({
-    novelId: opts.novelId,
-    chapters: [
-      { chapterNumber: opts.chapterNumber, released: opts.released },
-    ],
-    excludeUserId: opts.excludeUserId,
-  });
-}
-
 /**
  * Notify bookmarkers about one or more chapter publish/release events.
  * Loads bookmarks once and inserts all notification rows in a single batch.

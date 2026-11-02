@@ -74,7 +74,7 @@ export default async function ChapterReaderPage({
     getPublicChapterNeighbors(slug, chapterNumber),
   ]);
 
-  if (!novel || !current || Number.isNaN(chapterNumber)) {
+  if (!novel || !current) {
     notFound();
   }
 
