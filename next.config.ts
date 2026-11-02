@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Prerender public content; session UI and paid reads stream per request.
+  cacheComponents: true,
+  partialPrefetching: true,
   reactCompiler: true,
   serverExternalPackages: ["pdfjs-dist"],
   experimental: {

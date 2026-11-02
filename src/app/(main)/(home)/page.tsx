@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 import type { Metadata } from "next";
 import { HomeDiscoveryLinks } from "@/components/home-discovery-links";
 import { HomeSection } from "@/components/home-section";
@@ -17,6 +18,8 @@ import {
   getNovels,
   getRecentlyUpdatedNovels,
   getUnderratedNovels,
+  NOVELS_CATALOG_CACHE_TAG,
+  RECENTLY_UPDATED_NOVELS_CACHE_TAG,
 } from "@/lib/data";
 import { SITE } from "@/lib/constants";
 import { toNovelCardData } from "@/lib/novel-card-data";
@@ -61,6 +64,9 @@ function HomeCatalogFallback() {
 }
 
 async function HomeCatalog() {
+  "use cache";
+  cacheLife({ stale: 60, revalidate: 300, expire: 3600 });
+  cacheTag(NOVELS_CATALOG_CACHE_TAG, RECENTLY_UPDATED_NOVELS_CACHE_TAG);
   const [catalog, recentlyUpdated] = await Promise.all([
     getNovels(),
     getRecentlyUpdatedNovels(),

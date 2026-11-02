@@ -15,10 +15,15 @@ import {
   getChapter,
   getNovel,
   getPublicChapterMeta,
+  getPublicFreeChapter,
   getPublicChapterNeighbors,
 } from "@/lib/data";
 import { getSessionProfile } from "@/lib/session-profile";
 import { publicPageMetadata } from "@/lib/seo";
+
+// Without a chapter loading boundary, a cache miss keeps the current chapter
+// visible until the next chapter (including its access check) is ready.
+export const instant = false;
 
 export async function generateMetadata({
   params,
@@ -56,9 +61,16 @@ export default async function ChapterReaderPage({
   const { slug, chapter } = await params;
   const chapterNumber = Number(chapter);
 
+  if (!Number.isSafeInteger(chapterNumber) || chapterNumber < 1) notFound();
+  const meta = await getPublicChapterMeta(slug, chapterNumber);
+  if (!meta) notFound();
   const [novel, current, neighbors] = await Promise.all([
     getNovel(slug),
-    getChapter(slug, chapterNumber),
+    // Only explicitly free chapters may be included in a shared prerender.
+    // Paid and timed-release chapters always run the server access check.
+    meta.isFree
+      ? getPublicFreeChapter(slug, chapterNumber)
+      : getChapter(slug, chapterNumber),
     getPublicChapterNeighbors(slug, chapterNumber),
   ]);
 
@@ -100,6 +112,7 @@ export default async function ChapterReaderPage({
           previous,
           next,
           currentChapter: chapterNumber,
+          enablePrefetch: !current.locked,
         }}
       >
         {current.locked ? (

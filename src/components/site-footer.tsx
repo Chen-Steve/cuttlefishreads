@@ -33,7 +33,8 @@ const linkGroups = [
   },
 ];
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  "use cache";
   return (
     <footer className="mt-auto border-t border-border bg-surface">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">

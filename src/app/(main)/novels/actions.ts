@@ -5,12 +5,16 @@ import { refresh, updateTag } from "next/cache";
 import { notifyComment } from "@/lib/notifications/data";
 import {
   getNovelComments,
+  getChapterComments,
+  getCommentReplies,
+  getCommentTarget,
   isChapterReadable,
   NOVEL_RATINGS_CACHE_TAG,
   novelCommentsCacheTag,
   userBookmarksCacheTag,
 } from "@/lib/data";
 import type { NovelComment } from "@/types";
+import type { CommentCursor } from "@/lib/comment-pagination";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 
@@ -539,15 +543,49 @@ export type LoadMoreCommentsState = {
   error?: string;
   comments?: NovelComment[];
   hasMore?: boolean;
+  nextCursor?: CommentCursor | null;
 };
 
 export async function loadMoreComments(
   novelSlug: string,
-  offset: number,
+  cursor: CommentCursor | null,
+  chapterNumber?: number,
 ): Promise<LoadMoreCommentsState> {
-  const result = await getNovelComments(novelSlug, { limit: 50, offset });
-  return {
-    comments: result.comments,
-    hasMore: result.hasMore,
-  };
+  try {
+    return chapterNumber == null
+      ? await getNovelComments(novelSlug, { cursor })
+      : await getChapterComments(novelSlug, chapterNumber, { cursor });
+  } catch (error) {
+    console.error("loadMoreComments:", error);
+    return { error: "Could not load comments. Please try again." };
+  }
+}
+
+export async function loadCommentReplies(
+  parentId: string,
+  cursor: CommentCursor | null,
+): Promise<LoadMoreCommentsState> {
+  try {
+    return await getCommentReplies(parentId, { cursor });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Unlock this chapter to read its replies.") {
+      return { error: error.message };
+    }
+    console.error("loadCommentReplies:", error);
+    return { error: "Could not load replies. Please try again." };
+  }
+}
+
+export async function loadCommentTarget(
+  slug: string,
+  targetId: string,
+  chapterNumber?: number,
+): Promise<CommentState> {
+  try {
+    const comment = await getCommentTarget(slug, targetId, chapterNumber);
+    return comment ? { comment } : { error: "This comment is no longer available." };
+  } catch (error) {
+    console.error("loadCommentTarget:", error);
+    return { error: "Could not load the linked comment. Please try again." };
+  }
 }

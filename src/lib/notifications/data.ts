@@ -12,6 +12,7 @@ export type {
 export { notificationHref } from "@/lib/notifications/types";
 
 export const NOTIFICATIONS_PER_PAGE = 50;
+const NOTIFICATION_BATCH_SIZE = 500;
 
 type NotifyRow = {
   user_id: string;
@@ -36,8 +37,8 @@ function toInsertRow(row: NotifyRow) {
 }
 
 /**
- * Inbox rows are written with the service role. Duplicates (code 23505) are
- * ignored so re-likes / re-publishes stay quiet.
+ * Inbox rows are written with a service-only RPC that skips duplicates in SQL.
+ * Bound each request and process chunks sequentially to avoid request bursts.
  */
 export async function notifyUsers(rows: NotifyRow[]) {
   const filtered = rows.filter(
@@ -47,23 +48,12 @@ export async function notifyUsers(rows: NotifyRow[]) {
 
   const admin = createAdminClient();
   const payload = filtered.map(toInsertRow);
-  const { error } = await admin.from("notifications").insert(payload);
-  if (!error) return;
-  if (error.code === "23505" || error.message?.includes("duplicate")) {
-    // Batch insert can fail entirely on one conflict — fall back per-row.
-    await Promise.all(
-      payload.map(async (row) => {
-        const { error: rowError } = await admin
-          .from("notifications")
-          .insert(row);
-        if (rowError && rowError.code !== "23505") {
-          console.error("notifyUsers:", rowError);
-        }
-      }),
-    );
-    return;
+  for (let offset = 0; offset < payload.length; offset += NOTIFICATION_BATCH_SIZE) {
+    const { error } = await admin.rpc("batch_insert_notifications", {
+      p_rows: payload.slice(offset, offset + NOTIFICATION_BATCH_SIZE),
+    });
+    if (error) console.error("notifyUsers batch:", error);
   }
-  console.error("notifyUsers:", error);
 }
 
 /** @deprecated Use notifyUsers */

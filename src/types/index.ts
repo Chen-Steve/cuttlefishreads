@@ -110,6 +110,8 @@ export interface NovelComment {
   /** True when this is a reply authored by the novel's translator/publisher. */
   isTranslatorReply: boolean;
   replies: NovelComment[];
+  /** Total thread size; reply bodies are loaded separately on public pages. */
+  replyCount?: number;
   createdAt: string;
   updatedAt: string;
 }

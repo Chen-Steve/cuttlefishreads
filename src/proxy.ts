@@ -20,11 +20,21 @@ export async function proxy(request: NextRequest) {
     });
   }
 
+  // Public GET responses must not spend work refreshing a visitor's session.
+  // Crawler checks still run; page and Server Action requests keep refreshes.
+  if ((request.method === "GET" || request.method === "HEAD") && (
+    pathname === "/api/search-index" || pathname === "/api/search-suggestions" ||
+    pathname === "/feed.xml" || /^\/novels\/[^/]+\/feed\.xml$/.test(pathname) ||
+    /^\/api\/novels\/[^/]+\/chapters$/.test(pathname)
+  )) return NextResponse.next();
+
   return updateSession(request);
 }
 
 export const config = {
+  // These files never need cookies or crawler handling. Keep page, RSC and
+  // Server Action requests covered, including dynamic slugs containing dots.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/stripe/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static(?:/|$)|_next/image(?:/|$)|fonts(?:/|$)|(?:favicon\\.ico|cuttle\\.png|background[12]\\.jpg|robots\\.txt|sitemap\\.xml|ads\\.txt)$|api/stripe/webhook$).*)",
   ],
 };

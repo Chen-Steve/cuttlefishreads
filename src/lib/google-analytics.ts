@@ -228,8 +228,7 @@ async function fetchDashboardReport(
       monthlyViews,
     };
   } catch (error) {
-    console.error("[google-analytics] Unable to load dashboard data:", error);
-    return { ...EMPTY_ANALYTICS, configured: true, error: true };
+    throw new Error("Unable to load analytics dashboard", { cause: error });
   } finally {
     await client.close();
   }
@@ -250,14 +249,20 @@ export async function getGoogleAnalyticsDashboard(
     return { ...EMPTY_ANALYTICS, configured: true };
   }
 
-  return unstable_cache(
-    () => fetchDashboardReport(unique, mode),
-    ["ga4-dashboard-v1", mode, unique.join("|")],
-    {
-      revalidate: GA_REVALIDATE_SECONDS,
-      tags: unique.map((slug) => `ga4-novel-views:${slug}`),
-    },
-  )();
+  try {
+    return await unstable_cache(
+      () => fetchDashboardReport(unique, mode),
+      ["ga4-dashboard-v2", mode, unique.join("|")],
+      {
+        revalidate: GA_REVALIDATE_SECONDS,
+        tags: unique.map((slug) => `ga4-novel-views:${slug}`),
+      },
+    )();
+  } catch (error) {
+    // Presentation fallback is outside the cache, so the next visit can retry.
+    console.error("[google-analytics] Unable to load dashboard data:", error);
+    return { ...EMPTY_ANALYTICS, configured: true, error: true };
+  }
 }
 
 /**
@@ -310,7 +315,7 @@ async function persistCatalogViewCounts(
     p_counts: totals,
   });
   if (error) {
-    console.error("[google-analytics] Unable to store view counts:", error);
+    throw new Error("Unable to store view counts", { cause: error });
   }
 }
 
@@ -331,11 +336,7 @@ async function loadCatalogAllTimeViews(): Promise<Record<string, number>> {
           .eq("publication_type", "translation");
 
         if (error) {
-          console.error(
-            "[google-analytics] Unable to load catalog slugs:",
-            error,
-          );
-          return {};
+          throw new Error("Unable to load analytics catalog", { cause: error });
         }
 
         const slugs = (data ?? []).map((row) => row.slug as string);

@@ -2,15 +2,19 @@
 
 import {
   useEffect,
+  useCallback,
   useRef,
   useState,
   type MouseEvent,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
+import { PrefetchKind } from "next/dist/client/components/router-reducer/router-reducer-types";
 
 import { TabRail } from "@/components/tab-panel-shell";
 import { useReaderSettings } from "@/hooks/use-reader-settings";
-import type { CatalogBase } from "@/lib/catalog-paths";
+import { chapterHref, type CatalogBase } from "@/lib/catalog-paths";
+import { observeChapterProgress } from "@/lib/reader-prefetch";
 import { readerContentStyle } from "@/lib/reader-settings";
 import { cn } from "@/lib/utils";
 import type { Chapter } from "@/types";
@@ -25,6 +29,8 @@ type ChapterReaderNavConfig = {
   catalogBase?: CatalogBase;
   /** Bottom prev/next bar. Default true. */
   showBottomNav?: boolean;
+  /** Locked pages must not speculate beyond the unlock gate. */
+  enablePrefetch?: boolean;
 };
 
 function isInteractiveTarget(target: EventTarget | null) {
@@ -56,6 +62,32 @@ export function ImmersiveChapterShell({
   const [showChrome, setShowChrome] = useState(true);
   const immersiveEnabledRef = useRef(false);
   const showBottomNav = Boolean(nav && nav.showBottomNav !== false);
+  const router = useRouter();
+  const chapterBodyRef = useRef<HTMLDivElement>(null);
+  const prefetchedHref = useRef<string | null>(null);
+  const nextHref = nav?.next && nav.enablePrefetch !== false
+    ? chapterHref(nav.slug, nav.next.number, nav.catalogBase)
+    : null;
+  const prefetchNext = useCallback(() => {
+    if (!nextHref || prefetchedHref.current === nextHref || document.visibilityState === "hidden") return;
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    if (connection?.saveData || !navigator.onLine) return;
+    prefetchedHref.current = nextHref;
+    router.prefetch(nextHref, {
+      kind: PrefetchKind.FULL,
+      onInvalidate: () => {
+        if (prefetchedHref.current === nextHref) prefetchedHref.current = null;
+      },
+    });
+  }, [nextHref, router]);
+
+  useEffect(() => {
+    if (!nextHref || !chapterBodyRef.current) return;
+    // Give the next chapter the entire reading time to load. Check again near
+    // the end in case a long reading session outlasted the prefetched cache.
+    prefetchNext();
+    return observeChapterProgress(chapterBodyRef.current, prefetchNext);
+  }, [nextHref, prefetchNext]);
 
   useEffect(() => {
     if (!immersiveEnabledRef.current) {
@@ -84,6 +116,7 @@ export function ImmersiveChapterShell({
       catalogBase={nav.catalogBase}
       enableKeyboard
       framed={immersive}
+      onNextIntent={prefetchNext}
     />
   ) : null;
 
@@ -97,11 +130,13 @@ export function ImmersiveChapterShell({
         menuPlacement="up"
         catalogBase={nav.catalogBase}
         framed={immersive}
+        onNextIntent={prefetchNext}
       />
     ) : null;
 
   const chapterBody = (
     <div
+      ref={chapterBodyRef}
       className={cn(!immersive && "py-5 sm:py-6")}
       onClick={onContentClick}
     >

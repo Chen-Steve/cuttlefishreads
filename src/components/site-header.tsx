@@ -11,12 +11,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useImmersiveHidesSiteHeader } from "@/hooks/use-immersive-hides-site-header";
 import { SITE } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-
-type SearchMatch = {
-  slug: string;
-  title: string;
-  coverUrl?: string;
-};
+import { findClosestNovelTitle, type NovelTitleMatch } from "@/lib/novel-title-search";
+import { loadNovelSearchIndex } from "@/lib/search-index-client";
 
 const novelsNavItem = { href: "/novels", label: "Novels", icon: BookOpen } as const;
 const libraryNavItem = { href: "/library", label: "Library", icon: Library } as const;
@@ -72,44 +68,22 @@ function HeaderSearch({
   iconClassName: string;
 }) {
   const [query, setQuery] = useState("");
-  const [suggestion, setSuggestion] = useState<{
-    query: string;
-    match: SearchMatch | null;
-  } | null>(null);
+  const [searchIndex, setSearchIndex] = useState<NovelTitleMatch[]>([]);
   const [focused, setFocused] = useState(false);
   const trimmedQuery = query.trim();
-  const match =
-    suggestion?.query === trimmedQuery ? suggestion.match : null;
+  const match = findClosestNovelTitle(searchIndex, trimmedQuery);
   const showMatch = focused && trimmedQuery.length > 0 && match;
 
   useEffect(() => {
-    if (!trimmedQuery) {
-      return;
-    }
-
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(async () => {
-      try {
-        const response = await fetch(
-          `/api/search-suggestions?q=${encodeURIComponent(trimmedQuery)}`,
-          { signal: controller.signal },
-        );
-        if (!response.ok) return;
-
-        const data = (await response.json()) as { match?: SearchMatch | null };
-        setSuggestion({ query: trimmedQuery, match: data.match ?? null });
-      } catch (error) {
-        if ((error as DOMException).name !== "AbortError") {
-          setSuggestion({ query: trimmedQuery, match: null });
-        }
-      }
-    }, 150);
-
-    return () => {
-      controller.abort();
-      window.clearTimeout(timeoutId);
-    };
-  }, [trimmedQuery]);
+    if (!focused) return;
+    let cancelled = false;
+    loadNovelSearchIndex().then((novels) => {
+      if (!cancelled) setSearchIndex(novels);
+    }).catch(() => {
+      // Normal form submission still works; refocusing retries a failed load.
+    });
+    return () => { cancelled = true; };
+  }, [focused]);
 
   return (
     <form className={cn("relative", className)} role="search" action="/search">

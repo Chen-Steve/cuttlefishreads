@@ -4,8 +4,6 @@ import type Stripe from "stripe";
 import { creditStripeCheckoutSession } from "@/lib/credit-stripe-purchase";
 import { getStripe } from "@/lib/stripe";
 
-export const runtime = "nodejs";
-
 async function fulfillCheckoutSession(session: Stripe.Checkout.Session) {
   const result = await creditStripeCheckoutSession(session);
   if (!result.ok) {

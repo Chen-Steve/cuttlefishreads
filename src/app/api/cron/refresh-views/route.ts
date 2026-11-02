@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
   try {
     const result = await refreshCatalogViewCounts();
-    if (result.updated) revalidateNovelsDataCache();
+    if (result.updated) revalidateNovelsDataCache(true);
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     console.error("refresh-views:", error);

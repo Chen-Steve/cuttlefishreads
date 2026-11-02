@@ -8,10 +8,12 @@ import {
   deleteComment,
   replyToComment,
   updateComment,
+  loadCommentReplies,
 } from "@/app/(main)/novels/actions";
 import { StarRating } from "@/components/reviews";
 import { Badge } from "@/components/ui/badge";
 import type { NovelComment } from "@/types";
+import { mergeCommentPages, type CommentCursor } from "@/lib/comment-pagination";
 
 import { CommentLikeButton } from "./comment-like-button";
 
@@ -173,6 +175,34 @@ export function CommentItem({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [loadedReplies, setLoadedReplies] = useState<NovelComment[]>([]);
+  const [repliesLoaded, setRepliesLoaded] = useState(false);
+  const [moreReplies, setMoreReplies] = useState(false);
+  const [replyCursor, setReplyCursor] = useState<CommentCursor | null>(null);
+  const [replyLoadError, setReplyLoadError] = useState<string | null>(null);
+  const [repliesPending, startRepliesTransition] = useTransition();
+  const replies = mergeCommentPages(loadedReplies, comment.replies).sort(
+    (a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id),
+  );
+  const replyCount = comment.replyCount ?? comment.replies.length;
+  const canLoadReplies = repliesLoaded ? moreReplies : replyCount > comment.replies.length;
+
+  function handleLoadReplies() {
+    if (repliesPending) return;
+    setReplyLoadError(null);
+    startRepliesTransition(async () => {
+      try {
+        const result = await loadCommentReplies(comment.id, replyCursor);
+        if (result.error) { setReplyLoadError(result.error); return; }
+        setLoadedReplies((current) => mergeCommentPages(current, result.comments ?? []));
+        setReplyCursor(result.nextCursor ?? null);
+        setMoreReplies(Boolean(result.hasMore));
+        setRepliesLoaded(true);
+      } catch {
+        setReplyLoadError("Could not load replies. Please try again.");
+      }
+    });
+  }
 
   const isEdited =
     new Date(comment.updatedAt).getTime() >
@@ -455,18 +485,29 @@ export function CommentItem({
             </p>
           ) : null}
 
-          {comment.replies.length > 0 ? (
+          {replies.length > 0 ? (
             <ul className="mt-3 space-y-2 border-l-2 border-border pl-3">
-              {comment.replies.map((reply) => (
+              {replies.map((reply) => (
                 <CommentReplyItem
                   key={reply.id}
                   reply={reply}
                   parentId={comment.id}
-                  onDeleted={onReplyDeleted}
+                  onDeleted={(parentId, replyId) => {
+                    setLoadedReplies((current) => current.filter((row) => row.id !== replyId));
+                    onReplyDeleted?.(parentId, replyId);
+                  }}
                 />
               ))}
             </ul>
           ) : null}
+          {canLoadReplies ? (
+            <button type="button" onClick={handleLoadReplies} disabled={repliesPending}
+              aria-expanded={repliesLoaded}
+              className="mt-3 rounded-lg px-2 py-1 text-xs font-medium text-muted hover:bg-background hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50">
+              {repliesPending ? "Loading replies…" : repliesLoaded ? "Load more replies" : `Show replies (${replyCount})`}
+            </button>
+          ) : null}
+          {replyLoadError ? <p role="alert" className="mt-2 text-xs text-red-600 dark:text-red-400">{replyLoadError}</p> : null}
         </div>
       </div>
     </article>

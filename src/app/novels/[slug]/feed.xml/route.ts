@@ -4,8 +4,6 @@ import { getNovel } from "@/lib/data";
 import { SITE } from "@/lib/constants";
 import { buildRssFeed, getFeedItems, rssResponse } from "@/lib/rss";
 
-export const revalidate = 300;
-
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> },

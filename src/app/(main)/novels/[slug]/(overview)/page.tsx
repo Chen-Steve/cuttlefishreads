@@ -62,18 +62,6 @@ export default async function NovelDetailPage({
   params,
 }: PageProps<"/novels/[slug]">) {
   const { slug } = await params;
-  const readerAccess = getChapterListItems(slug)
-    .then((items) =>
-      items.map(({ id, locked, adminAccess }) => ({
-        id,
-        locked,
-        adminAccess,
-      })),
-    )
-    .catch((error: unknown) => {
-      console.error("reader chapter access:", error);
-      return [];
-    });
   const [novel, chapters] = await Promise.all([
     getNovel(slug),
     getPublicChapterListItems(slug),
@@ -231,11 +219,9 @@ export default async function NovelDetailPage({
         <Suspense fallback={null}>
           <NovelBulkBuy slug={novel.slug} />
         </Suspense>
-        <ChapterList
-          slug={novel.slug}
-          chapters={chapters}
-          readerAccess={readerAccess}
-        />
+        <Suspense fallback={<ChapterList slug={novel.slug} chapters={chapters} />}>
+          <ReaderChapterList slug={novel.slug} />
+        </Suspense>
       </section>
 
       <section className="mt-4" aria-label="Comments">
@@ -243,17 +229,16 @@ export default async function NovelDetailPage({
           <CommentSection
             mode="novel"
             novelSlug={novel.slug}
-            chapterTitles={Object.fromEntries(
-              chapters.map((c) => [
-                c.number,
-                c.title || `Chapter ${c.number}`,
-              ]),
-            )}
           />
         </Suspense>
       </section>
     </PageContainer>
   );
+}
+
+async function ReaderChapterList({ slug }: { slug: string }) {
+  const chapters = await getChapterListItems(slug);
+  return <ChapterList slug={slug} chapters={chapters} />;
 }
 
 function NovelViewCount({

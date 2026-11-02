@@ -1,4 +1,5 @@
 import { footnoteId, prepareChapterFootnotes } from "@/lib/footnotes";
+import { cacheLife } from "next/cache";
 import { createChapterScrapeBait } from "@/lib/chapter-scrape-bait";
 
 import { ChapterContentFrame } from "./chapter-content-frame";
@@ -9,7 +10,11 @@ import {
   renderMarkdownParagraphs,
 } from "./chapter-markdown";
 
-export function ChapterContent({ paragraphs }: { paragraphs: string[] }) {
+export async function ChapterContent({ paragraphs }: { paragraphs: string[] }) {
+  "use cache";
+  // Cache formatting on the server only. The caller must obtain these
+  // paragraphs from the public-free loader or pass getChapter's access check.
+  cacheLife("days");
   const { paragraphs: body, footnotes } = prepareChapterFootnotes(paragraphs);
   const bait = createChapterScrapeBait(body);
   const rendered =

@@ -6,6 +6,13 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess, type AdminAccess } from "@/lib/access";
 import { profileCacheTag, revalidateNovelsDataCache } from "@/lib/data";
+import {
+  chapterBodyCacheTag,
+  novelChapterBodiesCacheTag,
+  novelChaptersCacheTag,
+  novelDetailCacheTag,
+  NOVEL_DETAILS_CACHE_TAG,
+} from "@/lib/chapter-cache-tags";
 import { notifyBookmarkersOfChapter, notifyBookmarkersOfChapters } from "@/lib/notifications/data";
 import { validateCoverFile } from "@/lib/cover-file";
 import { slugify } from "@/lib/utils";
@@ -28,8 +35,31 @@ import {
 // of "/" or "/novels" would also drop unrelated entries (e.g. the hourly GA4
 // report) via Next's implicit route tags, so bust by tag only. Pass the novel
 // id whenever its chapters changed.
-function revalidatePublicPaths(novelId?: string) {
-  revalidateNovelsDataCache(novelId);
+async function revalidatePublicPaths(
+  novelId?: string,
+  chapterNumbers: number[] | "all" = [],
+  knownSlug?: string,
+) {
+  revalidateNovelsDataCache();
+  if (!novelId) {
+    updateTag(NOVEL_DETAILS_CACHE_TAG);
+    return;
+  }
+  // Access rules (free/paid, publication, unlock dates) must never be served
+  // stale after a write. Bodies have separate tags so new publications leave
+  // every existing body's data cache warm.
+  updateTag(novelChaptersCacheTag(novelId));
+  if (chapterNumbers === "all") {
+    updateTag(novelChapterBodiesCacheTag(novelId));
+  } else {
+    for (const number of new Set(chapterNumbers)) {
+      updateTag(chapterBodyCacheTag(novelId, number));
+    }
+  }
+  const slug = knownSlug ?? (await createAdminClient().from("novels")
+    .select("slug").eq("id", novelId).maybeSingle()).data?.slug;
+  if (slug) updateTag(novelDetailCacheTag(slug));
+  else updateTag(NOVEL_DETAILS_CACHE_TAG);
 }
 
 export type AdminState = { error?: string; success?: string };
@@ -98,7 +128,7 @@ export async function updateSupportLinks(
   if (error) return { error: error.message };
 
   // Global note and support links are cached inside the novel-detail entries.
-  revalidatePublicPaths();
+  await revalidatePublicPaths();
   if (auth.access.username) updateTag(profileCacheTag(auth.access.username));
   revalidatePath(`${WORKSPACE_BASE.translations}/settings`);
   return { message: "Settings saved." };
@@ -125,6 +155,7 @@ function ownsNovel(access: AdminAccess, publisherId: string | null): boolean {
 }
 
 type ChapterWithNovel = {
+  number: number;
   id: string;
   novel_id: string;
   novels: { publisher_id: string | null } | null;
@@ -351,7 +382,7 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
 
   const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));
-  revalidatePublicPaths();
+  await revalidatePublicPaths();
   redirect(workspaceBase);
 }
 
@@ -488,7 +519,7 @@ export async function updateNovel(
 
   const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));
-  revalidatePublicPaths();
+  await revalidatePublicPaths(novelId, [], existing.slug);
   revalidatePath(`/novels/${existing.slug}`);
   redirect(workspaceBase);
 }
@@ -520,7 +551,7 @@ export async function deleteNovel(novelId: string): Promise<AdminState> {
 
   const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));
-  revalidatePublicPaths(novelId);
+  await revalidatePublicPaths(novelId, "all", existing.slug);
   revalidatePath(`/novels/${existing.slug}`);
   redirect(workspaceBase);
 }
@@ -545,8 +576,8 @@ export async function createChapter(
   if (!content) return { error: "Chapter content is required." };
 
   const access = String(formData.get("access") ?? "free");
-  let isFree = access !== "paid";
-  let coinCost = isFree ? 0 : Math.floor(Number(formData.get("coinCost") ?? 0));
+  const isFree = access !== "paid";
+  const coinCost = isFree ? 0 : Math.floor(Number(formData.get("coinCost") ?? 0));
 
   if (!isFree && (!Number.isFinite(coinCost) || coinCost < 1)) {
     return { error: "Paid chapters need a cookie cost of at least 1." };
@@ -621,7 +652,7 @@ export async function createChapter(
 
   const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));
-  revalidatePublicPaths(novelId);
+  await revalidatePublicPaths(novelId, [number]);
   redirect(`${workspaceBase}/novels/${novelId}/chapters`);
 }
 
@@ -756,7 +787,7 @@ export async function bulkCreateChapters(
   for (let i = 0; i < rows.length; i += chunkSize) {
     const { error } = await admin.from("chapters").insert(rows.slice(i, i + chunkSize));
     if (error) {
-      if (i > 0) revalidatePublicPaths(id);
+      if (i > 0) await revalidatePublicPaths(id, rows.slice(0, i).map((row) => row.number));
       if (error.code === "23505") {
         return { error: "A chapter number in this upload already exists." };
       }
@@ -781,7 +812,7 @@ export async function bulkCreateChapters(
 
   const workspaceBase = WORKSPACE_BASE.translations;
   revalidatePath(workspaceInternalPath(workspaceBase));
-  revalidatePublicPaths(id);
+  await revalidatePublicPaths(id, prepared.map((chapter) => chapter.number));
   if (options.finalize === false) return {};
   redirect(`${workspaceBase}/novels/${id}/chapters`);
 }
@@ -844,7 +875,7 @@ export async function setChapterPublished(
       `${workspaceBase}/novels/${existing.novel_id}/chapters`,
     ),
   );
-  revalidatePublicPaths(existing.novel_id);
+  await revalidatePublicPaths(existing.novel_id, [existing.number]);
   return {};
 }
 
@@ -902,7 +933,7 @@ export async function publishAllChapters(novelId: string): Promise<AdminState> {
   revalidatePath(
     workspaceInternalPath(`${workspaceBase}/novels/${novelId}/chapters`),
   );
-  revalidatePublicPaths(novelId);
+  await revalidatePublicPaths(novelId, (drafts ?? []).map((chapter) => chapter.number));
   return {};
 }
 
@@ -914,7 +945,7 @@ export async function deleteChapter(chapterId: string): Promise<AdminState> {
 
   const { data: existing } = await admin
     .from("chapters")
-    .select("id, novel_id, novels(publisher_id)")
+    .select("id, novel_id, number, novels(publisher_id)")
     .eq("id", chapterId)
     .maybeSingle<ChapterWithNovel>();
   if (!existing) return { error: "Chapter not found." };
@@ -936,7 +967,7 @@ export async function deleteChapter(chapterId: string): Promise<AdminState> {
       `${workspaceBase}/novels/${existing.novel_id}/chapters`,
     ),
   );
-  revalidatePublicPaths(existing.novel_id);
+  await revalidatePublicPaths(existing.novel_id, [existing.number]);
   return {};
 }
 
@@ -971,12 +1002,15 @@ export async function deleteChapters(
 
   const chunkSize = 25;
   for (let i = 0; i < uniqueIds.length; i += chunkSize) {
-    const { error } = await admin
+    const { data: deleted, error } = await admin
       .from("chapters")
       .delete()
       .eq("novel_id", id)
-      .in("id", uniqueIds.slice(i, i + chunkSize));
+      .in("id", uniqueIds.slice(i, i + chunkSize))
+      .select("number");
+    // Invalidate each successful chunk, including when a later chunk fails.
     if (error) return { error: error.message };
+    await revalidatePublicPaths(id, (deleted ?? []).map((chapter) => chapter.number));
   }
 
   await admin
@@ -988,7 +1022,7 @@ export async function deleteChapters(
   revalidatePath(
     workspaceInternalPath(`${workspaceBase}/novels/${id}/chapters`),
   );
-  revalidatePublicPaths(id);
+  await revalidatePublicPaths(id);
   return {};
 }
 
@@ -1073,8 +1107,8 @@ export async function updateChapter(
   if (!content) return { error: "Chapter content is required." };
 
   const access = String(formData.get("access") ?? "free");
-  let isFree = access !== "paid";
-  let coinCost = isFree ? 0 : Math.floor(Number(formData.get("coinCost") ?? 0));
+  const isFree = access !== "paid";
+  const coinCost = isFree ? 0 : Math.floor(Number(formData.get("coinCost") ?? 0));
 
   if (!isFree && (!Number.isFinite(coinCost) || coinCost < 1)) {
     return { error: "Paid chapters need a cookie cost of at least 1." };
@@ -1097,7 +1131,7 @@ export async function updateChapter(
 
   const { data: existing } = await admin
     .from("chapters")
-    .select("id, novel_id, novels(publisher_id)")
+    .select("id, novel_id, number, novels(publisher_id)")
     .eq("id", chapterId)
     .maybeSingle<ChapterWithNovel>();
 
@@ -1145,7 +1179,7 @@ export async function updateChapter(
       `${workspaceBase}/novels/${existing.novel_id}/chapters/${chapterId}/edit`,
     ),
   );
-  revalidatePublicPaths(existing.novel_id);
+  await revalidatePublicPaths(existing.novel_id, [existing.number, number ?? existing.number]);
   return { success: "Chapter saved." };
 }
 

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test src/lib/*.test.ts src/lib/*.test.mjs"
   },
   "dependencies": {
     "@google-analytics/data": "^6.1.0",
@@ -34,7 +35,8 @@
     "typescript": "^5"
   },
   "overrides": {
-    "minimatch": "10.2.5",
+    "glob": "14.0.3",
+    "minimatch": "11.0.4",
     "postcss": "8.5.23",
     "sharp": "^0.35.3"
   }

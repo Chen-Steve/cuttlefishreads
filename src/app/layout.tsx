@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { Suspense } from "react";
 import { GoogleAnalyticsPageViews } from "@/components/google-analytics-page-views";
 import { InlineScript } from "@/components/inline-script";
 import { Toaster } from "@/components/ui/sonner";
@@ -59,8 +60,10 @@ export default function RootLayout({
         strategy="lazyOnload"
       />
       <body className="flex min-h-full flex-col bg-background text-foreground">
-        <GoogleAnalyticsPageViews />
-        {children}
+        <Suspense fallback={null}>
+          <GoogleAnalyticsPageViews />
+        </Suspense>
+        <Suspense fallback={null}>{children}</Suspense>
         <Toaster />
       </body>
     </html>
