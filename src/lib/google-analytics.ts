@@ -236,7 +236,7 @@ async function fetchDashboardReport(
 
 /**
  * Daily or monthly chart data for the admin dashboard.
- * Pass mode "daily" or "monthly" only — all-time totals use getAllTimeViewsBySlug.
+ * Pass mode "daily" or "monthly" only. All-time totals are novels.view_count.
  */
 export async function getGoogleAnalyticsDashboard(
   slugs: string[],
@@ -320,48 +320,9 @@ async function persistCatalogViewCounts(
 }
 
 /**
- * One GA report for the whole translation catalog, cached an hour.
- * The workspace dashboard reads this entry. Public pages read novels.view_count.
- */
-async function loadCatalogAllTimeViews(): Promise<Record<string, number>> {
-  if (!getConfiguration()) return {};
-
-  try {
-    return await unstable_cache(
-      async () => {
-        const admin = createAdminClient();
-        const { data, error } = await admin
-          .from("novels")
-          .select("slug")
-          .eq("publication_type", "translation");
-
-        if (error) {
-          throw new Error("Unable to load analytics catalog", { cause: error });
-        }
-
-        const slugs = (data ?? []).map((row) => row.slug as string);
-        const totals = await fetchAllTimeViewsBySlug(slugs);
-        await persistCatalogViewCounts(totals);
-        return totals;
-      },
-      ["ga4-all-time-views-catalog-v2"],
-      {
-        revalidate: GA_REVALIDATE_SECONDS,
-        tags: ["ga4-all-time-views"],
-      },
-    )();
-  } catch (error) {
-    console.error(
-      "[google-analytics] Unable to load all-time views by slug:",
-      error,
-    );
-    return {};
-  }
-}
-
-/**
  * Write fresh GA4 totals onto novels.view_count.
- * Called from the daily cron. Public pages read the column and do not call GA.
+ * Called from the daily cron. Public pages and the workspace totals read the
+ * column and do not call GA.
  * Also selects a novel row when Analytics is not configured, so a quiet week
  * still counts as database activity and the free project is less likely to pause.
  */
@@ -384,19 +345,4 @@ export async function refreshCatalogViewCounts(): Promise<{ updated: boolean }> 
   const totals = await fetchAllTimeViewsBySlug(slugs);
   await persistCatalogViewCounts(totals);
   return { updated: true };
-}
-
-/**
- * All-time views for many novels — shared catalog cache, then filtered.
- */
-export async function getAllTimeViewsBySlug(
-  slugs: string[],
-): Promise<Record<string, number>> {
-  if (!getConfiguration() || slugs.length === 0) return {};
-
-  const all = await loadCatalogAllTimeViews();
-  const unique = uniqueSortedSlugs(slugs);
-  const totals: Record<string, number> = {};
-  for (const slug of unique) totals[slug] = all[slug] ?? 0;
-  return totals;
 }

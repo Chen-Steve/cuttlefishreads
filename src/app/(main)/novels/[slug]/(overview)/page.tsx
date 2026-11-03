@@ -7,6 +7,7 @@ import { CommentSection, CommentsFallback } from "@/components/comments";
 import {
   BookmarkButton,
   BulkBuyChapters,
+  ChapterAccessPatch,
   ChapterList,
   NovelCover,
   MobileNovelTitle,
@@ -21,6 +22,7 @@ import { StarRating } from "@/components/reviews";
 import { Skeleton } from "@/components/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
+  getChapterListAccess,
   getChapterListItems,
   getNovel,
   getNovelRatingSummary,
@@ -219,9 +221,11 @@ export default async function NovelDetailPage({
         <Suspense fallback={null}>
           <NovelBulkBuy slug={novel.slug} />
         </Suspense>
-        <Suspense fallback={<ChapterList slug={novel.slug} chapters={chapters} />}>
-          <ReaderChapterList slug={novel.slug} />
-        </Suspense>
+        <ChapterList slug={novel.slug} chapters={chapters}>
+          <Suspense fallback={null}>
+            <ReaderChapterAccess slug={novel.slug} />
+          </Suspense>
+        </ChapterList>
       </section>
 
       <section className="mt-4" aria-label="Comments">
@@ -236,9 +240,10 @@ export default async function NovelDetailPage({
   );
 }
 
-async function ReaderChapterList({ slug }: { slug: string }) {
-  const chapters = await getChapterListItems(slug);
-  return <ChapterList slug={slug} chapters={chapters} />;
+async function ReaderChapterAccess({ slug }: { slug: string }) {
+  const access = await getChapterListAccess(slug);
+  if (access.length === 0) return null;
+  return <ChapterAccessPatch access={access} />;
 }
 
 function NovelViewCount({
@@ -319,19 +324,19 @@ async function NovelBookmarkButton({ slug }: { slug: string }) {
 }
 
 async function NovelBulkBuy({ slug }: { slug: string }) {
-  const [chapters, session] = await Promise.all([
-    getChapterListItems(slug),
-    getSessionProfile(),
-  ]);
-  if (!getBulkBuyState(chapters).eligible) return null;
+  const session = await getSessionProfile();
+  if (!session) return null;
+  const chapters = await getChapterListItems(slug);
+  const state = getBulkBuyState(chapters);
+  if (!state.eligible || state.purchasableCount === 0) return null;
 
   return (
     <div className="mb-2 flex justify-end">
       <BulkBuyChapters
         novelSlug={slug}
-        chapters={chapters}
-        userCoins={session?.coins ?? 0}
-        isLoggedIn={Boolean(session)}
+        purchasableCount={state.purchasableCount}
+        fullPrice={state.fullPrice}
+        userCoins={session.coins}
       />
     </div>
   );

@@ -6,31 +6,26 @@ import { usePathname } from "next/navigation";
 import { ArrowRight, Cookie, X } from "lucide-react";
 
 import { bulkUnlockChapters } from "@/app/(main)/novels/actions";
-import { getBulkBuyState } from "@/lib/bulk-buy";
 import { shopHref } from "@/lib/safe-return-path";
 import { cookiesLabel } from "@/lib/utils";
-import type { ChapterListItem } from "@/types";
 
 export function BulkBuyChapters({
   novelSlug,
-  chapters,
+  purchasableCount,
+  fullPrice,
   userCoins,
-  isLoggedIn,
 }: {
   novelSlug: string;
-  chapters: ChapterListItem[];
+  purchasableCount: number;
+  fullPrice: number;
   userCoins: number;
-  isLoggedIn: boolean;
 }) {
   const pathname = usePathname();
   const returnPath = pathname || `/novels/${novelSlug}`;
   const [error, setError] = useState<string | null>(null);
   const [showInsufficientPopup, setShowInsufficientPopup] = useState(false);
   const [pending, startTransition] = useTransition();
-  const bulkBuy = getBulkBuyState(chapters);
-  const canAfford = userCoins >= bulkBuy.fullPrice;
-
-  if (!isLoggedIn || !bulkBuy.eligible || bulkBuy.purchasableCount === 0) return null;
+  const canAfford = userCoins >= fullPrice;
 
   function handleBulkBuy() {
     setError(null);
@@ -61,7 +56,7 @@ export function BulkBuyChapters({
         >
           {pending
             ? "Unlocking…"
-            : `Buy all ${bulkBuy.purchasableCount} chapters for ${bulkBuy.fullPrice.toLocaleString()} cookies`}
+            : `Buy all ${purchasableCount} chapters for ${fullPrice.toLocaleString()} cookies`}
           <span className="inline-flex items-center gap-1 font-normal text-amber-600/80 dark:text-amber-400/80">
             <Cookie className="size-3" strokeWidth={1.75} aria-hidden />
           </span>
@@ -110,7 +105,7 @@ export function BulkBuyChapters({
             <p className="mt-2 text-center text-sm text-muted">
               You need{" "}
               <span className="font-semibold text-foreground">
-                {bulkBuy.fullPrice.toLocaleString()} cookies
+                {fullPrice.toLocaleString()} cookies
               </span>{" "}
               but only have{" "}
               <span className="font-semibold text-foreground">

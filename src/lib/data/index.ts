@@ -155,8 +155,6 @@ function mapChapterListItem(
     novelSlug: slug,
     number: row.number,
     title: row.title,
-    translatorNote: row.translator_note?.trim() ? row.translator_note : null,
-    useGlobalTranslatorNote: row.use_global_translator_note ?? true,
     publishedAt: formatDate(row.published_at),
     isFree: naturallyFree,
     isAdvanced: !row.is_free,
@@ -164,6 +162,19 @@ function mapChapterListItem(
     unlockAt: row.unlock_at,
     locked,
     adminAccess,
+  };
+}
+
+function toChapter(
+  row: DbChapterMeta,
+  item: ChapterListItem,
+  content?: string[],
+): Chapter {
+  return {
+    ...item,
+    translatorNote: row.translator_note?.trim() ? row.translator_note : null,
+    useGlobalTranslatorNote: row.use_global_translator_note ?? true,
+    ...(content ? { content } : {}),
   };
 }
 
@@ -266,8 +277,8 @@ const fetchNovelRows = unstable_cache(
     if (error) {
       throw new Error("fetchNovelRows failed", { cause: error });
     }
-    // view_count is mirrored from GA4 by the daily cron and the workspace
-    // dashboard. Public pages must not call the Analytics API themselves.
+    // view_count is mirrored from GA4 by the daily cron. Public pages must
+    // not call the Analytics API themselves.
     return (data ?? []) as DbNovel[];
   },
   ["novels-catalog-rows-v2"],
@@ -846,6 +857,36 @@ export const getChapterListItems = cache(
   },
 );
 
+/**
+ * Lock flags for the signed-in reader. Empty when the public list is already
+ * correct, so anonymous visits do not stream a second chapter list.
+ */
+export const getChapterListAccess = cache(
+  async (
+    slug: string,
+  ): Promise<Array<{ id: string; locked: boolean; adminAccess: boolean }>> => {
+    const novel = await fetchNovelIdBySlug(slug);
+    if (!novel) return [];
+
+    const currentUser = await getCurrentUser();
+    if (!currentUser) return [];
+
+    const isPublisher =
+      novel.publisher_id !== null && currentUser.id === novel.publisher_id;
+    const bypassLock = currentUser.isAdmin || isPublisher;
+    const unlocked = bypassLock
+      ? new Set<number>()
+      : await getUnlockedChapterNumbers(slug);
+    if (!bypassLock && unlocked.size === 0) return [];
+
+    const rows = await fetchDbChapterMetas(novel.id);
+    return rows.map((row) => {
+      const item = mapChapterListItem(slug, row, unlocked, bypassLock);
+      return { id: item.id, locked: item.locked, adminAccess: item.adminAccess };
+    });
+  },
+);
+
 /** TOC rows with public lock state only. No auth or unlock lookup. */
 export const getPublicChapterSummaries = cache(
   async (slug: string): Promise<ChapterSummary[]> => {
@@ -937,10 +978,7 @@ export const getChapter = cache(
     if (isNaturallyFree(row)) {
       const listItem = mapChapterListItem(slug, row, new Set(), false);
       const body = await fetchDbChapterContent(novel.id, chapterNumber);
-      return {
-        ...listItem,
-        content: splitContent(body ?? ""),
-      };
+      return toChapter(row, listItem, splitContent(body ?? ""));
     }
 
     const currentUser = await getCurrentUser();
@@ -953,14 +991,11 @@ export const getChapter = cache(
     const unlocked = new Set(purchased ? [chapterNumber] : []);
     const listItem = mapChapterListItem(slug, row, unlocked, bypassLock);
     if (listItem.locked) {
-      return listItem;
+      return toChapter(row, listItem);
     }
 
     const body = await fetchDbChapterContent(novel.id, chapterNumber);
-    return {
-      ...listItem,
-      content: splitContent(body ?? ""),
-    };
+    return toChapter(row, listItem, splitContent(body ?? ""));
   },
 );
 
@@ -983,10 +1018,11 @@ export async function getPublicFreeChapter(
   if (!row?.is_free) return undefined;
   const body = await fetchDbChapterContent(novel.id, chapterNumber);
   if (body == null) return undefined;
-  return {
-    ...mapChapterListItem(slug, row, new Set(), false),
-    content: splitContent(body),
-  };
+  return toChapter(
+    row,
+    mapChapterListItem(slug, row, new Set(), false),
+    splitContent(body),
+  );
 }
 
 export async function searchNovels(query: string): Promise<Novel[]> {

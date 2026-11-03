@@ -8,7 +8,7 @@ export { NovelCover } from "./novel-cover";
 export { NovelDescription } from "./novel-description";
 export { MobileNovelTitle } from "./mobile-novel-title";
 export { NovelTags } from "./novel-tags";
-export { ChapterList } from "./chapter-list";
+export { ChapterAccessPatch, ChapterList } from "./chapter-list";
 export { BookmarkButton } from "./bookmark-button";
 export { BulkBuyChapters } from "./bulk-buy-chapters";
 export { StartReadingButton } from "./start-reading-button";

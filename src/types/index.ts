@@ -91,8 +91,11 @@ export interface ChapterSummary {
   locked: boolean;
 }
 
-/** Chapter metadata for lists/TOC — no body content. */
-export type ChapterListItem = Omit<Chapter, "content">;
+/** Chapter metadata for lists/TOC — no body or translator note. */
+export type ChapterListItem = Omit<
+  Chapter,
+  "content" | "translatorNote" | "useGlobalTranslatorNote"
+>;
 
 export interface NovelComment {
   id: string;

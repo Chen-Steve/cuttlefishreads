@@ -6,7 +6,6 @@ import { TabPanelShell } from "@/components/tab-panel-shell";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
 import {
-  getAllTimeViewsBySlug,
   getGoogleAnalyticsDashboard,
   isGoogleAnalyticsConfigured,
   type GoogleAnalyticsDashboard,
@@ -49,7 +48,7 @@ export async function WorkspaceDashboardPage({
 
   let novelsQuery = admin
     .from("novels")
-    .select("id, slug, title, library_add_count")
+    .select("id, slug, title, library_add_count, view_count")
     .eq("publication_type", "translation")
     .order("updated_at", { ascending: false });
 
@@ -63,6 +62,7 @@ export async function WorkspaceDashboardPage({
       slug: string;
       title: string;
       library_add_count: number | null;
+      view_count: number | null;
     }[]
   >();
 
@@ -70,7 +70,8 @@ export async function WorkspaceDashboardPage({
   const novelIds = rows.map((n) => n.id);
   const slugs = rows.map((n) => n.slug);
 
-  // Translator workspace uses GA for view totals; charts use GA daily/monthly.
+  // Totals come from novels.view_count (same column as public pages).
+  // Daily and monthly charts still ask Google Analytics.
   const emptyAnalytics: GoogleAnalyticsDashboard = {
     configured: isGoogleAnalyticsConfigured(),
     error: false,
@@ -94,10 +95,13 @@ export async function WorkspaceDashboardPage({
   let unlockStats: UnlockStatRow[] = [];
   let unlockRows: UnlockDetailRow[] = [];
   let googleAnalytics: GoogleAnalyticsDashboard = emptyAnalytics;
-  let allTimeViewsBySlug: Record<string, number> = {};
+  const allTimeViewsBySlug: Record<string, number> = {};
+  for (const novel of rows) {
+    allTimeViewsBySlug[novel.slug] = Number(novel.view_count ?? 0);
+  }
 
   if (novelIds.length > 0) {
-    const [unlockStatsRes, recentUnlocksRes, ga, views] = await Promise.all([
+    const [unlockStatsRes, recentUnlocksRes, ga] = await Promise.all([
       admin.rpc("novel_unlock_stats", { p_slugs: slugs }),
       admin
         .from("chapter_unlocks")
@@ -111,13 +115,11 @@ export async function WorkspaceDashboardPage({
       mode === "all"
         ? Promise.resolve(emptyAnalytics)
         : getGoogleAnalyticsDashboard(slugs, mode),
-      getAllTimeViewsBySlug(slugs),
     ]);
 
     unlockStats = (unlockStatsRes.data ?? []) as UnlockStatRow[];
     unlockRows = (recentUnlocksRes.data ?? []) as UnlockDetailRow[];
     googleAnalytics = ga;
-    allTimeViewsBySlug = views;
   }
 
   const purchasesBySlug = new Map<string, number>();
@@ -186,8 +188,7 @@ export async function WorkspaceDashboardPage({
     { bookmarks: 0, purchases: 0, coinsEarned: 0 },
   );
 
-  // Always all-time so this matches the view counts on public novel pages
-  // (novel page + chapter pages, same GA query and cache).
+  // Same stored total the public novel pages show.
   const totalViews = Object.values(allTimeViewsBySlug).reduce(
     (sum, n) => sum + n,
     0,
@@ -744,7 +745,7 @@ function ViewsChart({
     periodLabel = "All time";
   }
 
-  // Same all-time totals as public novel pages (novel page + chapter pages).
+  // Stored all-time totals, same column as the public novel pages.
   const allTimeTotal = novels.reduce(
     (sum, n) => sum + (allTimeViewsBySlug[n.slug] ?? 0),
     0,

@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { ArrowDownUp, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
 
@@ -46,6 +54,23 @@ type ChapterAccessPatch = Pick<
   "id" | "locked" | "adminAccess"
 >;
 
+const ChapterAccessContext = createContext<
+  (access: ChapterAccessPatch[]) => void
+>(() => {});
+
+/** Applies purchased and admin locks onto the public list already on screen. */
+export function ChapterAccessPatch({
+  access,
+}: {
+  access: ChapterAccessPatch[];
+}) {
+  const apply = useContext(ChapterAccessContext);
+  useEffect(() => {
+    apply(access);
+  }, [access, apply]);
+  return null;
+}
+
 function applyChapterAccess(
   chapters: ChapterListItem[],
   access: ChapterAccessPatch[],
@@ -79,15 +104,15 @@ function applyChapterAccess(
 export function ChapterList({
   slug,
   chapters,
-  readerAccess,
   hideLockBadges = false,
+  children,
 }: {
   slug: string;
   chapters: ChapterListItem[];
-  /** Purchased and admin access, applied after the public list is on screen. */
-  readerAccess?: Promise<ChapterAccessPatch[]>;
   /** When true, skip lock UI on chapter rows. */
   hideLockBadges?: boolean;
+  /** Streams a lock patch without sending the chapter rows again. */
+  children?: ReactNode;
 }) {
   const [newestFirst] = useChapterOrder(CHAPTER_ORDER_STORAGE_KEY);
   const [page, setPage] = useState(0);
@@ -105,24 +130,12 @@ export function ChapterList({
     setAccessChapters(null);
   }
   const visibleChapters = accessChapters ?? chapters;
-
-  useEffect(() => {
-    if (!readerAccess) return;
-    let cancelled = false;
-    readerAccess.then(
-      (access) => {
-        if (cancelled) return;
-        setAccessChapters((current) => {
-          const merged = applyChapterAccess(current ?? chapters, access);
-          return merged ?? current;
-        });
-      },
-      () => {},
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [chapters, readerAccess]);
+  const applyAccess = useCallback((access: ChapterAccessPatch[]) => {
+    setAccessChapters((current) => {
+      const merged = applyChapterAccess(current ?? chapters, access);
+      return merged ?? current;
+    });
+  }, [chapters]);
 
   const rows = useMemo(() => {
     const sorted = [...visibleChapters].sort((a, b) => a.number - b.number);
@@ -139,17 +152,19 @@ export function ChapterList({
   const hasChapters = visibleChapters.length > 0;
 
   return (
-    <TabPanelShell
-      leftTab={
-        <h2 className="flex h-9 items-center px-4 text-sm font-semibold tracking-tight text-foreground">
-          Chapters:
-          <span className="ml-1.5 text-xs font-normal text-muted">
-            {visibleChapters.length}
-          </span>
-        </h2>
-      }
-      rightTab={hasChapters ? <ChapterOrderToggle /> : undefined}
-    >
+    <ChapterAccessContext.Provider value={applyAccess}>
+      {children}
+      <TabPanelShell
+        leftTab={
+          <h2 className="flex h-9 items-center px-4 text-sm font-semibold tracking-tight text-foreground">
+            Chapters:
+            <span className="ml-1.5 text-xs font-normal text-muted">
+              {visibleChapters.length}
+            </span>
+          </h2>
+        }
+        rightTab={hasChapters ? <ChapterOrderToggle /> : undefined}
+      >
       {hasChapters ? (
         <>
         <ol className="divide-y divide-border overflow-hidden rounded-b-xl">
@@ -234,6 +249,7 @@ export function ChapterList({
           No chapters published yet.
         </p>
       )}
-    </TabPanelShell>
+      </TabPanelShell>
+    </ChapterAccessContext.Provider>
   );
 }
