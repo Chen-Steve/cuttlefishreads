@@ -25,7 +25,8 @@ export async function proxy(request: NextRequest) {
   if ((request.method === "GET" || request.method === "HEAD") && (
     pathname === "/api/search-index" || pathname === "/api/search-suggestions" ||
     pathname === "/feed.xml" || /^\/novels\/[^/]+\/feed\.xml$/.test(pathname) ||
-    /^\/api\/novels\/[^/]+\/chapters$/.test(pathname)
+    /^\/api\/novels\/[^/]+\/chapters$/.test(pathname) ||
+    /^\/api\/novels\/[^/]+\/chapter-list$/.test(pathname)
   )) return NextResponse.next();
 
   return updateSession(request);

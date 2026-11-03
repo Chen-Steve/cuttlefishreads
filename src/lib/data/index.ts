@@ -25,6 +25,8 @@ import {
 import type {
   Chapter,
   ChapterListItem,
+  ChapterListRow,
+  ChapterLockUpdate,
   ChapterSummary,
   Novel,
   NovelComment,
@@ -34,6 +36,10 @@ import type {
 import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getSessionProfile } from "@/lib/session-profile";
+import {
+  CHAPTER_LIST_PAGE_SIZE,
+  type ChapterListOrder,
+} from "@/lib/chapter-list-page";
 import { formatRelativeDate } from "@/lib/utils";
 
 type DbNovel = {
@@ -820,20 +826,64 @@ export async function getUserCreatedNovels(userId: string): Promise<Novel[]> {
   return novels.filter((novel) => novel.publisherId === userId);
 }
 
-/** Chapter list with public lock state. No auth or unlock lookup. */
-export const getPublicChapterListItems = cache(
-  async (slug: string): Promise<ChapterListItem[]> => {
-    "use cache";
-    cacheLife({ stale: 0, revalidate: 300, expire: 3600 });
-    const novel = await fetchNovelIdBySlug(slug);
-    if (!novel) return [];
-    cacheTag(novelChaptersCacheTag(novel.id));
+function toChapterListRow(item: ChapterListItem): ChapterListRow {
+  return {
+    id: item.id,
+    number: item.number,
+    title: item.title,
+    publishedAt: item.publishedAt,
+    isFree: item.isFree,
+    isAdvanced: item.isAdvanced,
+    coinCost: item.coinCost,
+    unlockAt: item.unlockAt,
+    locked: item.locked,
+    adminAccess: item.adminAccess,
+  };
+}
 
-    const rows = await fetchDbChapterMetas(novel.id);
-    const unlocked = new Set<number>();
-    return rows.map((row) => mapChapterListItem(slug, row, unlocked, false));
-  },
-);
+function sliceChapterMetas(
+  rows: DbChapterMeta[],
+  page: number,
+  order: ChapterListOrder,
+): DbChapterMeta[] {
+  const start = page * CHAPTER_LIST_PAGE_SIZE;
+  if (start >= rows.length) return [];
+  const ordered = order === "newest" ? [...rows].reverse() : rows;
+  return ordered.slice(start, start + CHAPTER_LIST_PAGE_SIZE);
+}
+
+export type PublicChapterListPage = {
+  chapters: ChapterListRow[];
+  totalCount: number;
+};
+
+/**
+ * One page of the public chapter list. No auth or unlock lookup.
+ * The novel page renders the first oldest page; other pages load on demand.
+ */
+export async function getPublicChapterListPage(
+  slug: string,
+  page: number,
+  order: ChapterListOrder,
+): Promise<PublicChapterListPage> {
+  "use cache";
+  cacheLife({ stale: 0, revalidate: 300, expire: 3600 });
+  const novel = await fetchNovelIdBySlug(slug);
+  if (!novel) return { chapters: [], totalCount: 0 };
+  cacheTag(novelChaptersCacheTag(novel.id));
+  if (!Number.isSafeInteger(page) || page < 0) {
+    return { chapters: [], totalCount: 0 };
+  }
+
+  const rows = await fetchDbChapterMetas(novel.id);
+  const unlocked = new Set<number>();
+  return {
+    chapters: sliceChapterMetas(rows, page, order).map((row) =>
+      toChapterListRow(mapChapterListItem(slug, row, unlocked, false)),
+    ),
+    totalCount: rows.length,
+  };
+}
 
 /** Chapter list/TOC metadata without body content. */
 export const getChapterListItems = cache(
@@ -858,15 +908,18 @@ export const getChapterListItems = cache(
 );
 
 /**
- * Lock flags for the signed-in reader. Empty when the public list is already
- * correct, so anonymous visits do not stream a second chapter list.
+ * Lock flags that differ from the public page. Empty when that page is
+ * already correct, so anonymous visits do not stream a second list.
  */
-export const getChapterListAccess = cache(
+export const getChapterListLockUpdates = cache(
   async (
     slug: string,
-  ): Promise<Array<{ id: string; locked: boolean; adminAccess: boolean }>> => {
+    page: number,
+    order: ChapterListOrder,
+  ): Promise<ChapterLockUpdate[]> => {
     const novel = await fetchNovelIdBySlug(slug);
     if (!novel) return [];
+    if (!Number.isSafeInteger(page) || page < 0) return [];
 
     const currentUser = await getCurrentUser();
     if (!currentUser) return [];
@@ -880,10 +933,24 @@ export const getChapterListAccess = cache(
     if (!bypassLock && unlocked.size === 0) return [];
 
     const rows = await fetchDbChapterMetas(novel.id);
-    return rows.map((row) => {
-      const item = mapChapterListItem(slug, row, unlocked, bypassLock);
-      return { id: item.id, locked: item.locked, adminAccess: item.adminAccess };
-    });
+    const publicUnlocked = new Set<number>();
+    const updates: ChapterLockUpdate[] = [];
+    for (const row of sliceChapterMetas(rows, page, order)) {
+      const publicItem = mapChapterListItem(slug, row, publicUnlocked, false);
+      const personal = mapChapterListItem(slug, row, unlocked, bypassLock);
+      if (
+        publicItem.locked === personal.locked &&
+        publicItem.adminAccess === personal.adminAccess
+      ) {
+        continue;
+      }
+      updates.push({
+        id: personal.id,
+        locked: personal.locked,
+        adminAccess: personal.adminAccess,
+      });
+    }
+    return updates;
   },
 );
 
@@ -1405,7 +1472,7 @@ export async function getNovelRatingSummary(
   return summaries[slug] ?? { average: 0, count: 0 };
 }
 
-/** Batch rating averages for many novels (one cached query). */
+/** Batch rating averages for many novels (one grouped query). */
 export async function getNovelRatingSummariesBySlug(
   slugs: string[],
 ): Promise<Record<string, NovelRatingSummary>> {
@@ -1415,32 +1482,25 @@ export async function getNovelRatingSummariesBySlug(
   const all = await unstable_cache(
     async (): Promise<Record<string, NovelRatingSummary>> => {
       const admin = createAdminClient();
-      const { data, error } = await admin
-        .from("novel_comments")
-        .select("novel_slug, rating")
-        .is("parent_id", null)
-        .not("rating", "is", null);
+      const { data, error } = await admin.rpc("novel_rating_summaries");
 
       if (error) throw new Error("Could not load ratings", { cause: error });
 
-      const buckets = new Map<string, { sum: number; count: number }>();
-      for (const row of (data ?? []) as { novel_slug: string; rating: number }[]) {
-        const bucket = buckets.get(row.novel_slug) ?? { sum: 0, count: 0 };
-        bucket.sum += row.rating;
-        bucket.count += 1;
-        buckets.set(row.novel_slug, bucket);
-      }
-
       const summaries: Record<string, NovelRatingSummary> = {};
-      for (const [slug, bucket] of buckets) {
-        summaries[slug] = {
-          average: bucket.sum / bucket.count,
-          count: bucket.count,
+      for (const row of (data ?? []) as {
+        novel_slug: string;
+        average: number | string;
+        rating_count: number | string;
+      }[]) {
+        const count = Number(row.rating_count);
+        summaries[row.novel_slug] = {
+          average: count > 0 ? Number(row.average) : 0,
+          count,
         };
       }
       return summaries;
     },
-    ["novel-rating-summaries"],
+    ["novel-rating-summaries-v2"],
     {
       revalidate: CATALOG_REVALIDATE_SECONDS,
       tags: [NOVELS_CATALOG_CACHE_TAG, NOVEL_RATINGS_CACHE_TAG],

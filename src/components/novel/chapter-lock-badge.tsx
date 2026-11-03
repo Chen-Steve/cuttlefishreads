@@ -6,7 +6,11 @@ import { UnlockCountdown } from "@/components/reader/unlock-countdown";
 import { isScheduledUnlock } from "@/lib/unlock-countdown";
 import type { ChapterListItem } from "@/types";
 
-export function ChapterLockBadge({ chapter }: { chapter: ChapterListItem }) {
+export function ChapterLockBadge({
+  chapter,
+}: {
+  chapter: Pick<ChapterListItem, "locked" | "coinCost" | "unlockAt">;
+}) {
   if (!chapter.locked) return null;
 
   if (chapter.unlockAt && isScheduledUnlock(chapter.unlockAt)) {

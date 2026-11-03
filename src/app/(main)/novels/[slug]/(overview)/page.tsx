@@ -22,11 +22,11 @@ import { StarRating } from "@/components/reviews";
 import { Skeleton } from "@/components/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
-  getChapterListAccess,
   getChapterListItems,
+  getChapterListLockUpdates,
   getNovel,
   getNovelRatingSummary,
-  getPublicChapterListItems,
+  getPublicChapterListPage,
   isNovelBookmarked,
 } from "@/lib/data";
 import { getSessionProfile } from "@/lib/session-profile";
@@ -64,9 +64,9 @@ export default async function NovelDetailPage({
   params,
 }: PageProps<"/novels/[slug]">) {
   const { slug } = await params;
-  const [novel, chapters] = await Promise.all([
+  const [novel, chapterList] = await Promise.all([
     getNovel(slug),
-    getPublicChapterListItems(slug),
+    getPublicChapterListPage(slug, 0, "oldest"),
   ]);
 
   if (!novel) {
@@ -74,7 +74,7 @@ export default async function NovelDetailPage({
   }
 
   const viewCount = novel.viewCount ?? 0;
-  const firstChapter = chapters[0];
+  const firstChapter = chapterList.chapters[0];
 
   const authorLine =
     novel.translator || novel.originalAuthor ? (
@@ -221,7 +221,11 @@ export default async function NovelDetailPage({
         <Suspense fallback={null}>
           <NovelBulkBuy slug={novel.slug} />
         </Suspense>
-        <ChapterList slug={novel.slug} chapters={chapters}>
+        <ChapterList
+          slug={novel.slug}
+          chapters={chapterList.chapters}
+          totalCount={chapterList.totalCount}
+        >
           <Suspense fallback={null}>
             <ReaderChapterAccess slug={novel.slug} />
           </Suspense>
@@ -241,7 +245,7 @@ export default async function NovelDetailPage({
 }
 
 async function ReaderChapterAccess({ slug }: { slug: string }) {
-  const access = await getChapterListAccess(slug);
+  const access = await getChapterListLockUpdates(slug, 0, "oldest");
   if (access.length === 0) return null;
   return <ChapterAccessPatch access={access} />;
 }

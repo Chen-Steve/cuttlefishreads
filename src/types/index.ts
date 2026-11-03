@@ -97,6 +97,15 @@ export type ChapterListItem = Omit<
   "content" | "translatorNote" | "useGlobalTranslatorNote"
 >;
 
+/** One page of the public chapter list. The page already knows the novel slug. */
+export type ChapterListRow = Omit<ChapterListItem, "novelSlug">;
+
+/** Lock flags that differ from the public list. Unchanged chapters are omitted. */
+export type ChapterLockUpdate = Pick<
+  ChapterListItem,
+  "id" | "locked" | "adminAccess"
+>;
+
 export interface NovelComment {
   id: string;
   novelSlug: string;

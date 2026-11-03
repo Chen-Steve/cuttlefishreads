@@ -1,6 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowUpDown,
@@ -130,6 +139,24 @@ function SortDropdown({
   );
 }
 
+const NovelsBrowseFiltersContext = createContext<
+  (filters: NovelsBrowseFilters) => void
+>(() => {});
+
+/** URL filters for the catalog already on the page. Does not carry the novel list. */
+export function NovelsBrowseFilterState({
+  filters,
+}: {
+  filters: NovelsBrowseFilters;
+}) {
+  const apply = useContext(NovelsBrowseFiltersContext);
+  const { query, status, genre, sort } = filters;
+  useEffect(() => {
+    apply({ query, status, genre, sort });
+  }, [apply, query, status, genre, sort]);
+  return null;
+}
+
 function sortNovels(
   novels: NovelCardData[],
   sort: NovelSortOption,
@@ -170,32 +197,39 @@ function sortNovels(
 export function NovelsBrowser({
   novels,
   viewsBySlug = {},
-  initialFilters = DEFAULT_NOVELS_BROWSE_FILTERS,
+  children,
 }: {
   novels: NovelCardData[];
   viewsBySlug?: Record<string, number>;
-  initialFilters?: NovelsBrowseFilters;
+  /** Streamed URL filters. The catalog stays on this component. */
+  children?: ReactNode;
 }) {
   const router = useRouter();
-  const [query, setQuery] = useState(initialFilters.query);
-  const [status, setStatus] = useState(initialFilters.status);
-  const [genre, setGenre] = useState(initialFilters.genre);
-  const [sort, setSort] = useState(initialFilters.sort);
-  const [filtersOpen, setFiltersOpen] = useState(
-    initialFilters.status !== "all" || initialFilters.genre !== null,
-  );
-
-  const [previousFilters, setPreviousFilters] = useState(initialFilters);
-  if (
-    previousFilters.status !== initialFilters.status ||
-    previousFilters.genre !== initialFilters.genre ||
-    previousFilters.sort !== initialFilters.sort
-  ) {
-    setPreviousFilters(initialFilters);
-    setStatus(initialFilters.status);
-    setGenre(initialFilters.genre);
-    setSort(initialFilters.sort);
-  }
+  const queryDirty = useRef(false);
+  const appliedFacet = useRef<{
+    status: NovelStatusFilter;
+    genre: Genre | null;
+  } | null>(null);
+  const [query, setQuery] = useState(DEFAULT_NOVELS_BROWSE_FILTERS.query);
+  const [status, setStatus] = useState(DEFAULT_NOVELS_BROWSE_FILTERS.status);
+  const [genre, setGenre] = useState(DEFAULT_NOVELS_BROWSE_FILTERS.genre);
+  const [sort, setSort] = useState(DEFAULT_NOVELS_BROWSE_FILTERS.sort);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const applyStreamedFilters = useCallback((next: NovelsBrowseFilters) => {
+    if (!queryDirty.current) setQuery(next.query);
+    setStatus(next.status);
+    setGenre(next.genre);
+    setSort(next.sort);
+    const previous = appliedFacet.current;
+    if (
+      !previous ||
+      previous.status !== next.status ||
+      previous.genre !== next.genre
+    ) {
+      if (next.status !== "all" || next.genre !== null) setFiltersOpen(true);
+    }
+    appliedFacet.current = { status: next.status, genre: next.genre };
+  }, []);
 
   function commitFilters(next: {
     status: NovelStatusFilter;
@@ -244,6 +278,7 @@ export function NovelsBrowser({
     (status !== "all" ? 1 : 0) + (genre !== null ? 1 : 0);
 
   function clearAll() {
+    queryDirty.current = true;
     setQuery("");
     setStatus("all");
     setGenre(null);
@@ -260,6 +295,8 @@ export function NovelsBrowser({
     );
 
   return (
+    <NovelsBrowseFiltersContext.Provider value={applyStreamedFilters}>
+    {children}
     <div className="flex flex-col gap-3">
       <header className="mb-1 flex items-baseline justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
@@ -294,7 +331,10 @@ export function NovelsBrowser({
             <input
               type="search"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                queryDirty.current = true;
+                setQuery(e.target.value);
+              }}
               placeholder="Search by title, author, genre…"
               className="min-w-0 flex-1 border-0 bg-transparent py-0 text-sm font-medium leading-none text-foreground outline-none placeholder:font-medium placeholder:leading-none placeholder:text-muted/80"
               aria-label="Search novels"
@@ -303,7 +343,10 @@ export function NovelsBrowser({
             {query && (
               <button
                 type="button"
-                onClick={() => setQuery("")}
+                onClick={() => {
+                  queryDirty.current = true;
+                  setQuery("");
+                }}
                 aria-label="Clear search"
                 className="shrink-0 text-muted transition-colors hover:text-foreground"
               >
@@ -393,5 +436,6 @@ export function NovelsBrowser({
 
       <NovelGrid novels={filtered} dense showChapterCount hideAuthor />
     </div>
+    </NovelsBrowseFiltersContext.Provider>
   );
 }

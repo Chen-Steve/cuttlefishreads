@@ -3,7 +3,7 @@ export { FeaturedNovels } from "./featured-novels";
 export { ContinueReadingSection } from "./continue-reading-section";
 export { NovelGrid } from "./novel-grid";
 export { PaginatedRecentlyUpdatedList } from "./paginated-recently-updated-list";
-export { NovelsBrowser } from "./novels-browser";
+export { NovelsBrowser, NovelsBrowseFilterState } from "./novels-browser";
 export { NovelCover } from "./novel-cover";
 export { NovelDescription } from "./novel-description";
 export { MobileNovelTitle } from "./mobile-novel-title";

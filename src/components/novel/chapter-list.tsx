@@ -14,13 +14,13 @@ import { ArrowDownUp, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-reac
 
 import { TabPanelShell } from "@/components/tab-panel-shell";
 import { useChapterOrder } from "@/hooks/use-chapter-order";
+import { CHAPTER_LIST_PAGE_SIZE } from "@/lib/chapter-list-page";
 import { isScheduledUnlock } from "@/lib/unlock-countdown";
 import { cn } from "@/lib/utils";
-import type { ChapterListItem } from "@/types";
+import type { ChapterListRow, ChapterLockUpdate } from "@/types";
 import { ChapterLockBadge } from "./chapter-lock-badge";
 
 const CHAPTER_ORDER_STORAGE_KEY = "cf-chapter-order";
-const CHAPTER_PAGE_SIZE = 50;
 
 function ChapterOrderToggle({ className }: { className?: string }) {
   const [newestFirst, setNewestFirst] = useChapterOrder(
@@ -49,20 +49,63 @@ function ChapterOrderToggle({ className }: { className?: string }) {
   );
 }
 
-type ChapterAccessPatch = Pick<
-  ChapterListItem,
-  "id" | "locked" | "adminAccess"
->;
-
 const ChapterAccessContext = createContext<
-  (access: ChapterAccessPatch[]) => void
+  (access: ChapterLockUpdate[]) => void
 >(() => {});
 
-/** Applies purchased and admin locks onto the public list already on screen. */
+function mergeLockUpdates(
+  current: ChapterLockUpdate[],
+  incoming: ChapterLockUpdate[],
+): ChapterLockUpdate[] {
+  if (incoming.length === 0) return current;
+  const byId = new Map(current.map((update) => [update.id, update]));
+  let changed = false;
+  for (const update of incoming) {
+    const previous = byId.get(update.id);
+    if (
+      previous &&
+      previous.locked === update.locked &&
+      previous.adminAccess === update.adminAccess
+    ) {
+      continue;
+    }
+    byId.set(update.id, update);
+    changed = true;
+  }
+  return changed ? [...byId.values()] : current;
+}
+
+function applyLockUpdates(
+  chapters: ChapterListRow[],
+  updates: ChapterLockUpdate[],
+): ChapterListRow[] {
+  if (updates.length === 0) return chapters;
+  const byId = new Map(updates.map((update) => [update.id, update]));
+  let changed = false;
+  const next = chapters.map((chapter) => {
+    const update = byId.get(chapter.id);
+    if (
+      !update ||
+      (chapter.locked === update.locked &&
+        chapter.adminAccess === update.adminAccess)
+    ) {
+      return chapter;
+    }
+    changed = true;
+    return {
+      ...chapter,
+      locked: update.locked,
+      adminAccess: update.adminAccess,
+    };
+  });
+  return changed ? next : chapters;
+}
+
+/** Applies purchased and admin locks onto the chapters already on screen. */
 export function ChapterAccessPatch({
   access,
 }: {
-  access: ChapterAccessPatch[];
+  access: ChapterLockUpdate[];
 }) {
   const apply = useContext(ChapterAccessContext);
   useEffect(() => {
@@ -71,46 +114,16 @@ export function ChapterAccessPatch({
   return null;
 }
 
-function applyChapterAccess(
-  chapters: ChapterListItem[],
-  access: ChapterAccessPatch[],
-): ChapterListItem[] | null {
-  if (access.length !== chapters.length) return null;
-
-  let changed = false;
-  const next: ChapterListItem[] = [];
-  for (let index = 0; index < chapters.length; index++) {
-    const chapter = chapters[index]!;
-    const update = access[index];
-    if (!update || update.id !== chapter.id) return null;
-    if (
-      chapter.locked === update.locked &&
-      chapter.adminAccess === update.adminAccess
-    ) {
-      next.push(chapter);
-      continue;
-    }
-    changed = true;
-    next.push({
-      ...chapter,
-      locked: update.locked,
-      adminAccess: update.adminAccess,
-    });
-  }
-
-  return changed ? next : null;
-}
-
 export function ChapterList({
   slug,
   chapters,
-  hideLockBadges = false,
+  totalCount,
   children,
 }: {
   slug: string;
-  chapters: ChapterListItem[];
-  /** When true, skip lock UI on chapter rows. */
-  hideLockBadges?: boolean;
+  /** Oldest-first first page. Later pages load when the reader opens them. */
+  chapters: ChapterListRow[];
+  totalCount: number;
   /** Streams a lock patch without sending the chapter rows again. */
   children?: ReactNode;
 }) {
@@ -121,35 +134,96 @@ export function ChapterList({
     setPageOrder(newestFirst);
     setPage(0);
   }
-  const [accessChapters, setAccessChapters] = useState<ChapterListItem[] | null>(
-    null,
-  );
-  const [accessFor, setAccessFor] = useState(chapters);
-  if (accessFor !== chapters) {
-    setAccessFor(chapters);
-    setAccessChapters(null);
+  const [chaptersForSlug, setChaptersForSlug] = useState(slug);
+  const [lockUpdates, setLockUpdates] = useState<ChapterLockUpdate[]>([]);
+  const [fetched, setFetched] = useState<{
+    key: string;
+    chapters: ChapterListRow[];
+  } | null>(null);
+  const [failedKey, setFailedKey] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  if (chaptersForSlug !== slug) {
+    setChaptersForSlug(slug);
+    setLockUpdates([]);
+    setFetched(null);
+    setPage(0);
+    setFailedKey(null);
   }
-  const visibleChapters = accessChapters ?? chapters;
-  const applyAccess = useCallback((access: ChapterAccessPatch[]) => {
-    setAccessChapters((current) => {
-      const merged = applyChapterAccess(current ?? chapters, access);
-      return merged ?? current;
-    });
-  }, [chapters]);
 
-  const rows = useMemo(() => {
-    const sorted = [...visibleChapters].sort((a, b) => a.number - b.number);
-    return newestFirst ? sorted.reverse() : sorted;
-  }, [visibleChapters, newestFirst]);
+  const applyAccess = useCallback((access: ChapterLockUpdate[]) => {
+    setLockUpdates((current) => mergeLockUpdates(current, access));
+  }, []);
 
-  const totalPages = Math.max(1, Math.ceil(rows.length / CHAPTER_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalCount / CHAPTER_LIST_PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
-  const pageRows = rows.slice(
-    safePage * CHAPTER_PAGE_SIZE,
-    safePage * CHAPTER_PAGE_SIZE + CHAPTER_PAGE_SIZE,
+  if (page !== safePage) setPage(safePage);
+
+  const singlePage = totalCount <= CHAPTER_LIST_PAGE_SIZE;
+  const serverPage = !newestFirst && safePage === 0;
+  const needsFetch = totalCount > 0 && !singlePage && !serverPage;
+  const requestKey = `${newestFirst ? "newest" : "oldest"}:${safePage}`;
+
+  useEffect(() => {
+    if (!needsFetch) return;
+    const controller = new AbortController();
+    const key = requestKey;
+    const params = new URLSearchParams({
+      page: String(safePage),
+      order: newestFirst ? "newest" : "oldest",
+    });
+    const listUrl = `/api/novels/${encodeURIComponent(slug)}/chapter-list?${params}`;
+    const lockUrl = `/api/novels/${encodeURIComponent(slug)}/chapter-locks?${params}`;
+
+    Promise.all([
+      fetch(listUrl, { signal: controller.signal }).then(async (response) => {
+        if (!response.ok) throw new Error("Couldn't load chapters.");
+        const body = (await response.json()) as { chapters?: ChapterListRow[] };
+        if (!Array.isArray(body.chapters)) throw new Error("Couldn't load chapters.");
+        return body.chapters;
+      }),
+      fetch(lockUrl, { signal: controller.signal })
+        .then(async (response) => {
+          if (!response.ok) return [] as ChapterLockUpdate[];
+          const body = (await response.json()) as { updates?: ChapterLockUpdate[] };
+          return Array.isArray(body.updates) ? body.updates : [];
+        })
+        .catch(() => [] as ChapterLockUpdate[]),
+    ])
+      .then(([nextChapters, updates]) => {
+        if (controller.signal.aborted) return;
+        setFetched({ key, chapters: nextChapters });
+        setLockUpdates((current) => mergeLockUpdates(current, updates));
+        setFailedKey((current) => (current === key ? null : current));
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setFailedKey(key);
+      });
+
+    return () => controller.abort();
+  }, [attempt, needsFetch, newestFirst, requestKey, safePage, slug]);
+
+  const pageRows = useMemo(() => {
+    if (totalCount === 0) return [];
+    if (singlePage) return newestFirst ? [...chapters].reverse() : chapters;
+    if (serverPage) return chapters;
+    return fetched?.key === requestKey ? fetched.chapters : null;
+  }, [
+    chapters,
+    fetched,
+    newestFirst,
+    requestKey,
+    serverPage,
+    singlePage,
+    totalCount,
+  ]);
+
+  const visibleChapters = useMemo(
+    () => (pageRows == null ? null : applyLockUpdates(pageRows, lockUpdates)),
+    [lockUpdates, pageRows],
   );
 
-  const hasChapters = visibleChapters.length > 0;
+  const loadError = failedKey === requestKey;
+  const hasChapters = totalCount > 0;
 
   return (
     <ChapterAccessContext.Provider value={applyAccess}>
@@ -159,7 +233,7 @@ export function ChapterList({
           <h2 className="flex h-9 items-center px-4 text-sm font-semibold tracking-tight text-foreground">
             Chapters:
             <span className="ml-1.5 text-xs font-normal text-muted">
-              {visibleChapters.length}
+              {totalCount}
             </span>
           </h2>
         }
@@ -167,8 +241,29 @@ export function ChapterList({
       >
       {hasChapters ? (
         <>
+        {visibleChapters == null ? (
+          <p className="px-4 py-8 text-center text-sm text-muted" role="status">
+            {loadError ? (
+              <>
+                Couldn&apos;t load chapters.{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFailedKey(null);
+                    setAttempt((current) => current + 1);
+                  }}
+                  className="font-medium text-foreground underline underline-offset-2 hover:text-accent"
+                >
+                  Retry
+                </button>
+              </>
+            ) : (
+              "Loading chapters"
+            )}
+          </p>
+        ) : (
         <ol className="divide-y divide-border overflow-hidden rounded-b-xl">
-          {pageRows.map((chapter) => (
+          {visibleChapters.map((chapter) => (
             <li key={chapter.id}>
               <Link
                 href={`/novels/${slug}/${chapter.number}`}
@@ -196,9 +291,9 @@ export function ChapterList({
                     <ShieldCheck className="size-3" strokeWidth={2} aria-hidden />
                     Admin access
                   </span>
-                ) : !hideLockBadges && chapter.locked ? (
+                ) : !chapter.locked ? null : (
                   <ChapterLockBadge chapter={chapter} />
-                ) : null}
+                )}
                 <ChevronRight
                   className="size-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5"
                   strokeWidth={1.75}
@@ -208,6 +303,7 @@ export function ChapterList({
             </li>
           ))}
         </ol>
+        )}
         {totalPages > 1 ? (
           <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
             <button
