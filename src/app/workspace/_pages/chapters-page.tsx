@@ -26,26 +26,27 @@ export async function WorkspaceChaptersPage({
 
   const access = await getAdminAccess();
   const admin = createAdminClient();
-  const { data: novel } = await admin
-    .from("novels")
-    .select("id, title, publisher_id")
-    .eq("id", novelId)
-    .eq("publication_type", "translation")
-    .maybeSingle();
+  const [{ data: novel }, { data: chapters }] = await Promise.all([
+    admin
+      .from("novels")
+      .select("id, title, publisher_id")
+      .eq("id", novelId)
+      .eq("publication_type", "translation")
+      .maybeSingle(),
+    admin
+      .from("chapters")
+      .select(
+        "id, number, title, word_count, is_free, coin_cost, is_published, unlock_at",
+      )
+      .eq("novel_id", novelId)
+      .order("number", { ascending: true })
+      .returns<ChapterRow[]>(),
+  ]);
 
   if (!novel) notFound();
   if (!access || (!access.isMasterAdmin && novel.publisher_id !== access.userId)) {
     notFound();
   }
-
-  const { data: chapters } = await admin
-    .from("chapters")
-    .select(
-      "id, number, title, word_count, is_free, coin_cost, is_published, unlock_at",
-    )
-    .eq("novel_id", novelId)
-    .order("number", { ascending: true })
-    .returns<ChapterRow[]>();
 
   const rows = (chapters ?? []).map((chapter) => ({
     ...chapter,

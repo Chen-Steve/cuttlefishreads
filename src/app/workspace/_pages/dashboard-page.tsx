@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { Bookmark, Cookie, Eye, ShoppingCart } from "lucide-react";
 
 import { PageContainer } from "@/components/page-container";
+import { LoadingStatus, Skeleton } from "@/components/skeleton";
 import { TabPanelShell } from "@/components/tab-panel-shell";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
@@ -71,8 +73,9 @@ export async function WorkspaceDashboardPage({
   const slugs = rows.map((n) => n.slug);
 
   // Totals come from novels.view_count (same column as public pages).
-  // Daily and monthly charts still ask Google Analytics.
-  const emptyAnalytics: GoogleAnalyticsDashboard = {
+  // Daily and monthly charts still ask Google Analytics, but they stream in
+  // after the tables so a slow Analytics call does not hold the page.
+  const storedAnalytics: GoogleAnalyticsDashboard = {
     configured: isGoogleAnalyticsConfigured(),
     error: false,
     dailyViews: [],
@@ -94,14 +97,13 @@ export async function WorkspaceDashboardPage({
 
   let unlockStats: UnlockStatRow[] = [];
   let unlockRows: UnlockDetailRow[] = [];
-  let googleAnalytics: GoogleAnalyticsDashboard = emptyAnalytics;
   const allTimeViewsBySlug: Record<string, number> = {};
   for (const novel of rows) {
     allTimeViewsBySlug[novel.slug] = Number(novel.view_count ?? 0);
   }
 
   if (novelIds.length > 0) {
-    const [unlockStatsRes, recentUnlocksRes, ga] = await Promise.all([
+    const [unlockStatsRes, recentUnlocksRes] = await Promise.all([
       admin.rpc("novel_unlock_stats", { p_slugs: slugs }),
       admin
         .from("chapter_unlocks")
@@ -112,14 +114,10 @@ export async function WorkspaceDashboardPage({
         .eq("hidden_from_translator", false)
         .order("created_at", { ascending: false })
         .limit(RECENT_PURCHASES_LIMIT),
-      mode === "all"
-        ? Promise.resolve(emptyAnalytics)
-        : getGoogleAnalyticsDashboard(slugs, mode),
     ]);
 
     unlockStats = (unlockStatsRes.data ?? []) as UnlockStatRow[];
     unlockRows = (recentUnlocksRes.data ?? []) as UnlockDetailRow[];
-    googleAnalytics = ga;
   }
 
   const purchasesBySlug = new Map<string, number>();
@@ -215,13 +213,25 @@ export async function WorkspaceDashboardPage({
         </div>
       </TabPanelShell>
 
-      <GoogleAnalyticsSection
-        analytics={googleAnalytics}
-        allTimeViewsBySlug={allTimeViewsBySlug}
-        novels={rows}
-        mode={mode}
-        base={base}
-      />
+      {mode === "all" ? (
+        <GoogleAnalyticsSection
+          analytics={storedAnalytics}
+          allTimeViewsBySlug={allTimeViewsBySlug}
+          novels={rows}
+          mode={mode}
+          base={base}
+        />
+      ) : (
+        <Suspense fallback={<DashboardViewChartFallback />}>
+          <DashboardViewChart
+            slugs={slugs}
+            novels={rows}
+            mode={mode}
+            base={base}
+            allTimeViewsBySlug={allTimeViewsBySlug}
+          />
+        </Suspense>
+      )}
 
       <div className="mt-8 overflow-x-auto rounded-2xl border border-border bg-surface">
         {stats.length === 0 ? (
@@ -372,6 +382,48 @@ function SummaryCard({
         {formatCoins(value)}
       </p>
     </div>
+  );
+}
+
+async function DashboardViewChart({
+  slugs,
+  novels,
+  mode,
+  base,
+  allTimeViewsBySlug,
+}: {
+  slugs: string[];
+  novels: { id: string; slug: string; title: string }[];
+  mode: Exclude<ViewsMode, "all">;
+  base: string;
+  allTimeViewsBySlug: Record<string, number>;
+}) {
+  const analytics =
+    slugs.length === 0
+      ? {
+          configured: isGoogleAnalyticsConfigured(),
+          error: false,
+          dailyViews: [],
+          monthlyViews: [],
+        }
+      : await getGoogleAnalyticsDashboard(slugs, mode);
+
+  return (
+    <GoogleAnalyticsSection
+      analytics={analytics}
+      allTimeViewsBySlug={allTimeViewsBySlug}
+      novels={novels}
+      mode={mode}
+      base={base}
+    />
+  );
+}
+
+function DashboardViewChartFallback() {
+  return (
+    <LoadingStatus label="Loading views">
+      <Skeleton className="mt-3 h-72 w-full rounded-2xl" />
+    </LoadingStatus>
   );
 }
 

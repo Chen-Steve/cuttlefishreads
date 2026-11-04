@@ -4,7 +4,25 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
+import { LoadingStatus, Skeleton } from "@/components/skeleton";
 import type { AuthState } from "../actions";
+
+/** Shown until the redirect query is read. Not a form, so it cannot submit early. */
+export function AuthFormFallback({ label }: { label: string }) {
+  return (
+    <LoadingStatus label={label}>
+      <section className="mx-auto flex w-full max-w-md flex-col px-4 py-12 sm:px-6 sm:py-16">
+        <Skeleton className="h-7 w-44" />
+        <Skeleton className="mt-2 h-4 w-64 max-w-full" />
+        <div className="mt-6 flex flex-col gap-4">
+          <Skeleton className="h-11 w-full rounded-xl" />
+          <Skeleton className="h-11 w-full rounded-xl" />
+          <Skeleton className="mt-2 h-11 w-full rounded-xl" />
+        </div>
+      </section>
+    </LoadingStatus>
+  );
+}
 
 interface Field {
   name: string;

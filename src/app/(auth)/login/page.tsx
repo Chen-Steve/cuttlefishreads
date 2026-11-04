@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { AuthForm } from "../_components/auth-form";
+import { Suspense } from "react";
+import { AuthForm, AuthFormFallback } from "../_components/auth-form";
 import { login, signInWithGoogle } from "../actions";
 import { rewriteLegacyWorkspacePath } from "@/lib/workspace";
 
@@ -7,7 +8,19 @@ export const metadata: Metadata = {
   title: "Login",
 };
 
-export default async function LoginPage({
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ redirect?: string }>;
+}) {
+  return (
+    <Suspense fallback={<AuthFormFallback label="Loading sign in" />}>
+      <LoginForm searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function LoginForm({
   searchParams,
 }: {
   searchParams: Promise<{ redirect?: string }>;

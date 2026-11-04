@@ -15,15 +15,10 @@ export type NovelRow = {
   slug: string;
   status: string;
   cover_url: string | null;
-  genres: string[];
   updated_at: string;
-  chapter_count: number;
   publisher_id: string | null;
   translator: string | null;
   translator_username: string | null;
-  view_count: number;
-  reader_count: number;
-  library_add_count: number;
 };
 
 export type TranslatorOption = {

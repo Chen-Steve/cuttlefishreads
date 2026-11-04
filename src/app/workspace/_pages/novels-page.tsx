@@ -8,15 +8,7 @@ import {
   type TranslatorOption,
 } from "../_components/novels-grid";
 
-type RawNovel = Omit<
-  NovelRow,
-  "chapter_count" | "translator_username" | "view_count" | "reader_count" | "library_add_count"
-> & {
-  chapters: { count: number }[];
-  view_count: number | null;
-  reader_count: number | null;
-  library_add_count: number | null;
-};
+type RawNovel = Omit<NovelRow, "translator_username">;
 
 function buildPublisherOptions(novels: NovelRow[]): TranslatorOption[] {
   const byPublisher = new Map<string, { label: string; count: number }>();
@@ -47,7 +39,7 @@ export async function WorkspaceNovelsPage() {
   let query = admin
     .from("novels")
     .select(
-      "id, title, slug, status, cover_url, genres, updated_at, publisher_id, translator, view_count, reader_count, library_add_count, chapters(count)",
+      "id, title, slug, status, cover_url, updated_at, publisher_id, translator",
     )
     // Catalog novels only (legacy original rows stay out of this workspace).
     .eq("publication_type", "translation")
@@ -60,13 +52,15 @@ export async function WorkspaceNovelsPage() {
 
   const { data } = await query.returns<RawNovel[]>();
 
-  const publisherIds = [
-    ...new Set(
-      (data ?? [])
-        .map((n) => n.publisher_id)
-        .filter((id): id is string => id != null),
-    ),
-  ];
+  const publisherIds = access?.isMasterAdmin
+    ? [
+        ...new Set(
+          (data ?? [])
+            .map((n) => n.publisher_id)
+            .filter((id): id is string => id != null),
+        ),
+      ]
+    : [];
 
   const { data: profiles } =
     publisherIds.length === 0
@@ -86,17 +80,12 @@ export async function WorkspaceNovelsPage() {
     slug: n.slug,
     status: n.status,
     cover_url: n.cover_url,
-    genres: n.genres,
     updated_at: n.updated_at,
     publisher_id: n.publisher_id,
     translator: n.translator,
     translator_username: n.publisher_id
       ? (usernameById.get(n.publisher_id) ?? null)
       : null,
-    chapter_count: n.chapters?.[0]?.count ?? 0,
-    view_count: Number(n.view_count ?? 0),
-    reader_count: Number(n.reader_count ?? 0),
-    library_add_count: Number(n.library_add_count ?? 0),
   }));
 
   const translatorOptions = access?.isMasterAdmin
