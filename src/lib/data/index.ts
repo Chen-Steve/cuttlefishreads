@@ -59,14 +59,13 @@ type DbNovel = {
   language: string;
   created_at: string;
   view_count?: number | null;
-  reader_count?: number | null;
   library_add_count?: number | null;
   chapters: { count: number }[];
 };
 
 /** Catalog cards / carousels — no synopsis. */
 const NOVEL_LIST_COLUMNS =
-  "id, slug, title, original_author, translator, cover_url, genres, tags, status, created_at, updated_at, publisher_id, novelupdates_url, language, view_count, reader_count, library_add_count, chapters(count)";
+  "id, slug, title, original_author, translator, cover_url, genres, tags, status, created_at, updated_at, publisher_id, novelupdates_url, language, view_count, library_add_count, chapters(count)";
 
 /** Novel detail, featured, metadata — includes synopsis. */
 const NOVEL_DETAIL_COLUMNS = `${NOVEL_LIST_COLUMNS}, description`;
@@ -291,7 +290,7 @@ const fetchNovelRows = unstable_cache(
     // not call the Analytics API themselves.
     return (data ?? []) as DbNovel[];
   },
-  ["novels-catalog-rows-v2"],
+  ["novels-catalog-rows-v3"],
   {
     revalidate: CATALOG_REVALIDATE_SECONDS,
     tags: [NOVELS_CATALOG_CACHE_TAG],
@@ -534,40 +533,33 @@ export async function getNewlyAddedNovels(
     .slice(0, NEWLY_ADDED_LIMIT);
 }
 
-function hashSeed(seed: string): number {
-  let hash = 2166136261;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash ^= seed.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
+/** Below this, a novel only fills an underrated slot after longer works. */
+const UNDERRATED_CHAPTER_FLOOR = 5;
+
+function compareUnderrated(a: Novel, b: Novel): number {
+  const score =
+    (a.viewCount ?? 0) / a.chapterCount - (b.viewCount ?? 0) / b.chapterCount;
+  if (score !== 0) return score;
+  const chapters = b.chapterCount - a.chapterCount;
+  if (chapters !== 0) return chapters;
+  const saved = (b.libraryAddCount ?? 0) - (a.libraryAddCount ?? 0);
+  if (saved !== 0) return saved;
+  const created =
+    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+  if (created !== 0) return created;
+  return a.slug.localeCompare(b.slug);
 }
 
-/** Deterministic PRNG so underrated picks stay stable for a cache window. */
-function mulberry32(seed: number) {
-  let state = seed;
-  return () => {
-    state |= 0;
-    state = (state + 0x6d2b79f5) | 0;
-    let t = Math.imul(state ^ (state >>> 15), 1 | state);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+function rankUnderratedPool(novels: Novel[], minChapters: number): Novel[] {
+  return novels
+    .filter((novel) => novel.chapterCount >= minChapters)
+    .sort(compareUnderrated);
 }
 
-function shuffleNovels(novels: Novel[], seed: string): Novel[] {
-  const items = [...novels];
-  const random = mulberry32(hashSeed(seed));
-  for (let i = items.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(random() * (i + 1));
-    const current = items[i]!;
-    items[i] = items[j]!;
-    items[j] = current;
-  }
-  return items;
-}
-
-/** Daily-rotated picks excluding featured and newly-added. */
+/**
+ * Overlooked translations: few views for the number of chapters, excluding
+ * novels already shown in Featured and Newly added. Longer works come first.
+ */
 export async function getUnderratedNovels(
   excludeSlugs: Iterable<string>,
   limit = UNDERRATED_LIMIT,
@@ -576,8 +568,13 @@ export async function getUnderratedNovels(
   const excluded = new Set(excludeSlugs);
   const catalog = novels ?? (await getNovels());
   const pool = catalog.filter((novel) => !excluded.has(novel.slug));
-  const dayKey = new Date().toISOString().slice(0, 10);
-  return shuffleNovels(pool, `underrated:${dayKey}`).slice(0, limit);
+  const primary = rankUnderratedPool(pool, UNDERRATED_CHAPTER_FLOOR);
+  if (primary.length >= limit) return primary.slice(0, limit);
+  const filler = rankUnderratedPool(
+    pool.filter((novel) => novel.chapterCount < UNDERRATED_CHAPTER_FLOOR),
+    1,
+  );
+  return [...primary, ...filler].slice(0, limit);
 }
 
 export async function getCompletedNovels(

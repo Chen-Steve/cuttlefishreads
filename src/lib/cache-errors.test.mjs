@@ -54,6 +54,7 @@ function fixture() {
     return { data: [], error: state.fail?.({ table: name }) ? new Error("RPC unavailable") : null };
   } };
   const mocks = {
+    "@/lib/chapter-list-page": loadTs("./chapter-list-page.ts"),
     "@/lib/comment-pagination": loadTs("./comment-pagination.ts"),
     react: { cache: (fn) => fn }, "next/cache": cache, "next/server": {},
     "@/utils/supabase/admin": { createAdminClient: () => admin },
@@ -77,7 +78,7 @@ const cases = [
   ["recent updates", (q) => q.table === "recently_updated_chapters", (d) => d.getRecentlyUpdatedNovels()],
   ["bookmarks", (q) => q.table === "bookmarks", (d) => d.getUserBookmarkedNovels("reader")],
   ["public profile", (q) => q.table === "profiles", (d) => d.getPublicProfile("Publisher")],
-  ["ratings", (q) => q.columns === "novel_slug, rating", (d) => d.getNovelRatingSummary("story")],
+  ["ratings", (q) => q.table === "novel_rating_summaries", (d) => d.getNovelRatingSummary("story")],
   ["comments", (q) => q.table === "novel_comments" && !q.replies, (d) => d.getNovelComments("story")],
   ["comment authors", (q) => q.columns === "id, username", (d) => d.getNovelComments("story")],
 ];
