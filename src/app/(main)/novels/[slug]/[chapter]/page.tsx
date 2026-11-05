@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { CommentSection, CommentsFallback } from "@/components/comments";
+import { CommentSection } from "@/components/comments";
 import { PageContainer } from "@/components/page-container";
 import { ChapterContent } from "@/components/reader/chapter-content";
 import {
@@ -146,13 +145,11 @@ export default async function ChapterReaderPage({
           />
 
           <section className="mt-6 mb-10" aria-label="Comments">
-            <Suspense fallback={<CommentsFallback />}>
-              <CommentSection
-                mode="chapter"
-                novelSlug={slug}
-                chapterNumber={chapterNumber}
-              />
-            </Suspense>
+            <CommentSection
+              mode="chapter"
+              novelSlug={slug}
+              chapterNumber={chapterNumber}
+            />
           </section>
         </>
       ) : null}

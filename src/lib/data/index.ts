@@ -71,20 +71,20 @@ const NOVEL_LIST_COLUMNS =
 /** Novel detail, featured, metadata — includes synopsis. */
 const NOVEL_DETAIL_COLUMNS = `${NOVEL_LIST_COLUMNS}, description`;
 
+// Notes stay off this shared list. A chapter page only needs the open
+// chapter's note, which is loaded with that chapter's body.
 const CHAPTER_META_COLUMNS =
-  "id, number, title, translator_note, use_global_translator_note, is_free, coin_cost, unlock_at, published_at";
+  "id, number, title, use_global_translator_note, is_free, coin_cost, unlock_at, published_at";
 
 const NEWLY_ADDED_LIMIT = 7;
 const UNDERRATED_LIMIT = 7;
 const COMPLETED_LIMIT = 7;
 const FEATURED_LIMIT = 7;
 
-type DbChapter = {
+type DbChapterMeta = {
   id: string;
   number: number;
   title: string;
-  content: string;
-  translator_note: string | null;
   use_global_translator_note: boolean;
   is_free: boolean;
   coin_cost: number;
@@ -92,7 +92,10 @@ type DbChapter = {
   published_at: string;
 };
 
-type DbChapterMeta = Omit<DbChapter, "content">;
+type DbChapterBody = {
+  content: string | null;
+  translatorNote: string | null;
+};
 
 function splitContent(text: string): string[] {
   return text
@@ -175,10 +178,11 @@ function toChapter(
   row: DbChapterMeta,
   item: ChapterListItem,
   content?: string[],
+  translatorNote?: string | null,
 ): Chapter {
   return {
     ...item,
-    translatorNote: row.translator_note?.trim() ? row.translator_note : null,
+    translatorNote: translatorNote?.trim() ? translatorNote : null,
     useGlobalTranslatorNote: row.use_global_translator_note ?? true,
     ...(content ? { content } : {}),
   };
@@ -310,7 +314,7 @@ async function fetchDbChapterMetas(novelId: string): Promise<DbChapterMeta[]> {
       }
       return (data ?? []) as DbChapterMeta[];
     },
-    ["chapter-metas", novelId],
+    ["chapter-metas-v2", novelId],
     {
       revalidate: CHAPTER_REVALIDATE_SECONDS,
       tags: [novelChaptersCacheTag(novelId)],
@@ -329,8 +333,6 @@ async function fetchDbChapterMeta(
 export type PublicChapterMeta = {
   number: number;
   title: string;
-  /** Free for everyone right now (is_free or unlock_at has passed). */
-  naturallyFree: boolean;
   /** Explicitly free; timed releases stay in the request-time reader. */
   isFree: boolean;
 };
@@ -356,7 +358,6 @@ export async function getPublicChapterMeta(
   return {
     number: row.number,
     title: row.title,
-    naturallyFree: isNaturallyFree(row),
     isFree: row.is_free,
   };
 }
@@ -364,13 +365,13 @@ export async function getPublicChapterMeta(
 async function fetchDbChapterContent(
   novelId: string,
   chapterNumber: number,
-): Promise<string | null> {
+): Promise<DbChapterBody | null> {
   return unstable_cache(
     async () => {
       const admin = createAdminClient();
       const { data, error } = await admin
         .from("chapters")
-        .select("content")
+        .select("content, translator_note")
         .eq("novel_id", novelId)
         .eq("number", chapterNumber)
         .eq("is_published", true)
@@ -379,9 +380,14 @@ async function fetchDbChapterContent(
       if (error) {
         throw new Error("Could not load chapter content", { cause: error });
       }
-      return (data?.content as string | null | undefined) ?? null;
+      if (!data) return null;
+      const note = (data.translator_note as string | null | undefined)?.trim();
+      return {
+        content: (data.content as string | null | undefined) ?? null,
+        translatorNote: note ? note : null,
+      };
     },
-    ["chapter-body-v2", novelId, String(chapterNumber)],
+    ["chapter-body-v3", novelId, String(chapterNumber)],
     {
       revalidate: CHAPTER_REVALIDATE_SECONDS,
       tags: [
@@ -1045,7 +1051,12 @@ export const getChapter = cache(
     if (isNaturallyFree(row)) {
       const listItem = mapChapterListItem(slug, row, new Set(), false);
       const body = await fetchDbChapterContent(novel.id, chapterNumber);
-      return toChapter(row, listItem, splitContent(body ?? ""));
+      return toChapter(
+        row,
+        listItem,
+        splitContent(body?.content ?? ""),
+        body?.translatorNote,
+      );
     }
 
     const currentUser = await getCurrentUser();
@@ -1062,7 +1073,12 @@ export const getChapter = cache(
     }
 
     const body = await fetchDbChapterContent(novel.id, chapterNumber);
-    return toChapter(row, listItem, splitContent(body ?? ""));
+    return toChapter(
+      row,
+      listItem,
+      splitContent(body?.content ?? ""),
+      body?.translatorNote,
+    );
   },
 );
 
@@ -1084,11 +1100,12 @@ export async function getPublicFreeChapter(
   // Scheduled releases are deliberately evaluated by getChapter per request.
   if (!row?.is_free) return undefined;
   const body = await fetchDbChapterContent(novel.id, chapterNumber);
-  if (body == null) return undefined;
+  if (body?.content == null) return undefined;
   return toChapter(
     row,
     mapChapterListItem(slug, row, new Set(), false),
-    splitContent(body),
+    splitContent(body.content),
+    body.translatorNote,
   );
 }
 

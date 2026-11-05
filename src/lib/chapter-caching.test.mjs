@@ -16,7 +16,7 @@ function fixture() {
     novel_id: novel.id, title: `Chapter ${chapter.number}`, is_published: true,
     coin_cost: 5, published_at: "2026-01-01", unlock_at: null, ...chapter,
   }));
-  const state = { user: null, unlocked: [], otherUnlocks: [], unlockRequests: [], failUnlocks: false, sessionReads: 0, bodyReads: [], expired: [], connections: 0 };
+  const state = { user: null, unlocked: [], otherUnlocks: [], unlockRequests: [], failUnlocks: false, sessionReads: 0, bodyReads: [], bodyColumns: "", metaColumns: "", expired: [], connections: 0 };
   const entries = new Map();
   const expire = (tag) => {
     state.expired.push(tag);
@@ -68,7 +68,13 @@ function fixture() {
       if (deleting && table === "chapters") {
         for (const row of rows) chapters.splice(chapters.indexOf(row), 1);
       }
-      if (table === "chapters" && columns === "content") state.bodyReads.push(rows[0]?.number);
+      if (table === "chapters" && String(columns).includes("content")) {
+        state.bodyReads.push(rows[0]?.number);
+        state.bodyColumns = columns;
+      }
+      if (table === "chapters" && String(columns).includes("number")) {
+        state.metaColumns = columns;
+      }
       const data = rows.map((row) => ({ ...row, novels: { publisher_id: novel.publisher_id } }));
       return { data: single ? data[0] ?? null : data, error: null };
     }
@@ -76,6 +82,7 @@ function fixture() {
   }
   const tags = loadTs("./chapter-cache-tags.ts", {});
   const mocks = {
+    "@/lib/chapter-list-page": loadTs("./chapter-list-page.ts"),
     "@/lib/comment-pagination": loadTs("./comment-pagination.ts"),
     "@/lib/novel-title-search": loadTs("./novel-title-search.ts"),
     react: { cache: (fn) => fn },
@@ -104,11 +111,18 @@ function fixture() {
 }
 
 test("public prerenders never read paid or timed-release bodies", async () => {
-  const { data, state } = fixture();
-  assert.equal((await data.getPublicFreeChapter("story", 1)).content[0], "PUBLIC CHAPTER");
+  const { data, state, chapters } = fixture();
+  chapters[0].translator_note = "  Thanks for reading  ";
+  const chapter = await data.getPublicFreeChapter("story", 1);
+  assert.equal(chapter.content[0], "PUBLIC CHAPTER");
+  assert.equal(chapter.translatorNote, "Thanks for reading");
   assert.equal(await data.getPublicFreeChapter("story", 2), undefined);
   assert.equal(await data.getPublicFreeChapter("story", 3), undefined);
   assert.deepEqual(state.bodyReads, [1]);
+  assert.equal(state.bodyColumns, "content, translator_note");
+  assert.ok(
+    state.metaColumns.split(",").every((column) => column.trim() !== "translator_note"),
+  );
 });
 
 test("free and due chapter checks need no session or entitlement lookup", async () => {

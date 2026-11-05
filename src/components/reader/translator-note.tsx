@@ -13,14 +13,12 @@ function initials(name: string): string {
 export function TranslatorNote({
   name,
   username,
-  profileHref,
   note,
   kofiUrl,
   patreonUrl,
 }: {
   name: string;
   username?: string;
-  profileHref?: string;
   note: string | null;
   kofiUrl?: string;
   patreonUrl?: string;
@@ -37,7 +35,7 @@ export function TranslatorNote({
       A note from{" "}
       {username ? (
         <Link
-          href={profileHref ?? `/u/${username}`}
+          href={`/u/${username}`}
           prefetch={false}
           className="font-semibold text-foreground transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >

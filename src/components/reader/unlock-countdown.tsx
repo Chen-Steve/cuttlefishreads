@@ -9,12 +9,10 @@ import { cn } from "@/lib/utils";
 
 export function UnlockCountdown({
   unlockAt,
-  variant = "badge",
   precision = "full",
   className,
 }: {
   unlockAt: string;
-  variant?: "badge" | "prominent";
   precision?: UnlockCountdownPrecision;
   className?: string;
 }) {
@@ -26,25 +24,6 @@ export function UnlockCountdown({
   );
 
   if (!scheduled) return null;
-
-  if (variant === "prominent") {
-    return (
-      <div
-        className={cn(
-          "inline-flex items-center gap-3 rounded-xl border border-accent/30 bg-accent/10 px-4 py-3",
-          className,
-        )}
-      >
-        <Clock className="size-4 shrink-0 text-accent" strokeWidth={1.75} aria-hidden />
-        <div>
-          <p className="text-xs font-medium text-accent/70">Unlocks in</p>
-          <p className="font-mono text-lg font-semibold leading-tight tabular-nums text-accent" suppressHydrationWarning>
-            {label}
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <span

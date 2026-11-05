@@ -26,8 +26,6 @@ type ChapterReaderNavConfig = {
   previous?: Pick<Chapter, "number">;
   next?: Pick<Chapter, "number">;
   currentChapter: number;
-  /** Bottom prev/next bar. Default true. */
-  showBottomNav?: boolean;
   /** Locked pages must not speculate beyond the unlock gate. */
   enablePrefetch?: boolean;
 };
@@ -64,7 +62,6 @@ export function ImmersiveChapterShell({
     setPreviousImmersive(immersive);
     if (!immersive) setShowChrome(true);
   }
-  const showBottomNav = Boolean(nav && nav.showBottomNav !== false);
   const router = useRouter();
   const chapterBodyRef = useRef<HTMLDivElement>(null);
   const prefetchedHref = useRef<string | null>(null);
@@ -73,8 +70,17 @@ export function ImmersiveChapterShell({
     : null;
   const prefetchNext = useCallback(() => {
     if (!nextHref || prefetchedHref.current === nextHref || document.visibilityState === "hidden") return;
-    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-    if (connection?.saveData || !navigator.onLine) return;
+    const connection = (navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    }).connection;
+    if (
+      connection?.saveData ||
+      connection?.effectiveType === "slow-2g" ||
+      connection?.effectiveType === "2g" ||
+      !navigator.onLine
+    ) {
+      return;
+    }
     prefetchedHref.current = nextHref;
     router.prefetch(nextHref, {
       kind: PrefetchKind.FULL,
@@ -113,18 +119,17 @@ export function ImmersiveChapterShell({
     />
   ) : null;
 
-  const bottomNav =
-    showBottomNav && nav ? (
-      <ReaderNav
-        slug={nav.slug}
-        previous={nav.previous}
-        next={nav.next}
-        currentChapter={nav.currentChapter}
-        menuPlacement="up"
-        framed={immersive}
-        onNextIntent={prefetchNext}
-      />
-    ) : null;
+  const bottomNav = nav ? (
+    <ReaderNav
+      slug={nav.slug}
+      previous={nav.previous}
+      next={nav.next}
+      currentChapter={nav.currentChapter}
+      menuPlacement="up"
+      framed={immersive}
+      onNextIntent={prefetchNext}
+    />
+  ) : null;
 
   const chapterBody = (
     <div
@@ -186,7 +191,7 @@ export function ImmersiveChapterShell({
         </div>
       ) : null}
 
-      {immersive && showChrome && showBottomNav ? (
+      {immersive && showChrome && nav ? (
         <div className="h-16" aria-hidden />
       ) : null}
     </>
