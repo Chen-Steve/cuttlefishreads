@@ -165,7 +165,7 @@ export function CommentsPanel({
             aria-hidden
           />
           <p className="mt-3 text-sm text-muted">
-            No comments yet. Be the first to share your thoughts.
+            No comments yet. Be the first!
           </p>
         </div>
       )}
