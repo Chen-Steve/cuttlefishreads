@@ -37,7 +37,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/:asset(favicon\\.ico|cuttle\\.png|background[12]\\.jpg)",
+        source: "/:asset(favicon\\.ico|cuttle\\.png|background1\\.jpg)",
         headers: [
           {
             key: "Cache-Control",

@@ -36,6 +36,6 @@ export const config = {
   // These files never need cookies or crawler handling. Keep page, RSC and
   // Server Action requests covered, including dynamic slugs containing dots.
   matcher: [
-    "/((?!_next/static(?:/|$)|_next/image(?:/|$)|fonts(?:/|$)|(?:favicon\\.ico|cuttle\\.png|background[12]\\.jpg|robots\\.txt|sitemap\\.xml|ads\\.txt)$|api/stripe/webhook$).*)",
+    "/((?!_next/static(?:/|$)|_next/image(?:/|$)|fonts(?:/|$)|(?:favicon\\.ico|cuttle\\.png|background1\\.jpg|robots\\.txt|sitemap\\.xml|ads\\.txt)$|api/stripe/webhook$).*)",
   ],
 };
