@@ -59,7 +59,7 @@ export async function SiteFooter() {
                 className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent transition-colors hover:bg-accent/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
                 <Feather className="size-3.5" strokeWidth={1.75} aria-hidden />
-                Apply to join
+                Join Us
               </Link>
               <a
                 href={SITE.discordUrl}
