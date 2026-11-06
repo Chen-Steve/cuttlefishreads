@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { WorkspaceSuspense } from "../_components/workspace-suspense";
+
 import { PageContainer } from "@/components/page-container";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
@@ -65,7 +67,15 @@ function ApplicationCard({ app }: { app: ApplicationRow }) {
   );
 }
 
-export default async function ApplicationsPage() {
+export default function ApplicationsPage() {
+  return (
+    <WorkspaceSuspense>
+      <Applications />
+    </WorkspaceSuspense>
+  );
+}
+
+async function Applications() {
   const access = await getAdminAccess();
   if (!access?.isMasterAdmin) notFound();
 

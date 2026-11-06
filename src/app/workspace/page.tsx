@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { WorkspaceSuspense } from "./_components/workspace-suspense";
 import { WorkspaceNovelsPage } from "./_pages/novels-page";
 
 export const metadata: Metadata = {
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function AdminPage() {
-  return <WorkspaceNovelsPage />;
+  return (
+    <WorkspaceSuspense>
+      <WorkspaceNovelsPage />
+    </WorkspaceSuspense>
+  );
 }

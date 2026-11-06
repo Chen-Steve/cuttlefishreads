@@ -2,13 +2,12 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { toast } from "sonner";
 
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { TabPanelShell } from "@/components/tab-panel-shell";
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
-import { chapterHref } from "@/lib/catalog-paths";
 import { countChapterWords } from "@/lib/chapter-words";
 import {
   formatSuggestedUnlockPreview,
@@ -19,6 +18,8 @@ import { WORKSPACE_BASE } from "@/lib/workspace";
 import { createChapter, updateChapter, type AdminState } from "../actions";
 import { ChapterEditorPreview } from "./chapter-editor-preview";
 import { ConfirmDialog } from "./confirm-dialog";
+
+const OPTIONS_OPEN_KEY = "cf-chapter-editor-options";
 
 const inputClass =
   "h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25";
@@ -55,13 +56,11 @@ function ChapterSiblingNav({
   base,
   previous,
   next,
-  variant = "header",
 }: {
   novelId: string;
   base: string;
   previous?: ChapterSibling | null;
   next?: ChapterSibling | null;
-  variant?: "header" | "sidebar";
 }) {
   const previousHref = previous
     ? chapterEditHref(base, novelId, previous.id)
@@ -70,13 +69,10 @@ function ChapterSiblingNav({
     ? chapterEditHref(base, novelId, next.id)
     : undefined;
 
-  const isSidebar = variant === "sidebar";
-  const linkClass = isSidebar
-    ? "inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-    : "inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-background hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
-  const disabledClass = isSidebar
-    ? "inline-flex h-11 flex-1 cursor-not-allowed items-center justify-center gap-1.5 rounded-xl border border-border bg-background px-3 text-sm font-medium text-muted opacity-40"
-    : "inline-flex h-8 cursor-not-allowed items-center gap-1 rounded-lg px-2.5 text-xs font-semibold text-muted opacity-40";
+  const linkClass =
+    "inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-background hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+  const disabledClass =
+    "inline-flex h-8 cursor-not-allowed items-center gap-1 rounded-lg px-2.5 text-xs font-semibold text-muted opacity-40";
 
   const previousLabel = previous
     ? `Previous chapter (Ch. ${previous.number})`
@@ -84,13 +80,11 @@ function ChapterSiblingNav({
   const nextLabel = next
     ? `Next chapter (Ch. ${next.number})`
     : "Next chapter";
-  const previousText = isSidebar ? "Previous" : "Prev";
-  const nextText = isSidebar ? "Next chapter" : "Next";
 
   return (
     <nav
       aria-label="Chapter navigation"
-      className={isSidebar ? "flex gap-2" : "ml-auto flex shrink-0 items-center"}
+      className="ml-auto flex shrink-0 items-center"
     >
       <SiblingNavItem
         href={previousHref}
@@ -99,9 +93,7 @@ function ChapterSiblingNav({
         disabledClass={disabledClass}
       >
         <ChevronLeft className="size-4" strokeWidth={1.75} aria-hidden />
-        <span className={isSidebar ? undefined : "hidden sm:inline"}>
-          {previousText}
-        </span>
+        <span className="hidden sm:inline">Prev</span>
       </SiblingNavItem>
       <SiblingNavItem
         href={nextHref}
@@ -109,9 +101,7 @@ function ChapterSiblingNav({
         linkClass={linkClass}
         disabledClass={disabledClass}
       >
-        <span className={isSidebar ? undefined : "hidden sm:inline"}>
-          {nextText}
-        </span>
+        <span className="hidden sm:inline">Next</span>
         <ChevronRight className="size-4" strokeWidth={1.75} aria-hidden />
       </SiblingNavItem>
     </nav>
@@ -149,7 +139,6 @@ function SiblingNavItem({
 
 export function ChapterForm({
   novelId,
-  novelSlug,
   initial,
   latestChapterUnlockAt = null,
   defaultCoinCost = null,
@@ -158,7 +147,6 @@ export function ChapterForm({
   nextChapter = null,
 }: {
   novelId: string;
-  novelSlug?: string | null;
   initial?: ChapterFormInitial;
   latestChapterUnlockAt?: string | null;
   /** Cookie cost of the most recent paid chapter, reused as the default. */
@@ -174,6 +162,7 @@ export function ChapterForm({
   const readyRef = useRef(false);
   const [dirty, setDirty] = useState(false);
   const [editorMode, setEditorMode] = useState<"write" | "preview">("write");
+  const [optionsOpen, setOptionsOpen] = useState(true);
   const [preview, setPreview] = useState(() => ({
     content: initial?.content ?? "",
     words: countChapterWords(initial?.content ?? ""),
@@ -218,7 +207,18 @@ export function ChapterForm({
 
   useEffect(() => {
     readyRef.current = true;
+    if (localStorage.getItem(OPTIONS_OPEN_KEY) === "closed") {
+      setOptionsOpen(false);
+    }
   }, []);
+
+  function toggleOptions() {
+    setOptionsOpen((open) => {
+      const next = !open;
+      localStorage.setItem(OPTIONS_OPEN_KEY, next ? "open" : "closed");
+      return next;
+    });
+  }
 
   function markDirty() {
     if (readyRef.current) setDirty(true);
@@ -316,11 +316,6 @@ export function ChapterForm({
 
   const cardClass = "flex flex-col gap-4";
 
-  const liveHref =
-    isEdit && novelSlug && initial?.isPublished
-      ? chapterHref(novelSlug, initial.number)
-      : null;
-
   return (
     <>
     <form
@@ -360,18 +355,6 @@ export function ChapterForm({
               Unsaved
             </span>
           ) : null}
-          {liveHref ? (
-            <a
-              href={liveHref}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="View published chapter in a new tab"
-              className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-muted transition-colors hover:bg-background hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            >
-              View live
-              <ExternalLink className="size-3.5" strokeWidth={1.75} aria-hidden />
-            </a>
-          ) : null}
           <label htmlFor="chapter-title" className="sr-only">
             Chapter title (optional)
           </label>
@@ -403,44 +386,62 @@ export function ChapterForm({
 
         <input type="hidden" name="novelId" value={novelId} />
 
-        <div className="grid items-start gap-4 px-4 pb-4 pt-2 lg:grid-cols-[minmax(0,1fr)_19rem]">
+        <div
+          className={`grid items-start gap-4 px-4 pb-4 pt-2 ${optionsOpen ? "lg:grid-cols-[minmax(0,1fr)_16rem]" : ""}`}
+        >
           {/* Main column: writing */}
           <div className={cardClass}>
             <div className="flex flex-col gap-1.5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <label htmlFor="chapter-content" className={labelClass}>
-                  Content
-                </label>
-                <div
-                  role="tablist"
-                  aria-label="Editor mode"
-                  className="flex items-center rounded-lg border border-border bg-background p-0.5"
-                >
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <div className="flex items-center gap-1.5">
+                  <div
+                    role="tablist"
+                    aria-label="Editor mode"
+                    className="flex items-center rounded-lg border border-border bg-background p-0.5"
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={editorMode === "write"}
+                      onClick={() => setEditorMode("write")}
+                      className={
+                        editorMode === "write"
+                          ? "rounded-md bg-surface px-2.5 py-1 text-xs font-semibold text-foreground"
+                          : "rounded-md px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-foreground"
+                      }
+                    >
+                      Write
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={editorMode === "preview"}
+                      onClick={showPreview}
+                      className={
+                        editorMode === "preview"
+                          ? "rounded-md bg-surface px-2.5 py-1 text-xs font-semibold text-foreground"
+                          : "rounded-md px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-foreground"
+                      }
+                    >
+                      Preview
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    role="tab"
-                    aria-selected={editorMode === "write"}
-                    onClick={() => setEditorMode("write")}
-                    className={
-                      editorMode === "write"
-                        ? "rounded-md bg-surface px-2.5 py-1 text-xs font-semibold text-foreground"
-                        : "rounded-md px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-foreground"
-                    }
+                    onClick={toggleOptions}
+                    aria-expanded={optionsOpen}
+                    aria-controls="chapter-options"
+                    title={optionsOpen ? "Hide options" : "Show options"}
+                    className="inline-flex size-7 items-center justify-center rounded-lg border border-border text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                   >
-                    Write
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={editorMode === "preview"}
-                    onClick={showPreview}
-                    className={
-                      editorMode === "preview"
-                        ? "rounded-md bg-surface px-2.5 py-1 text-xs font-semibold text-foreground"
-                        : "rounded-md px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-foreground"
-                    }
-                  >
-                    Preview
+                    {optionsOpen ? (
+                      <PanelRightClose className="size-4" strokeWidth={1.75} aria-hidden />
+                    ) : (
+                      <PanelRightOpen className="size-4" strokeWidth={1.75} aria-hidden />
+                    )}
+                    <span className="sr-only">
+                      {optionsOpen ? "Hide options" : "Show options"}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -475,9 +476,12 @@ export function ChapterForm({
           </div>
 
           {/* Sidebar: publishing options, sticky so they're always in reach */}
-          <aside className={`${cardClass} lg:sticky lg:top-6`}>
+          <aside
+            id="chapter-options"
+            className={`${cardClass} lg:sticky lg:top-6 ${optionsOpen ? "" : "hidden"}`}
+          >
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="chapter-number" className={labelClass}>
+            <label htmlFor="chapter-number" className="sr-only">
               Chapter #
             </label>
             <input
@@ -486,8 +490,8 @@ export function ChapterForm({
               type="number"
               min={1}
               defaultValue={initial?.number ?? nextChapterNumber ?? ""}
-              placeholder="Auto"
-              className={`${inputClass} w-28`}
+              placeholder="Chapter #"
+              className={`${inputClass} w-full`}
             />
             {!isEdit && nextChapterNumber !== null && (
               <span className="text-xs text-muted">
@@ -519,7 +523,7 @@ export function ChapterForm({
                     onChange={() => setAccess("paid")}
                     className="size-3.5 accent-accent"
                   />
-                  Paid (unlock with cookies)
+                  Paid
                 </label>
               </div>
             </fieldset>
@@ -613,8 +617,7 @@ export function ChapterForm({
             </div>
             {noteMode === "global" ? (
               <span className="text-xs text-muted">
-                Uses the global message from workspace Settings, with your
-                Ko-fi / Patreon links.
+                Global message can be changed from workspace Settings.
               </span>
             ) : null}
             <div
@@ -642,15 +645,6 @@ export function ChapterForm({
           >
             {submitLabel}
           </button>
-          {isEdit ? (
-            <ChapterSiblingNav
-              novelId={novelId}
-              base={base}
-              previous={previousChapter}
-              next={nextChapter}
-              variant="sidebar"
-            />
-          ) : null}
         </aside>
         </div>
       </TabPanelShell>

@@ -32,7 +32,7 @@ export async function WorkspaceChapterEditPage({
     await Promise.all([
       admin
         .from("novels")
-        .select("id, title, slug, publisher_id")
+        .select("id, publisher_id")
         .eq("id", novelId)
         .eq("publication_type", "translation")
         .maybeSingle(),
@@ -80,7 +80,6 @@ export async function WorkspaceChapterEditPage({
       <ChapterForm
         key={row.id}
         novelId={novel.id}
-        novelSlug={novel.slug}
         latestChapterUnlockAt={latestUnlockRow?.unlock_at ?? null}
         previousChapter={previousChapter}
         nextChapter={nextChapter}

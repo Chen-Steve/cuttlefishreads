@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 
 import {
   isStaleAuthSessionError,
@@ -22,6 +23,10 @@ export const getAuthClaims = cache(async () => {
   if (!cookieStore.getAll().some((cookie) => isSupabaseAuthCookie(cookie.name))) {
     return null;
   }
+
+  // getClaims() reads Date.now() while checking the JWT. Cache Components
+  // reject that during prerender unless the read is deferred to request time.
+  await connection();
 
   const supabase = await getServerSupabase();
   const { data, error } = await supabase.auth.getClaims();

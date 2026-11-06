@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getAdminAccess } from "@/lib/access";
 import { WORKSPACE_BASE } from "@/lib/workspace";
 import { AdminNav } from "./_components/admin-nav";
+import { WorkspaceSuspense } from "./_components/workspace-suspense";
 
 export const metadata: Metadata = {
   title: {
@@ -15,7 +16,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function AdminLayout({
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <WorkspaceSuspense>
+      <AuthorizedWorkspace>{children}</AuthorizedWorkspace>
+    </WorkspaceSuspense>
+  );
+}
+
+async function AuthorizedWorkspace({
   children,
 }: {
   children: React.ReactNode;
