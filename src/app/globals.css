@@ -65,9 +65,14 @@ html {
   font-variant-emoji: text;
 }
 
-/* Highlight the active footnote / return target after navigating. */
-[id^="cf-fn"]:target,
-[id^="cf-fnref"]:target {
+/* Dim yellow wash on the paragraph a footnote return link jumped to. */
+.chapter-prose > p.footnote-paragraph-hit {
+  border-radius: 0.25rem;
+  background-color: rgb(255 228 140 / 0.5);
+}
+
+/* Highlight the footnote just jumped to. */
+[id^="cf-fn"]:target {
   border-radius: 0.15em;
   background-color: color-mix(in srgb, var(--accent) 22%, transparent);
   outline: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
