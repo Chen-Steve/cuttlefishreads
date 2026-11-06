@@ -2,11 +2,14 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { TabPanelShell } from "@/components/tab-panel-shell";
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
+import { chapterHref } from "@/lib/catalog-paths";
+import { countChapterWords } from "@/lib/chapter-words";
 import {
   formatSuggestedUnlockPreview,
   getSuggestedUnlockAt,
@@ -14,6 +17,8 @@ import {
 } from "@/lib/suggested-unlock-at";
 import { WORKSPACE_BASE } from "@/lib/workspace";
 import { createChapter, updateChapter, type AdminState } from "../actions";
+import { ChapterEditorPreview } from "./chapter-editor-preview";
+import { ConfirmDialog } from "./confirm-dialog";
 
 const inputClass =
   "h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/25";
@@ -29,6 +34,7 @@ export type ChapterFormInitial = {
   isFree: boolean;
   coinCost: number;
   unlockAt: string | null;
+  isPublished: boolean;
 };
 
 export type ChapterSibling = {
@@ -143,6 +149,7 @@ function SiblingNavItem({
 
 export function ChapterForm({
   novelId,
+  novelSlug,
   initial,
   latestChapterUnlockAt = null,
   defaultCoinCost = null,
@@ -151,6 +158,7 @@ export function ChapterForm({
   nextChapter = null,
 }: {
   novelId: string;
+  novelSlug?: string | null;
   initial?: ChapterFormInitial;
   latestChapterUnlockAt?: string | null;
   /** Cookie cost of the most recent paid chapter, reused as the default. */
@@ -162,6 +170,15 @@ export function ChapterForm({
 }) {
   const isEdit = Boolean(initial);
   const base = WORKSPACE_BASE;
+  const formRef = useRef<HTMLFormElement>(null);
+  const readyRef = useRef(false);
+  const [dirty, setDirty] = useState(false);
+  const [editorMode, setEditorMode] = useState<"write" | "preview">("write");
+  const [preview, setPreview] = useState(() => ({
+    content: initial?.content ?? "",
+    words: countChapterWords(initial?.content ?? ""),
+  }));
+  const unsaved = useUnsavedChanges(dirty);
 
   const boundAction = isEdit
     ? updateChapter.bind(null, initial!.chapterId)
@@ -172,6 +189,11 @@ export function ChapterForm({
     {},
   );
   const wasPending = useRef(false);
+  const pendingRef = useRef(pending);
+
+  useEffect(() => {
+    pendingRef.current = pending;
+  }, [pending]);
 
   // Stay on the edit page and report save results with a toast.
   useEffect(() => {
@@ -189,8 +211,51 @@ export function ChapterForm({
     }
     if (state.success) {
       toast.success(state.success);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear unsaved after a completed save
+      setDirty(false);
     }
   }, [isEdit, pending, state.error, state.success]);
+
+  useEffect(() => {
+    readyRef.current = true;
+  }, []);
+
+  function markDirty() {
+    if (readyRef.current) setDirty(true);
+  }
+
+  function onSubmit() {
+    unsaved.cancelLeave();
+  }
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) {
+        return;
+      }
+      if (event.key.toLowerCase() !== "s") return;
+      event.preventDefault();
+      if (!pendingRef.current) formRef.current?.requestSubmit();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  function readContentMarkdown(): string {
+    const field = formRef.current?.elements.namedItem("content");
+    return field instanceof HTMLInputElement ? field.value : "";
+  }
+
+  function showPreview() {
+    const content = readContentMarkdown();
+    setPreview({ content, words: countChapterWords(content) });
+    setEditorMode("preview");
+  }
+
+  function confirmLeave() {
+    setDirty(false);
+    unsaved.confirmLeave();
+  }
 
   const [access, setAccess] = useState<"free" | "paid">(
     initial && !initial.isFree ? "paid" : "free",
@@ -233,7 +298,9 @@ export function ChapterForm({
   }, [latestChapterUnlockAt]);
 
   function applySuggestedUnlockDate() {
-    setUnlockAt(toDatetimeLocal(suggestedUnlockAt));
+    const next = toDatetimeLocal(suggestedUnlockAt);
+    if (next !== unlockAt) setDirty(true);
+    setUnlockAt(next);
   }
 
   const submitLabel = pending
@@ -249,8 +316,20 @@ export function ChapterForm({
 
   const cardClass = "flex flex-col gap-4";
 
+  const liveHref =
+    isEdit && novelSlug && initial?.isPublished
+      ? chapterHref(novelSlug, initial.number)
+      : null;
+
   return (
-    <form action={action}>
+    <>
+    <form
+      ref={formRef}
+      action={action}
+      onInput={markDirty}
+      onChange={markDirty}
+      onSubmit={onSubmit}
+    >
       <TabPanelShell
         leftTab={
           <Link
@@ -265,6 +344,7 @@ export function ChapterForm({
           <button
             type="submit"
             disabled={pending}
+            title="Save (Ctrl+S)"
             className="inline-flex h-9 items-center justify-center px-4 text-sm font-semibold text-accent transition-colors hover:text-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitLabel}
@@ -275,6 +355,23 @@ export function ChapterForm({
           <h1 className="shrink-0 text-sm font-semibold tracking-tight text-foreground">
             {isEdit ? `Edit chapter ${initial!.number}` : "Add chapter"}
           </h1>
+          {dirty ? (
+            <span className="shrink-0 text-xs font-medium text-amber-700 dark:text-amber-400">
+              Unsaved
+            </span>
+          ) : null}
+          {liveHref ? (
+            <a
+              href={liveHref}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="View published chapter in a new tab"
+              className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-muted transition-colors hover:bg-background hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              View live
+              <ExternalLink className="size-3.5" strokeWidth={1.75} aria-hidden />
+            </a>
+          ) : null}
           <label htmlFor="chapter-title" className="sr-only">
             Chapter title (optional)
           </label>
@@ -310,17 +407,70 @@ export function ChapterForm({
           {/* Main column: writing */}
           <div className={cardClass}>
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="chapter-content" className={labelClass}>
-                Content
-              </label>
-              <RichTextEditor
-                id="chapter-content"
-                name="content"
-                defaultValue={initial?.content ?? ""}
-                placeholder="Write the chapter here."
-                className="min-h-[24rem]"
-                enableFootnotes
-              />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label htmlFor="chapter-content" className={labelClass}>
+                  Content
+                </label>
+                <div
+                  role="tablist"
+                  aria-label="Editor mode"
+                  className="flex items-center rounded-lg border border-border bg-background p-0.5"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={editorMode === "write"}
+                    onClick={() => setEditorMode("write")}
+                    className={
+                      editorMode === "write"
+                        ? "rounded-md bg-surface px-2.5 py-1 text-xs font-semibold text-foreground"
+                        : "rounded-md px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-foreground"
+                    }
+                  >
+                    Write
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={editorMode === "preview"}
+                    onClick={showPreview}
+                    className={
+                      editorMode === "preview"
+                        ? "rounded-md bg-surface px-2.5 py-1 text-xs font-semibold text-foreground"
+                        : "rounded-md px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-foreground"
+                    }
+                  >
+                    Preview
+                  </button>
+                </div>
+              </div>
+              <div
+                className={editorMode === "write" ? undefined : "hidden"}
+                inert={editorMode === "preview" ? true : undefined}
+              >
+                <RichTextEditor
+                  id="chapter-content"
+                  name="content"
+                  defaultValue={initial?.content ?? ""}
+                  placeholder="Write the chapter here."
+                  className="min-h-[24rem] max-h-[min(70dvh,48rem)] lg:max-h-[calc(100dvh-11rem)]"
+                  enableFootnotes
+                  showWordCount
+                />
+              </div>
+              {editorMode === "preview" ? (
+                <div className="flex min-h-[24rem] max-h-[min(70dvh,48rem)] flex-col overflow-hidden rounded-xl border border-border bg-background lg:max-h-[calc(100dvh-11rem)]">
+                  <div className="flex shrink-0 items-center justify-end border-b border-border px-3 py-1.5">
+                    <span className="text-xs tabular-nums text-muted">
+                      {preview.words.toLocaleString()} word
+                      {preview.words === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    <ChapterEditorPreview content={preview.content} />
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -466,25 +616,28 @@ export function ChapterForm({
                 Uses the global message from workspace Settings, with your
                 Ko-fi / Patreon links.
               </span>
-            ) : (
-              <div className="flex flex-col gap-1.5">
-                <RichTextEditor
-                  id="chapter-note"
-                  name="translatorNote"
-                  defaultValue={initial?.translatorNote ?? ""}
-                  placeholder="A short message just for this chapter."
-                  className="min-h-[6.5rem]"
-                />
-                <span className="text-xs text-muted">
-                  Shown above the comments on this chapter only.
-                </span>
-              </div>
-            )}
+            ) : null}
+            <div
+              className={noteMode === "unique" ? "flex flex-col gap-1.5" : "hidden"}
+              inert={noteMode === "global" ? true : undefined}
+            >
+              <RichTextEditor
+                id="chapter-note"
+                name="translatorNote"
+                defaultValue={initial?.translatorNote ?? ""}
+                placeholder="A short message just for this chapter."
+                className="min-h-[10rem]"
+              />
+              <span className="text-xs text-muted">
+                Shown above the comments on this chapter only.
+              </span>
+            </div>
           </fieldset>
 
           <button
             type="submit"
             disabled={pending}
+            title="Save (Ctrl+S)"
             className={`${submitButtonClass} w-full`}
           >
             {submitLabel}
@@ -502,5 +655,17 @@ export function ChapterForm({
         </div>
       </TabPanelShell>
     </form>
+    <ConfirmDialog
+      open={unsaved.leaveOpen}
+      title="Unsaved changes"
+      confirmLabel="Leave"
+      cancelLabel="Keep editing"
+      intent="accent"
+      onCancel={unsaved.cancelLeave}
+      onConfirm={confirmLeave}
+    >
+      Leave this chapter? Your latest edits have not been saved.
+    </ConfirmDialog>
+    </>
   );
 }

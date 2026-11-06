@@ -13,6 +13,7 @@ export function ConfirmDialog({
   pendingLabel = "Deleting…",
   cancelLabel = "Cancel",
   pending = false,
+  intent = "danger",
   onCancel,
   onConfirm,
 }: {
@@ -23,6 +24,7 @@ export function ConfirmDialog({
   pendingLabel?: string;
   cancelLabel?: string;
   pending?: boolean;
+  intent?: "danger" | "accent";
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -75,7 +77,11 @@ export function ConfirmDialog({
                 type="button"
                 onClick={onConfirm}
                 disabled={pending}
-                className="inline-flex h-9 items-center rounded-lg bg-rose-600 px-3 text-sm font-semibold text-white transition-colors hover:bg-rose-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:opacity-50 dark:bg-rose-500 dark:hover:bg-rose-400"
+                className={
+                  intent === "accent"
+                    ? "inline-flex h-9 items-center rounded-lg bg-accent px-3 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+                    : "inline-flex h-9 items-center rounded-lg bg-rose-600 px-3 text-sm font-semibold text-white transition-colors hover:bg-rose-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:opacity-50 dark:bg-rose-500 dark:hover:bg-rose-400"
+                }
               >
                 {pending ? pendingLabel : confirmLabel}
               </button>

@@ -15,6 +15,7 @@ type ChapterRow = {
   is_free: boolean;
   coin_cost: number;
   unlock_at: string | null;
+  is_published: boolean;
 };
 
 export async function WorkspaceChapterEditPage({
@@ -31,14 +32,14 @@ export async function WorkspaceChapterEditPage({
     await Promise.all([
       admin
         .from("novels")
-        .select("id, title, publisher_id")
+        .select("id, title, slug, publisher_id")
         .eq("id", novelId)
         .eq("publication_type", "translation")
         .maybeSingle(),
       admin
         .from("chapters")
         .select(
-          "id, number, title, content, translator_note, use_global_translator_note, is_free, coin_cost, unlock_at",
+          "id, number, title, content, translator_note, use_global_translator_note, is_free, coin_cost, unlock_at, is_published",
         )
         .eq("id", chapterId)
         .eq("novel_id", novelId)
@@ -79,6 +80,7 @@ export async function WorkspaceChapterEditPage({
       <ChapterForm
         key={row.id}
         novelId={novel.id}
+        novelSlug={novel.slug}
         latestChapterUnlockAt={latestUnlockRow?.unlock_at ?? null}
         previousChapter={previousChapter}
         nextChapter={nextChapter}
@@ -92,6 +94,7 @@ export async function WorkspaceChapterEditPage({
           isFree: row.is_free,
           coinCost: row.coin_cost,
           unlockAt: row.unlock_at,
+          isPublished: row.is_published,
         }}
       />
     </PageContainer>
