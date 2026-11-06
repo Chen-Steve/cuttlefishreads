@@ -190,7 +190,9 @@ export function renderFootnoteBacklinks(footnote: Footnote): ReactNode {
             className={footnoteLinkClassName}
             aria-label={label}
           >
-            ↩{footnote.refCount > 1 ? <sup>{occurrence}</sup> : null}
+            {/* U+FE0E keeps U+21A9 a text arrow. Without it, mobile draws a color emoji. */}
+            <span className="footnote-return">{"\u21A9\uFE0E"}</span>
+            {footnote.refCount > 1 ? <sup>{occurrence}</sup> : null}
           </a>
         );
       })}
