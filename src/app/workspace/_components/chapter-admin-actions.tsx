@@ -118,12 +118,12 @@ export function DeleteSelectedButton({
         type="button"
         onClick={() => setOpen(true)}
         disabled={pending || count === 0}
-        className="inline-flex h-9 items-center gap-1.5 px-3 text-xs font-semibold text-rose-600 transition-colors hover:text-rose-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:opacity-50 dark:text-rose-400 dark:hover:text-rose-300"
+        className="inline-flex h-9 items-center gap-1.5 px-4 text-sm font-semibold text-rose-600 transition-colors hover:text-rose-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:opacity-50 dark:text-rose-400 dark:hover:text-rose-300"
       >
         {pending ? (
-          <Loader2 className="size-3.5 animate-spin" aria-hidden />
+          <Loader2 className="size-4 animate-spin" aria-hidden />
         ) : (
-          <Trash2 className="size-3.5" strokeWidth={1.75} aria-hidden />
+          <Trash2 className="size-4" strokeWidth={1.75} aria-hidden />
         )}
         Delete{count > 0 ? ` ${count}` : ""}
       </button>
@@ -198,12 +198,12 @@ export function DownloadChaptersButton({
       type="button"
       onClick={download}
       disabled={pending || chapterIds.length === 0}
-      className="inline-flex h-9 shrink-0 items-center gap-1.5 px-3 text-xs font-semibold text-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+      className="inline-flex h-9 shrink-0 items-center gap-1.5 px-4 text-sm font-semibold text-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
     >
       {pending ? (
-        <Loader2 className="size-3.5 animate-spin" aria-hidden />
+        <Loader2 className="size-4 animate-spin" aria-hidden />
       ) : (
-        <Download className="size-3.5" strokeWidth={1.75} aria-hidden />
+        <Download className="size-4" strokeWidth={1.75} aria-hidden />
       )}
       {label}
     </button>
@@ -235,7 +235,7 @@ export function PublishAllButton({
       type="button"
       onClick={publishAll}
       disabled={pending}
-      className="inline-flex h-9 items-center gap-1.5 px-3 text-xs font-semibold text-foreground transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+      className="inline-flex h-9 items-center gap-1.5 px-4 text-sm font-semibold text-foreground transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
     >
       {pending ? (
         <Loader2 className="size-4 animate-spin" aria-hidden />

@@ -59,11 +59,11 @@ function ChapterOrderToggle() {
           : "Chapter order: oldest first. Click to show newest first."
       }
       className={cn(
-        "inline-flex h-9 shrink-0 items-center gap-1.5 px-3 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+        "inline-flex h-9 shrink-0 items-center gap-1.5 px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
         newestFirst ? "text-accent" : "text-muted hover:text-foreground",
       )}
     >
-      <ArrowDownUp className="size-3.5" strokeWidth={1.75} aria-hidden />
+      <ArrowDownUp className="size-4" strokeWidth={1.75} aria-hidden />
       {newestFirst ? "Newest" : "Oldest"}
     </button>
   );
@@ -172,14 +172,14 @@ export function ChapterList({
             <button
               type="button"
               onClick={exitSelecting}
-              className="inline-flex h-9 items-center px-3 text-xs font-semibold text-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="inline-flex h-9 items-center px-4 text-sm font-semibold text-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={toggleSelectAll}
-              className="inline-flex h-9 items-center px-3 text-xs font-semibold text-foreground transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="inline-flex h-9 items-center px-4 text-sm font-semibold text-foreground transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               {allSelected ? "Clear" : "Select all"}
             </button>
@@ -203,9 +203,9 @@ export function ChapterList({
               <button
                 type="button"
                 onClick={() => setSelecting(true)}
-                className="inline-flex h-9 shrink-0 items-center gap-1.5 px-3 text-xs font-semibold text-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                className="inline-flex h-9 shrink-0 items-center gap-1.5 px-4 text-sm font-semibold text-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
-                <CheckSquare className="size-3.5" strokeWidth={1.75} aria-hidden />
+                <CheckSquare className="size-4" strokeWidth={1.75} aria-hidden />
                 Select
               </button>
             ) : null}
