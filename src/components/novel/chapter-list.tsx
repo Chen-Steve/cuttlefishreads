@@ -5,7 +5,9 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -21,6 +23,35 @@ import type { ChapterListRow, ChapterLockUpdate } from "@/types";
 import { ChapterLockBadge } from "./chapter-lock-badge";
 
 const CHAPTER_ORDER_STORAGE_KEY = "cf-chapter-order";
+
+function chapterPageItems(
+  currentPage: number,
+  totalPages: number,
+): Array<number | "ellipsis"> {
+  const current = currentPage + 1;
+
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, "ellipsis", totalPages];
+  }
+
+  if (current >= totalPages - 3) {
+    return [
+      1,
+      "ellipsis",
+      totalPages - 4,
+      totalPages - 3,
+      totalPages - 2,
+      totalPages - 1,
+      totalPages,
+    ];
+  }
+
+  return [1, "ellipsis", current - 1, current, current + 1, "ellipsis", totalPages];
+}
 
 function ChapterOrderToggle({ className }: { className?: string }) {
   const [newestFirst, setNewestFirst] = useChapterOrder(
@@ -217,12 +248,72 @@ export function ChapterList({
     totalCount,
   ]);
 
+  // Keep the current page mounted while the next one loads. Swapping in a
+  // one-line loading message collapses the list and yanks the scroll position.
+  const staleRowsRef = useRef<{ slug: string; rows: ChapterListRow[] } | null>(
+    null,
+  );
+  if (pageRows && pageRows.length > 0) {
+    staleRowsRef.current = { slug, rows: pageRows };
+  } else if (staleRowsRef.current?.slug !== slug) {
+    staleRowsRef.current = null;
+  }
+  const loadError = failedKey === requestKey;
+  const pendingPage = needsFetch && pageRows == null && !loadError;
+  const shownRows =
+    pageRows ??
+    (pendingPage && staleRowsRef.current?.slug === slug
+      ? staleRowsRef.current.rows
+      : null);
+
   const visibleChapters = useMemo(
-    () => (pageRows == null ? null : applyLockUpdates(pageRows, lockUpdates)),
-    [lockUpdates, pageRows],
+    () => (shownRows == null ? null : applyLockUpdates(shownRows, lockUpdates)),
+    [lockUpdates, shownRows],
   );
 
-  const loadError = failedKey === requestKey;
+  const pagerRef = useRef<HTMLDivElement>(null);
+  const pagerAnchorRef = useRef<number | null>(null);
+
+  function selectPage(next: number) {
+    if (next === safePage) return;
+    const pager = pagerRef.current;
+    pagerAnchorRef.current = pager ? pager.getBoundingClientRect().top : null;
+    document.documentElement.classList.add("chapter-page-turn");
+    setPage(next);
+  }
+
+  useLayoutEffect(() => {
+    if (pagerAnchorRef.current == null) return;
+    let cancel = false;
+    const restore = () => {
+      if (cancel) return;
+      const wanted = pagerAnchorRef.current;
+      const pager = pagerRef.current;
+      if (wanted == null || !pager) return;
+      const delta = pager.getBoundingClientRect().top - wanted;
+      // The shorter last page pulls the pager up. scroll-behavior: smooth
+      // would animate that correction, so the jump stays on screen.
+      if (Math.abs(delta) > 1) {
+        window.scrollBy({ top: delta, behavior: "instant" });
+      }
+    };
+    restore();
+    const frame = requestAnimationFrame(() => {
+      restore();
+      requestAnimationFrame(() => {
+        restore();
+        if (!pendingPage) {
+          pagerAnchorRef.current = null;
+          document.documentElement.classList.remove("chapter-page-turn");
+        }
+      });
+    });
+    return () => {
+      cancel = true;
+      cancelAnimationFrame(frame);
+    };
+  }, [pendingPage, visibleChapters]);
+
   const hasChapters = totalCount > 0;
 
   return (
@@ -262,7 +353,10 @@ export function ChapterList({
             )}
           </p>
         ) : (
-        <ol className="divide-y divide-border overflow-hidden rounded-b-xl">
+        <ol
+          aria-busy={pendingPage}
+          className="divide-y divide-border overflow-anchor-none overflow-hidden rounded-b-xl"
+        >
           {visibleChapters.map((chapter) => (
             <li key={chapter.id}>
               <Link
@@ -305,10 +399,51 @@ export function ChapterList({
         </ol>
         )}
         {totalPages > 1 ? (
-          <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
+        <div ref={pagerRef} className="overflow-anchor-none border-t border-border">
+        {totalPages > 2 ? (
+          <nav
+            aria-label="Chapter pages"
+            className="flex flex-wrap items-center justify-center gap-1 px-2 py-2"
+          >
+            {chapterPageItems(safePage, totalPages).map((item, index) =>
+              item === "ellipsis" ? (
+                <span
+                  key={`ellipsis-${index}`}
+                  className="inline-flex size-9 items-center justify-center text-sm text-muted"
+                  aria-hidden
+                >
+                  …
+                </span>
+              ) : (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => selectPage(item - 1)}
+                  aria-label={`Page ${item}`}
+                  aria-current={safePage + 1 === item ? "page" : undefined}
+                  className={cn(
+                    "relative inline-flex size-9 items-center justify-center text-sm font-medium tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+                    safePage + 1 === item
+                      ? "text-accent-foreground"
+                      : "text-foreground hover:text-accent",
+                  )}
+                >
+                  {safePage + 1 === item ? (
+                    <span
+                      className="absolute inset-0 m-auto size-7 rounded-md bg-accent"
+                      aria-hidden
+                    />
+                  ) : null}
+                  <span className="relative">{item}</span>
+                </button>
+              ),
+            )}
+          </nav>
+        ) : (
+          <div className="flex items-center justify-between gap-3 px-4 py-3">
             <button
               type="button"
-              onClick={() => setPage((current) => Math.max(0, current - 1))}
+              onClick={() => selectPage(Math.max(0, safePage - 1))}
               disabled={safePage === 0}
               aria-label="Previous page"
               className={cn(
@@ -324,9 +459,7 @@ export function ChapterList({
             </p>
             <button
               type="button"
-              onClick={() =>
-                setPage((current) => Math.min(totalPages - 1, current + 1))
-              }
+              onClick={() => selectPage(Math.min(totalPages - 1, safePage + 1))}
               disabled={safePage >= totalPages - 1}
               aria-label="Next page"
               className={cn(
@@ -338,6 +471,8 @@ export function ChapterList({
               <ChevronRight className="size-4" strokeWidth={2} aria-hidden />
             </button>
           </div>
+        )}
+        </div>
         ) : null}
         </>
       ) : (

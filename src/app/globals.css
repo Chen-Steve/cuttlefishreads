@@ -47,6 +47,12 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Keep chapter-page changes from being pulled by scroll anchoring. */
+html.chapter-page-turn,
+html.chapter-page-turn * {
+  overflow-anchor: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

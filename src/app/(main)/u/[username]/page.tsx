@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Coffee, Heart, User } from "lucide-react";
 
 import { NovelGrid } from "@/components/novel";
 import { PageContainer } from "@/components/page-container";
+import { LoadingStatus, Skeleton } from "@/components/skeleton";
 import {
   getPublicProfile,
   getUserBookmarkedNovels,
@@ -65,9 +66,44 @@ function ProfileSection({
   );
 }
 
-export default async function PublicProfilePage({
+function ProfileFallback() {
+  return (
+    <PageContainer
+      as="section"
+      className="flex flex-col gap-6 pt-4 pb-8 sm:gap-7 sm:pt-5 sm:pb-10 lg:pt-6 lg:pb-12"
+    >
+      <LoadingStatus label="Loading profile">
+        <div className="flex flex-col gap-6 sm:gap-7">
+          <header className="flex items-center gap-3 border-b border-border pb-4">
+            <Skeleton className="size-10 rounded-full" />
+            <Skeleton className="h-5 w-36" />
+          </header>
+          <div className="grid grid-cols-3 gap-x-2 gap-y-2.5 sm:grid-cols-4 lg:grid-cols-6">
+            {Array.from({ length: 6 }, (_, index) => (
+              <Skeleton key={index} className="aspect-[3/4] rounded-lg" />
+            ))}
+          </div>
+        </div>
+      </LoadingStatus>
+    </PageContainer>
+  );
+}
+
+export default function PublicProfilePage({
   params,
 }: PageProps<"/u/[username]">) {
+  return (
+    <Suspense fallback={<ProfileFallback />}>
+      <PublicProfileContent params={params} />
+    </Suspense>
+  );
+}
+
+async function PublicProfileContent({
+  params,
+}: {
+  params: PageProps<"/u/[username]">["params"];
+}) {
   const { username } = await params;
   const profile = await getPublicProfile(username);
 
