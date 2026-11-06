@@ -43,7 +43,7 @@ export function HomeDiscoveryLinks({
 
   return (
     <section
-      className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3"
+      className="mt-4 flex items-stretch gap-2 sm:mt-5 sm:gap-3"
       aria-label="Quick links"
     >
       <button
@@ -53,7 +53,7 @@ export function HomeDiscoveryLinks({
         aria-busy={pending}
         className={cn(
           tileClass,
-          "disabled:cursor-not-allowed disabled:opacity-50",
+          "min-w-0 flex-1 disabled:cursor-not-allowed disabled:opacity-50",
         )}
       >
         <TileBackground src="/background1.jpg" />
@@ -67,14 +67,10 @@ export function HomeDiscoveryLinks({
         href={SITE.discordUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className={tileClass}
+        aria-label="Discord (opens in a new tab)"
+        className="inline-flex size-11 shrink-0 items-center justify-center self-center text-foreground transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:size-12"
       >
-        <TileBackground src="/background2.jpg" />
-        <span className="relative z-10 inline-flex flex-col items-center gap-1.5">
-          <DiscordIcon className="size-4 sm:size-5" />
-          Join our Discord!
-          <span className="sr-only"> (opens in a new tab)</span>
-        </span>
+        <DiscordIcon className="size-6 sm:size-7" />
       </a>
     </section>
   );

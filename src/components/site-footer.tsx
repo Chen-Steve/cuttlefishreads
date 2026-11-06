@@ -7,14 +7,6 @@ import { SITE } from "@/lib/constants";
 
 const linkGroups = [
   {
-    title: "Browse",
-    links: [
-      { href: "/novels", label: "All novels" },
-      { href: "/library", label: "My library" },
-      { href: "/search", label: "Search" },
-    ],
-  },
-  {
     title: "Account",
     links: [
       { href: "/login", label: "Login" },
@@ -60,9 +52,6 @@ export async function SiteFooter() {
                 {SITE.name}
               </span>
             </Link>
-            <p className="mt-4 text-sm leading-relaxed text-muted">
-              {SITE.description}.
-            </p>
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <Link
                 href="/apply"
@@ -76,16 +65,15 @@ export async function SiteFooter() {
                 href={SITE.discordUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                aria-label="Discord (opens in a new tab)"
+                className="inline-flex size-8 items-center justify-center text-foreground transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
-                <DiscordIcon className="size-3.5" />
-                Discord
-                <span className="sr-only"> (opens in a new tab)</span>
+                <DiscordIcon className="size-5" />
               </a>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 sm:gap-16">
+          <div className="grid grid-cols-2 gap-10 sm:gap-16">
             {linkGroups.map((group) => (
               <nav key={group.title} aria-label={group.title}>
                 <h2 className="text-sm font-semibold text-foreground">
