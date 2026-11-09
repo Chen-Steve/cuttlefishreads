@@ -3,8 +3,8 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createAdminClient } from "@/utils/supabase/admin";
-import { getAdminAccess, type AdminAccess } from "@/lib/access";
+import { getAdminAccess, ownsNovel, type AdminAccess } from "@/lib/access";
+import { getServerSupabase } from "@/utils/supabase/auth";
 import {
   isNaturallyFree,
   profileCacheTag,
@@ -57,7 +57,7 @@ async function revalidatePublicPaths(
       updateTag(chapterBodyCacheTag(novelId, number));
     }
   }
-  const slug = knownSlug ?? (await createAdminClient().from("novels")
+  const slug = knownSlug ?? (await (await getServerSupabase()).from("novels")
     .select("slug").eq("id", novelId).maybeSingle()).data?.slug;
   if (slug) updateTag(novelDetailCacheTag(slug));
   else updateTag(NOVEL_DETAILS_CACHE_TAG);
@@ -115,8 +115,8 @@ export async function updateSupportLinks(
 
   const globalNote = String(formData.get("globalNote") ?? "").trim();
 
-  const admin = createAdminClient();
-  const { error } = await admin
+  const db = await getServerSupabase();
+  const { data: saved, error } = await db
     .from("profiles")
     .update({
       translator_note: globalNote || null,
@@ -124,9 +124,11 @@ export async function updateSupportLinks(
       patreon_url: patreon as string | null,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", auth.access.userId);
+    .eq("id", auth.access.userId)
+    .select("id");
 
   if (error) return { error: error.message };
+  if (!saved?.length) return { error: "Could not save settings." };
 
   // Global note and support links are cached inside the novel-detail entries.
   await revalidatePublicPaths();
@@ -149,11 +151,7 @@ async function requireWorkspace(): Promise<WorkspaceAuth> {
   return { access };
 }
 
-// Translators may only act on novels they own (publisher_id === their id).
-// Master admins can act on any novel.
-function ownsNovel(access: AdminAccess, publisherId: string | null): boolean {
-  return access.isMasterAdmin || publisherId === access.userId;
-}
+type Db = Awaited<ReturnType<typeof getServerSupabase>>;
 
 type ChapterWithNovel = {
   number: number;
@@ -244,17 +242,17 @@ function coverPathFromUrl(url: string | null | undefined): string | null {
 }
 
 async function deleteCoverObject(
-  admin: ReturnType<typeof createAdminClient>,
+  db: Db,
   url: string | null | undefined,
 ) {
   const path = coverPathFromUrl(url);
   if (!path) return;
-  const { error } = await admin.storage.from("covers").remove([path]);
+  const { error } = await db.storage.from("covers").remove([path]);
   if (error) console.error("deleteCoverObject:", error);
 }
 
 async function uploadCover(
-  admin: ReturnType<typeof createAdminClient>,
+  db: Db,
   slug: string,
   file: File | null,
 ): Promise<{ url: string; path: string } | null> {
@@ -263,7 +261,7 @@ async function uploadCover(
   const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
   const path = `${slug}-${Date.now()}.${ext}`;
 
-  const { error } = await admin.storage.from("covers").upload(path, file, {
+  const { error } = await db.storage.from("covers").upload(path, file, {
     contentType: file.type || undefined,
     upsert: false,
     cacheControl: "31536000",
@@ -275,7 +273,7 @@ async function uploadCover(
 
   const {
     data: { publicUrl },
-  } = admin.storage.from("covers").getPublicUrl(path);
+  } = db.storage.from("covers").getPublicUrl(path);
   return { url: publicUrl, path };
 }
 
@@ -321,7 +319,7 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
   if ("error" in assets) return { error: assets.error };
   const { cover, novelupdatesUrl } = assets;
 
-  const admin = createAdminClient();
+  const db = await getServerSupabase();
 
   // Translators get fixed attribution: the novel is theirs, the translator name
   // is their own username, and there is no separate original-author field. Only
@@ -342,7 +340,7 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
           "Publisher username is required so chapter purchases credit the translator.",
       };
     }
-    const { data: profile } = await admin
+    const { data: profile } = await db
       .from("profiles")
       .select("id, role")
       .eq("username", publisherUsername)
@@ -358,7 +356,7 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
   const base = slugify(title) || "novel";
   let slug = base;
   for (let i = 2; ; i += 1) {
-    const { data: existing } = await admin
+    const { data: existing } = await db
       .from("novels")
       .select("id")
       .eq("slug", slug)
@@ -370,7 +368,7 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
   let uploadedCover: { url: string; path: string } | null = null;
   try {
     uploadedCover = await uploadCover(
-      admin,
+      db,
       slug,
       cover,
     );
@@ -378,7 +376,7 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
     return { error: err instanceof Error ? err.message : "Cover upload failed." };
   }
 
-  const { error } = await admin.from("novels").insert({
+  const { error } = await db.from("novels").insert({
     slug,
     title,
     original_author: originalAuthor || null,
@@ -396,7 +394,7 @@ async function _createNovel(formData: FormData): Promise<AdminState> {
 
   if (error) {
     if (uploadedCover) {
-      await admin.storage.from("covers").remove([uploadedCover.path]);
+      await db.storage.from("covers").remove([uploadedCover.path]);
     }
     return { error: error.message };
   }
@@ -424,9 +422,9 @@ export async function updateNovel(
   if ("error" in assets) return { error: assets.error };
   const { cover, novelupdatesUrl } = assets;
 
-  const admin = createAdminClient();
+  const db = await getServerSupabase();
 
-  const { data: existing } = await admin
+  const { data: existing } = await db
     .from("novels")
     .select(
       "id, slug, cover_url, original_author, translator, publisher_id",
@@ -456,7 +454,7 @@ export async function updateNovel(
       (access.username ?? "");
     const publisherUsername = String(formData.get("publisherUsername") ?? "").trim();
     if (publisherUsername) {
-      const { data: profile } = await admin
+      const { data: profile } = await db
         .from("profiles")
         .select("id")
         .eq("username", publisherUsername)
@@ -483,14 +481,14 @@ export async function updateNovel(
   let uploadedCover: { url: string; path: string } | null = null;
   if (cover) {
     try {
-      uploadedCover = await uploadCover(admin, existing.slug, cover);
+      uploadedCover = await uploadCover(db, existing.slug, cover);
       if (uploadedCover) coverUrl = uploadedCover.url;
     } catch (err) {
       return { error: err instanceof Error ? err.message : "Cover upload failed." };
     }
   }
 
-  const { error } = await admin
+  const { data: saved, error } = await db
     .from("novels")
     .update({
       title,
@@ -506,17 +504,25 @@ export async function updateNovel(
       novelupdates_url: novelupdatesUrl,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", novelId);
+    .eq("id", novelId)
+    .select("id");
+
+  if (!saved?.length && !error) {
+    if (uploadedCover) {
+      await db.storage.from("covers").remove([uploadedCover.path]);
+    }
+    return { error: "You can only manage your own novels." };
+  }
 
   if (error) {
     if (uploadedCover) {
-      await admin.storage.from("covers").remove([uploadedCover.path]);
+      await db.storage.from("covers").remove([uploadedCover.path]);
     }
     return { error: error.message };
   }
 
   if (uploadedCover && existing.cover_url && existing.cover_url !== coverUrl) {
-    await deleteCoverObject(admin, existing.cover_url);
+    await deleteCoverObject(db, existing.cover_url);
   }
 
   const workspaceBase = WORKSPACE_BASE;
@@ -530,9 +536,9 @@ export async function deleteNovel(novelId: string): Promise<AdminState> {
   const auth = await requireWorkspace();
   if (!auth.access) return { error: auth.error };
 
-  const admin = createAdminClient();
+  const db = await getServerSupabase();
 
-  const { data: existing } = await admin
+  const { data: existing } = await db
     .from("novels")
     .select("slug, publisher_id, cover_url")
     .eq("id", novelId)
@@ -543,13 +549,16 @@ export async function deleteNovel(novelId: string): Promise<AdminState> {
     return { error: "You can only manage your own novels." };
   }
 
-  const { error } = await admin.from("novels").delete().eq("id", novelId);
+  await deleteCoverObject(db, existing.cover_url);
 
-  if (error) {
-    return { error: error.message };
-  }
+  const { data: removed, error } = await db
+    .from("novels")
+    .delete()
+    .eq("id", novelId)
+    .select("id");
 
-  await deleteCoverObject(admin, existing.cover_url);
+  if (error) return { error: error.message };
+  if (!removed?.length) return { error: "You can only manage your own novels." };
 
   const workspaceBase = WORKSPACE_BASE;
   revalidatePath(workspaceBase);
@@ -595,9 +604,9 @@ export async function createChapter(
     unlockAt = date.toISOString();
   }
 
-  const admin = createAdminClient();
+  const db = await getServerSupabase();
 
-  const { data: novel } = await admin
+  const { data: novel } = await db
     .from("novels")
     .select("id, title, publisher_id")
     .eq("id", novelId)
@@ -609,7 +618,7 @@ export async function createChapter(
 
   let number = Math.floor(Number(formData.get("number") ?? 0));
   if (!Number.isFinite(number) || number < 1) {
-    const { data: last } = await admin
+    const { data: last } = await db
       .from("chapters")
       .select("number")
       .eq("novel_id", novelId)
@@ -619,7 +628,7 @@ export async function createChapter(
     number = (last?.number ?? 0) + 1;
   }
 
-  const { error } = await admin.from("chapters").insert({
+  const { error } = await db.from("chapters").insert({
     novel_id: novelId,
     number,
     title,
@@ -638,7 +647,7 @@ export async function createChapter(
     return { error: error.message };
   }
 
-  await admin
+  await db
     .from("novels")
     .update({ updated_at: new Date().toISOString() })
     .eq("id", novelId);
@@ -738,8 +747,8 @@ export async function bulkCreateChapters(
     prepared.push({ number, title, content, unlockAt });
   }
 
-  const admin = createAdminClient();
-  const { data: novel } = await admin
+  const db = await getServerSupabase();
+  const { data: novel } = await db
     .from("novels")
     .select("id, publisher_id")
     .eq("id", id)
@@ -749,7 +758,7 @@ export async function bulkCreateChapters(
     return { error: "You can only manage your own novels." };
   }
 
-  const { data: existingRows } = await admin
+  const { data: existingRows } = await db
     .from("chapters")
     .select("number")
     .eq("novel_id", id)
@@ -785,7 +794,7 @@ export async function bulkCreateChapters(
 
   const chunkSize = 25;
   for (let i = 0; i < rows.length; i += chunkSize) {
-    const { error } = await admin.from("chapters").insert(rows.slice(i, i + chunkSize));
+    const { error } = await db.from("chapters").insert(rows.slice(i, i + chunkSize));
     if (error) {
       if (i > 0) await revalidatePublicPaths(id, rows.slice(0, i).map((row) => row.number));
       if (error.code === "23505") {
@@ -795,7 +804,7 @@ export async function bulkCreateChapters(
     }
   }
 
-  await admin.from("novels").update({ updated_at: now }).eq("id", id);
+  await db.from("novels").update({ updated_at: now }).eq("id", id);
 
   if (publish) {
     await notifyBookmarkersOfChapters({
@@ -825,9 +834,9 @@ export async function setChapterPublished(
   const auth = await requireWorkspace();
   if (!auth.access) return { error: auth.error };
 
-  const admin = createAdminClient();
+  const db = await getServerSupabase();
 
-  const { data: existing } = await admin
+  const { data: existing } = await db
     .from("chapters")
     .select(
       "id, novel_id, number, is_free, unlock_at, novels(publisher_id)",
@@ -845,14 +854,16 @@ export async function setChapterPublished(
     return { error: "You can only manage your own novels." };
   }
 
-  const { error } = await admin
+  const { data: saved, error } = await db
     .from("chapters")
     .update({ is_published: published, updated_at: new Date().toISOString() })
-    .eq("id", chapterId);
+    .eq("id", chapterId)
+    .select("id");
 
   if (error) return { error: error.message };
+  if (!saved?.length) return { error: "You can only manage your own novels." };
 
-  await admin
+  await db
     .from("novels")
     .update({ updated_at: new Date().toISOString() })
     .eq("id", existing.novel_id);
@@ -880,9 +891,9 @@ export async function publishAllChapters(novelId: string): Promise<AdminState> {
   const auth = await requireWorkspace();
   if (!auth.access) return { error: auth.error };
 
-  const admin = createAdminClient();
+  const db = await getServerSupabase();
 
-  const { data: novel } = await admin
+  const { data: novel } = await db
     .from("novels")
     .select("publisher_id")
     .eq("id", novelId)
@@ -892,13 +903,13 @@ export async function publishAllChapters(novelId: string): Promise<AdminState> {
     return { error: "You can only manage your own novels." };
   }
 
-  const { data: drafts } = await admin
+  const { data: drafts } = await db
     .from("chapters")
     .select("number, is_free, unlock_at")
     .eq("novel_id", novelId)
     .eq("is_published", false);
 
-  const { error } = await admin
+  const { error } = await db
     .from("chapters")
     .update({ is_published: true, updated_at: new Date().toISOString() })
     .eq("novel_id", novelId)
@@ -906,7 +917,7 @@ export async function publishAllChapters(novelId: string): Promise<AdminState> {
 
   if (error) return { error: error.message };
 
-  await admin
+  await db
     .from("novels")
     .update({ updated_at: new Date().toISOString() })
     .eq("id", novelId);
@@ -930,9 +941,9 @@ export async function deleteChapter(chapterId: string): Promise<AdminState> {
   const auth = await requireWorkspace();
   if (!auth.access) return { error: auth.error };
 
-  const admin = createAdminClient();
+  const db = await getServerSupabase();
 
-  const { data: existing } = await admin
+  const { data: existing } = await db
     .from("chapters")
     .select("id, novel_id, number, novels(publisher_id)")
     .eq("id", chapterId)
@@ -942,10 +953,15 @@ export async function deleteChapter(chapterId: string): Promise<AdminState> {
     return { error: "You can only manage your own novels." };
   }
 
-  const { error } = await admin.from("chapters").delete().eq("id", chapterId);
+  const { data: removed, error } = await db
+    .from("chapters")
+    .delete()
+    .eq("id", chapterId)
+    .select("id");
   if (error) return { error: error.message };
+  if (!removed?.length) return { error: "You can only manage your own novels." };
 
-  await admin
+  await db
     .from("novels")
     .update({ updated_at: new Date().toISOString() })
     .eq("id", existing.novel_id);
@@ -973,9 +989,9 @@ export async function deleteChapters(
     return { error: "Select at least one chapter." };
   }
 
-  const admin = createAdminClient();
+  const db = await getServerSupabase();
 
-  const { data: novel } = await admin
+  const { data: novel } = await db
     .from("novels")
     .select("id, publisher_id")
     .eq("id", id)
@@ -987,7 +1003,7 @@ export async function deleteChapters(
 
   const chunkSize = 25;
   for (let i = 0; i < uniqueIds.length; i += chunkSize) {
-    const { data: deleted, error } = await admin
+    const { data: deleted, error } = await db
       .from("chapters")
       .delete()
       .eq("novel_id", id)
@@ -998,7 +1014,7 @@ export async function deleteChapters(
     await revalidatePublicPaths(id, (deleted ?? []).map((chapter) => chapter.number));
   }
 
-  await admin
+  await db
     .from("novels")
     .update({ updated_at: new Date().toISOString() })
     .eq("id", id);
@@ -1039,9 +1055,9 @@ export async function getChaptersForDownload(
     };
   }
 
-  const admin = createAdminClient();
+  const db = await getServerSupabase();
 
-  const { data: novel } = await admin
+  const { data: novel } = await db
     .from("novels")
     .select("id, publisher_id")
     .eq("id", id)
@@ -1051,7 +1067,7 @@ export async function getChaptersForDownload(
     return { error: "You can only manage your own novels." };
   }
 
-  const { data: rows, error } = await admin
+  const { data: rows, error } = await db
     .from("chapters")
     .select("number, title, content")
     .eq("novel_id", id)
@@ -1110,9 +1126,9 @@ export async function updateChapter(
     unlockAt = date.toISOString();
   }
 
-  const admin = createAdminClient();
+  const db = await getServerSupabase();
 
-  const { data: existing } = await admin
+  const { data: existing } = await db
     .from("chapters")
     .select("id, novel_id, number, novels(publisher_id)")
     .eq("id", chapterId)
@@ -1123,7 +1139,7 @@ export async function updateChapter(
     return { error: "You can only manage your own novels." };
   }
 
-  const { error } = await admin
+  const { data: saved, error } = await db
     .from("chapters")
     .update({
       title,
@@ -1136,7 +1152,12 @@ export async function updateChapter(
       ...(number !== undefined ? { number } : {}),
       updated_at: new Date().toISOString(),
     })
-    .eq("id", chapterId);
+    .eq("id", chapterId)
+    .select("id");
+
+  if (!error && !saved?.length) {
+    return { error: "You can only manage your own novels." };
+  }
 
   if (error) {
     if (error.code === "23505") {
@@ -1145,7 +1166,7 @@ export async function updateChapter(
     return { error: error.message };
   }
 
-  await admin
+  await db
     .from("novels")
     .update({ updated_at: new Date().toISOString() })
     .eq("id", existing.novel_id);

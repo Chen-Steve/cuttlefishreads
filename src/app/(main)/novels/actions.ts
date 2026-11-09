@@ -15,7 +15,6 @@ import {
 } from "@/lib/data";
 import type { NovelComment } from "@/types";
 import type { CommentCursor } from "@/lib/comment-pagination";
-import { createAdminClient } from "@/utils/supabase/admin";
 import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
 
 const MAX_COMMENT_LENGTH = 2000;
@@ -45,10 +44,9 @@ function expireCommentCache(
 
 export type UnlockState = { error?: string; unlocked?: boolean };
 
-// Spends coins to unlock a paid chapter for the signed-in user. The coin price
-// is resolved inside unlock_chapter() (SECURITY DEFINER). EXECUTE is granted
-// only to service_role so signed-in users cannot hit /rest/v1/rpc/unlock_chapter
-// directly; this action verifies the session then calls it as admin.
+// Spends the signed-in reader's coins. unlock_chapter() ignores any user id
+// unless the caller is the service role, so this action calls it with the
+// reader's own session.
 export async function unlockChapter(
   novelSlug: string,
   chapterNumber: number,
@@ -57,9 +55,9 @@ export async function unlockChapter(
   if (!claims) {
     return { error: "Please sign in to unlock this chapter." };
   }
-  const admin = createAdminClient();
+  const supabase = await getServerSupabase();
 
-  const { data, error } = await admin.rpc("unlock_chapter", {
+  const { data, error } = await supabase.rpc("unlock_chapter", {
     p_novel_slug: novelSlug,
     p_chapter_number: chapterNumber,
     p_user_id: claims.sub,
@@ -243,13 +241,10 @@ export async function createComment(
     return { error: "Novel not found." };
   }
 
-  // Comment writes go through the service role; the Data API roles have no
-  // INSERT/UPDATE on novel_comments, so these checks can't be bypassed.
-  const admin = createAdminClient();
-
   // One rating per reader per novel: a new rating replaces the old one.
+  // The database also rejects a second rating and comments on locked chapters.
   if (ratingValue != null) {
-    const { error: clearError } = await admin
+    const { error: clearError } = await supabase
       .from("novel_comments")
       .update({ rating: null })
       .eq("user_id", claims.sub)
@@ -259,7 +254,7 @@ export async function createComment(
     if (clearError) return { error: clearError.message };
   }
 
-  const { data: inserted, error } = await admin
+  const { data: inserted, error } = await supabase
     .from("novel_comments")
     .insert({
       user_id: claims.sub,
@@ -349,7 +344,7 @@ export async function replyToComment(
 
   const userId = claims.sub as string;
 
-  const { data: inserted, error } = await createAdminClient()
+  const { data: inserted, error } = await supabase
     .from("novel_comments")
     .insert({
       user_id: userId,
@@ -434,7 +429,7 @@ export async function updateComment(
     return { error: "Comment not found." };
   }
 
-  const { error } = await createAdminClient()
+  const { error } = await supabase
     .from("novel_comments")
     .update({
       body: body.trim(),

@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/page-container";
-import { createAdminClient } from "@/utils/supabase/admin";
-import { getAdminAccess } from "@/lib/access";
+import { getAdminAccess, ownsNovel } from "@/lib/access";
+import { getServerSupabase } from "@/utils/supabase/auth";
 import { ChapterForm } from "../_components/chapter-form";
 
 export async function WorkspaceChapterNewPage({
@@ -11,8 +11,8 @@ export async function WorkspaceChapterNewPage({
   novelId: string;
 }) {
   const access = await getAdminAccess();
-  const admin = createAdminClient();
-  const { data: novel } = await admin
+  const supabase = await getServerSupabase();
+  const { data: novel } = await supabase
     .from("novels")
     .select("id, title, publisher_id")
     .eq("id", novelId)
@@ -20,13 +20,13 @@ export async function WorkspaceChapterNewPage({
     .maybeSingle();
 
   if (!novel) notFound();
-  if (!access || (!access.isMasterAdmin && novel.publisher_id !== access.userId)) {
+  if (!access || !ownsNovel(access, novel.publisher_id)) {
     notFound();
   }
 
   const [{ data: latestUnlockRow }, { data: latestPaidRow }, { data: lastNumberRow }] =
     await Promise.all([
-      admin
+      supabase
         .from("chapters")
         .select("unlock_at")
         .eq("novel_id", novelId)
@@ -34,7 +34,7 @@ export async function WorkspaceChapterNewPage({
         .order("unlock_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      admin
+      supabase
         .from("chapters")
         .select("coin_cost")
         .eq("novel_id", novelId)
@@ -42,7 +42,7 @@ export async function WorkspaceChapterNewPage({
         .order("number", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      admin
+      supabase
         .from("chapters")
         .select("number")
         .eq("novel_id", novelId)

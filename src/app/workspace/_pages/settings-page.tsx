@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/page-container";
-import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
+import { getServerSupabase } from "@/utils/supabase/auth";
 import { SupportLinksForm } from "../_components/support-links-form";
 
 export async function WorkspaceSettingsPage() {
@@ -11,8 +11,8 @@ export async function WorkspaceSettingsPage() {
 
   const roleNoun = "translator";
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin
+  const supabase = await getServerSupabase();
+  const { data: profile } = await supabase
     .from("profiles")
     .select("translator_note, kofi_url, patreon_url")
     .eq("id", access.userId)

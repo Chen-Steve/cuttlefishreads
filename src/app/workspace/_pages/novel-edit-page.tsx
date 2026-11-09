@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/page-container";
-import { createAdminClient } from "@/utils/supabase/admin";
-import { getAdminAccess } from "@/lib/access";
+import { getAdminAccess, ownsNovel } from "@/lib/access";
+import { getServerSupabase } from "@/utils/supabase/auth";
 import { WORKSPACE_BASE } from "@/lib/workspace";
 import { NovelForm } from "../_components/novel-form";
 
@@ -14,8 +14,8 @@ export async function WorkspaceNovelEditPage({
   const base = WORKSPACE_BASE;
 
   const access = await getAdminAccess();
-  const admin = createAdminClient();
-  const { data: novel } = await admin
+  const supabase = await getServerSupabase();
+  const { data: novel } = await supabase
     .from("novels")
     .select(
       "id, title, original_author, translator, description, cover_url, genres, tags, status, language, publisher_id, novelupdates_url",
@@ -25,7 +25,7 @@ export async function WorkspaceNovelEditPage({
     .maybeSingle();
 
   if (!novel) notFound();
-  if (!access || (!access.isMasterAdmin && novel.publisher_id !== access.userId)) {
+  if (!access || !ownsNovel(access, novel.publisher_id)) {
     notFound();
   }
 

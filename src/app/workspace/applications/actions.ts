@@ -2,10 +2,10 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 
-import { createAdminClient } from "@/utils/supabase/admin";
-import { getAdminAccess, grantProfileRole } from "@/lib/access";
+import { getAdminAccess } from "@/lib/access";
 import { profileCacheTag } from "@/lib/data";
 import { WORKSPACE_BASE } from "@/lib/workspace";
+import { getServerSupabase } from "@/utils/supabase/auth";
 
 export type ReviewState = { error?: string };
 
@@ -15,66 +15,47 @@ async function requireMasterAdmin(): Promise<string | null> {
   return access.userId;
 }
 
-export async function approveApplication(
+async function reviewApplication(
   applicationId: string,
+  status: "approved" | "rejected",
 ): Promise<ReviewState> {
   const reviewerId = await requireMasterAdmin();
   if (!reviewerId) return { error: "You are not authorized to review applications." };
 
-  const admin = createAdminClient();
-
-  const { data: application } = await admin
+  const supabase = await getServerSupabase();
+  const { data: application } = await supabase
     .from("translator_applications")
-    .select("id, user_id, status, username")
+    .select("username")
     .eq("id", applicationId)
     .maybeSingle();
 
-  if (!application) return { error: "Application not found." };
+  const { error } = await supabase.rpc("review_translator_application", {
+    p_application_id: applicationId,
+    p_status: status,
+  });
+  if (error) {
+    return {
+      error: error.message === "application not found"
+        ? "Application not found."
+        : error.message,
+    };
+  }
 
-  // Grant translator without clearing other profile fields.
-  const granted = await grantProfileRole(
-    application.user_id,
-    "translator",
-    application.username || null,
-  );
-  if (granted.error) return { error: granted.error };
-
-  const { error } = await admin
-    .from("translator_applications")
-    .update({
-      status: "approved",
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: reviewerId,
-    })
-    .eq("id", applicationId);
-
-  if (error) return { error: error.message };
-
-  if (application.username) updateTag(profileCacheTag(application.username));
+  if (status === "approved" && application?.username) {
+    updateTag(profileCacheTag(application.username));
+  }
   revalidatePath(`${WORKSPACE_BASE}/applications`);
   return {};
+}
+
+export async function approveApplication(
+  applicationId: string,
+): Promise<ReviewState> {
+  return reviewApplication(applicationId, "approved");
 }
 
 export async function rejectApplication(
   applicationId: string,
 ): Promise<ReviewState> {
-  const reviewerId = await requireMasterAdmin();
-  if (!reviewerId) return { error: "You are not authorized to review applications." };
-
-  const admin = createAdminClient();
-
-  const { error } = await admin
-    .from("translator_applications")
-    .update({
-      status: "rejected",
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: reviewerId,
-    })
-    .eq("id", applicationId);
-
-  if (error) return { error: error.message };
-
-  revalidatePath(`${WORKSPACE_BASE}/applications`);
-  return {};
+  return reviewApplication(applicationId, "rejected");
 }
-

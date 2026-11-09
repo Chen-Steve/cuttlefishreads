@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/page-container";
 import { getAdminAccess } from "@/lib/access";
-import { createAdminClient } from "@/utils/supabase/admin";
+import { getServerSupabase } from "@/utils/supabase/auth";
 import type { NovelComment } from "@/types";
 
 import {
@@ -46,9 +46,9 @@ export async function WorkspaceCommentsPage() {
   const access = await getAdminAccess();
   if (!access) notFound();
 
-  const admin = createAdminClient();
+  const supabase = await getServerSupabase();
 
-  let novelsQuery = admin
+  let novelsQuery = supabase
     .from("novels")
     .select("id, slug, title, publisher_id")
     .eq("publication_type", "translation")
@@ -73,7 +73,7 @@ export async function WorkspaceCommentsPage() {
   const { data: topData, error: commentsError } =
     slugs.length === 0
       ? { data: [] as CommentQueryRow[], error: null }
-      : await admin
+      : await supabase
           .from("novel_comments")
           .select(COMMENT_WITH_AUTHOR)
           .in("novel_slug", slugs)
@@ -92,7 +92,7 @@ export async function WorkspaceCommentsPage() {
   const { data: replyData, error: repliesError } =
     parentIds.length === 0
       ? { data: [] as CommentQueryRow[], error: null }
-      : await admin
+      : await supabase
           .from("novel_comments")
           .select(COMMENT_WITH_AUTHOR)
           .in("parent_id", parentIds)

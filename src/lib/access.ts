@@ -1,14 +1,9 @@
 import { cache } from "react";
 
+import { adminEmailList, isAdminEmail } from "@/lib/admin";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { getAuthClaims } from "@/utils/supabase/auth";
-import { isAdminEmail } from "@/lib/admin";
-import {
-  isTranslatorRole,
-  parseProfileRoles,
-  storedRoleFromFlags,
-  type ProfileRole,
-} from "@/lib/roles";
+import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
+import { isTranslatorRole, parseProfileRoles, type ProfileRole } from "@/lib/roles";
 
 export type AdminAccess = {
   userId: string;
@@ -24,40 +19,34 @@ export type AdminAccess = {
   hasWorkspace: boolean;
 };
 
-// Workspace access is driven by profiles.role, but an approved translator
-// application can drift out of sync (e.g. approval ran before a profile row
-// existed). When that happens, sync the profile and treat them as translator.
-async function ensureTranslatorApplicationRole(
-  admin: ReturnType<typeof createAdminClient>,
-  userId: string,
-  isTranslator: boolean,
-): Promise<boolean> {
-  if (isTranslator) return true;
+let syncedAdminEmails: string | null = null;
 
-  const { data: application } = await admin
-    .from("translator_applications")
-    .select("status, username")
-    .eq("user_id", userId)
-    .maybeSingle();
+/**
+ * Copies ADMIN_EMAILS into the database so row-level policies can see it.
+ * Content writes do not use the service role; this allowlist sync is the
+ * exception, and it no-ops until the list changes.
+ */
+export async function syncAdminAllowlist(): Promise<void> {
+  const emails = adminEmailList();
+  const key = emails.join("\n");
+  if (syncedAdminEmails === key) return;
 
-  if (application?.status !== "approved") return false;
-
-  const { error } = await admin.from("profiles").upsert(
-    {
-      id: userId,
-      role: "translator",
-      username: application.username || null,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "id" },
-  );
-
+  const { error } = await createAdminClient().rpc("sync_admin_emails", {
+    p_emails: emails,
+  });
   if (error) {
-    console.error("[getAdminAccess] failed to sync translator role:", error);
-    return false;
+    console.error("[syncAdminAllowlist]", error);
+    return;
   }
+  syncedAdminEmails = key;
+}
 
-  return true;
+/** Publisher of the novel, or a master admin. */
+export function ownsNovel(
+  access: AdminAccess,
+  publisherId: string | null,
+): boolean {
+  return access.isMasterAdmin || publisherId === access.userId;
 }
 
 /**
@@ -72,8 +61,9 @@ export const getAdminAccess = cache(async (): Promise<AdminAccess | null> => {
   const email = claims.email as string | undefined;
   const isMasterAdmin = isAdminEmail(email);
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin
+  await syncAdminAllowlist();
+  const supabase = await getServerSupabase();
+  let { data: profile } = await supabase
     .from("profiles")
     .select("username, role")
     .eq("id", userId)
@@ -81,12 +71,23 @@ export const getAdminAccess = cache(async (): Promise<AdminAccess | null> => {
 
   let isTranslator = isTranslatorRole(profile?.role as string | null | undefined);
 
-  if (!isMasterAdmin) {
-    isTranslator = await ensureTranslatorApplicationRole(
-      admin,
-      userId,
-      isTranslator,
-    );
+  // Approved applications can land before the profile role is set. The
+  // database promotes the caller only when that approved row exists.
+  if (!isMasterAdmin && !isTranslator) {
+    const { data: synced, error } = await supabase.rpc("sync_own_translator_role");
+    if (error) {
+      console.error("[getAdminAccess] failed to sync translator role:", error);
+    } else if (synced === true) {
+      isTranslator = true;
+      if (!profile?.username) {
+        const { data: refreshed } = await supabase
+          .from("profiles")
+          .select("username, role")
+          .eq("id", userId)
+          .maybeSingle();
+        profile = refreshed;
+      }
+    }
   }
 
   const roles = parseProfileRoles({
@@ -103,35 +104,3 @@ export const getAdminAccess = cache(async (): Promise<AdminAccess | null> => {
     hasWorkspace: isMasterAdmin || isTranslator,
   };
 });
-
-/** Grant translator access via profiles.role. */
-export async function grantProfileRole(
-  userId: string,
-  role: ProfileRole,
-  username?: string | null,
-): Promise<{ error?: string }> {
-  const admin = createAdminClient();
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("role, username")
-    .eq("id", userId)
-    .maybeSingle();
-
-  const alreadyTranslator = isTranslatorRole(
-    profile?.role as string | null | undefined,
-  );
-  const nextTranslator = role === "translator" || alreadyTranslator;
-
-  const { error } = await admin.from("profiles").upsert(
-    {
-      id: userId,
-      role: storedRoleFromFlags(nextTranslator),
-      username: username || profile?.username || null,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "id" },
-  );
-
-  if (error) return { error: error.message };
-  return {};
-}

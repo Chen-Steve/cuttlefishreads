@@ -1,6 +1,6 @@
 import { PageContainer } from "@/components/page-container";
-import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
+import { getServerSupabase } from "@/utils/supabase/auth";
 import { WORKSPACE_BASE, WORKSPACE_LABELS } from "@/lib/workspace";
 import {
   NovelsGrid,
@@ -32,11 +32,11 @@ function buildPublisherOptions(novels: NovelRow[]): TranslatorOption[] {
 
 export async function WorkspaceNovelsPage() {
   const access = await getAdminAccess();
-  const admin = createAdminClient();
+  const supabase = await getServerSupabase();
   const base = WORKSPACE_BASE;
   const labels = WORKSPACE_LABELS;
 
-  let query = admin
+  let query = supabase
     .from("novels")
     .select(
       "id, title, slug, status, cover_url, updated_at, publisher_id, translator",
@@ -65,7 +65,7 @@ export async function WorkspaceNovelsPage() {
   const { data: profiles } =
     publisherIds.length === 0
       ? { data: [] as { id: string; username: string | null }[] }
-      : await admin
+      : await supabase
           .from("profiles")
           .select("id, username")
           .in("id", publisherIds);

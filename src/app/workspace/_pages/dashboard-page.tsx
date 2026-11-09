@@ -5,8 +5,8 @@ import { Bookmark, Cookie, Eye, ShoppingCart } from "lucide-react";
 import { PageContainer } from "@/components/page-container";
 import { LoadingStatus, Skeleton } from "@/components/skeleton";
 import { TabPanelShell } from "@/components/tab-panel-shell";
-import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
+import { getServerSupabase } from "@/utils/supabase/auth";
 import {
   getGoogleAnalyticsDashboard,
   isGoogleAnalyticsConfigured,
@@ -46,9 +46,9 @@ export async function WorkspaceDashboardPage({
 
   const base = WORKSPACE_BASE;
 
-  const admin = createAdminClient();
+  const supabase = await getServerSupabase();
 
-  let novelsQuery = admin
+  let novelsQuery = supabase
     .from("novels")
     .select("id, slug, title, library_add_count, view_count")
     .eq("publication_type", "translation")
@@ -104,8 +104,8 @@ export async function WorkspaceDashboardPage({
 
   if (novelIds.length > 0) {
     const [unlockStatsRes, recentUnlocksRes] = await Promise.all([
-      admin.rpc("novel_unlock_stats", { p_slugs: slugs }),
-      admin
+      supabase.rpc("novel_unlock_stats", { p_slugs: slugs }),
+      supabase
         .from("chapter_unlocks")
         .select(
           "novel_slug, chapter_number, translator_share, created_at, user_id",
@@ -131,7 +131,7 @@ export async function WorkspaceDashboardPage({
   const buyerIds = [...new Set(unlockRows.map((r) => r.user_id))];
   const usernameById = new Map<string, string>();
   if (buyerIds.length > 0) {
-    const { data: profiles } = await admin
+    const { data: profiles } = await supabase
       .from("profiles")
       .select("id, username")
       .in("id", buyerIds);

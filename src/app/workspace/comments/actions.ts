@@ -2,22 +2,16 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 
-import { getAdminAccess, type AdminAccess } from "@/lib/access";
+import { getAdminAccess, ownsNovel } from "@/lib/access";
 import { novelCommentsCacheTag } from "@/lib/data";
 import { notifyUsers } from "@/lib/notifications/data";
 import { WORKSPACE_BASE } from "@/lib/workspace";
-import { createAdminClient } from "@/utils/supabase/admin";
+import { getServerSupabase } from "@/utils/supabase/auth";
 import type { NovelComment } from "@/types";
 
 const MAX_COMMENT_LENGTH = 2000;
 
 export type ReplyState = { error?: string; reply?: NovelComment };
-
-// Translators may only act on novels they own (publisher_id === their id).
-// Master admins can act on any novel.
-function ownsNovel(access: AdminAccess, publisherId: string | null): boolean {
-  return access.isMasterAdmin || publisherId === access.userId;
-}
 
 // Posts a translator reply to a reader comment. The reply is a child
 // novel_comments row (parent_id = commentId) authored by the current user.
@@ -38,9 +32,9 @@ export async function replyToComment(
     return { error: `Reply must be ${MAX_COMMENT_LENGTH} characters or fewer.` };
   }
 
-  const admin = createAdminClient();
+  const supabase = await getServerSupabase();
 
-  const { data: parent, error: parentError } = await admin
+  const { data: parent, error: parentError } = await supabase
     .from("novel_comments")
     .select(
       "id, user_id, novel_id, novel_slug, chapter_number, parent_id, novels(publisher_id)",
@@ -68,7 +62,7 @@ export async function replyToComment(
     return { error: "You can only reply to comments on your own novels." };
   }
 
-  const { data: inserted, error } = await admin
+  const { data: inserted, error } = await supabase
     .from("novel_comments")
     .insert({
       user_id: access.userId,

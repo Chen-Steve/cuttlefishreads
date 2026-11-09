@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/page-container";
-import { createAdminClient } from "@/utils/supabase/admin";
-import { getAdminAccess } from "@/lib/access";
+import { getAdminAccess, ownsNovel } from "@/lib/access";
+import { getServerSupabase } from "@/utils/supabase/auth";
 import { WORKSPACE_BASE } from "@/lib/workspace";
 import { ChapterList } from "../_components/chapter-list";
 
@@ -25,15 +25,15 @@ export async function WorkspaceChaptersPage({
   const base = WORKSPACE_BASE;
 
   const access = await getAdminAccess();
-  const admin = createAdminClient();
+  const supabase = await getServerSupabase();
   const [{ data: novel }, { data: chapters }] = await Promise.all([
-    admin
+    supabase
       .from("novels")
       .select("id, title, publisher_id")
       .eq("id", novelId)
       .eq("publication_type", "translation")
       .maybeSingle(),
-    admin
+    supabase
       .from("chapters")
       .select(
         "id, number, title, word_count, is_free, coin_cost, is_published, unlock_at",
@@ -44,7 +44,7 @@ export async function WorkspaceChaptersPage({
   ]);
 
   if (!novel) notFound();
-  if (!access || (!access.isMasterAdmin && novel.publisher_id !== access.userId)) {
+  if (!access || !ownsNovel(access, novel.publisher_id)) {
     notFound();
   }
 

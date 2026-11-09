@@ -4,7 +4,6 @@ import { revalidatePath, updateTag } from "next/cache";
 
 import { profileCacheTag } from "@/lib/data";
 import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
-import { createAdminClient } from "@/utils/supabase/admin";
 import {
   USERNAME_MAX,
   USERNAME_MIN,
@@ -47,12 +46,12 @@ function avatarPathFromUrl(url: string | null | undefined): string | null {
 }
 
 async function deleteAvatarObject(
-  admin: ReturnType<typeof createAdminClient>,
+  supabase: Awaited<ReturnType<typeof getServerSupabase>>,
   url: string | null | undefined,
 ) {
   const path = avatarPathFromUrl(url);
   if (!path) return;
-  await admin.storage.from("avatars").remove([path]);
+  await supabase.storage.from("avatars").remove([path]);
 }
 
 export async function updateUsername(
@@ -117,9 +116,9 @@ export async function updateAvatar(
   if (validationError) return { error: validationError };
 
   const userId = claims.sub as string;
-  const admin = createAdminClient();
+  const supabase = await getServerSupabase();
 
-  const { data: existing } = await admin
+  const { data: existing } = await supabase
     .from("profiles")
     .select("avatar_url, username")
     .eq("id", userId)
@@ -130,7 +129,7 @@ export async function updateAvatar(
     : "jpg";
   const path = `${userId}-${Date.now()}.${ext}`;
 
-  const { error: uploadError } = await admin.storage.from("avatars").upload(path, file, {
+  const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, {
     contentType: file.type || undefined,
     upsert: false,
     cacheControl: "31536000",
@@ -142,19 +141,20 @@ export async function updateAvatar(
 
   const {
     data: { publicUrl },
-  } = admin.storage.from("avatars").getPublicUrl(path);
+  } = supabase.storage.from("avatars").getPublicUrl(path);
 
-  const { error: updateError } = await admin
+  const { data: saved, error: updateError } = await supabase
     .from("profiles")
     .update({ avatar_url: publicUrl })
-    .eq("id", userId);
+    .eq("id", userId)
+    .select("id");
 
-  if (updateError) {
-    await admin.storage.from("avatars").remove([path]);
-    return { error: updateError.message };
+  if (updateError || !saved?.length) {
+    await supabase.storage.from("avatars").remove([path]);
+    return { error: updateError?.message ?? "Could not save your profile picture." };
   }
 
-  await deleteAvatarObject(admin, existing?.avatar_url);
+  await deleteAvatarObject(supabase, existing?.avatar_url);
 
   revalidatePath("/account");
   if (existing?.username) {
@@ -205,9 +205,9 @@ export async function removeAvatar(): Promise<AvatarState> {
   }
 
   const userId = claims.sub as string;
-  const admin = createAdminClient();
+  const supabase = await getServerSupabase();
 
-  const { data: existing } = await admin
+  const { data: existing } = await supabase
     .from("profiles")
     .select("avatar_url, username")
     .eq("id", userId)
@@ -217,14 +217,16 @@ export async function removeAvatar(): Promise<AvatarState> {
     return { error: "No profile picture to remove." };
   }
 
-  const { error } = await admin
+  const { data: saved, error } = await supabase
     .from("profiles")
     .update({ avatar_url: null })
-    .eq("id", userId);
+    .eq("id", userId)
+    .select("id");
 
   if (error) return { error: error.message };
+  if (!saved?.length) return { error: "Could not remove your profile picture." };
 
-  await deleteAvatarObject(admin, existing.avatar_url);
+  await deleteAvatarObject(supabase, existing.avatar_url);
 
   revalidatePath("/account");
   if (existing.username) {

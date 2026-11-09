@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { WorkspaceSuspense } from "../_components/workspace-suspense";
 
 import { PageContainer } from "@/components/page-container";
-import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminAccess } from "@/lib/access";
+import { getServerSupabase } from "@/utils/supabase/auth";
 import { ReviewButtons } from "./_components/review-buttons";
 
 export const metadata: Metadata = {
@@ -79,8 +79,8 @@ async function Applications() {
   const access = await getAdminAccess();
   if (!access?.isMasterAdmin) notFound();
 
-  const admin = createAdminClient();
-  const { data: translatorRows } = await admin
+  const supabase = await getServerSupabase();
+  const { data: translatorRows } = await supabase
     .from("translator_applications")
     .select("id, username, email, discord, message, status, created_at")
     .order("created_at", { ascending: false });
