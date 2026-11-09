@@ -13,7 +13,13 @@ import { useReaderPanelPosition } from "@/hooks/use-reader-panel-position";
 import { cn } from "@/lib/utils";
 import type { ChapterSummary } from "@/types";
 import { chapterHref } from "@/lib/catalog-paths";
+import { isScheduledUnlock } from "@/lib/unlock-countdown";
 import { readerChromeBtnClass } from "./reader-chrome";
+
+function stillLocked(chapter: ChapterSummary): boolean {
+  if (chapter.unlockAt && !isScheduledUnlock(chapter.unlockAt)) return false;
+  return chapter.locked;
+}
 
 function chapterListLabel(chapter: ChapterSummary): string {
   if (!chapter.title) return `Chapter ${chapter.number}`;
@@ -34,7 +40,9 @@ function applyAccess(
   const unlocked = new Set(access.unlocked);
   return chapters.map((chapter) => ({
     ...chapter,
-    locked: access.bypass ? false : chapter.locked && !unlocked.has(chapter.number),
+    locked: access.bypass
+      ? false
+      : stillLocked(chapter) && !unlocked.has(chapter.number),
   }));
 }
 
@@ -213,7 +221,7 @@ export function ChapterContentsDropdown({
                 >
                   {label}
                 </span>
-                {chapter.locked ? (
+                {stillLocked(chapter) ? (
                   <>
                     <span className="sr-only">Locked</span>
                     <Lock

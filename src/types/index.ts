@@ -89,6 +89,8 @@ export interface ChapterSummary {
   number: number;
   title: string;
   locked: boolean;
+  /** When this is already in the past, the chapter is public even if `locked` was cached. */
+  unlockAt: string | null;
 }
 
 /** Chapter metadata for lists/TOC — no body or translator note. */

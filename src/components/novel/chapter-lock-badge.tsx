@@ -1,9 +1,10 @@
 "use client";
 
 import { Cookie, Lock } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { UnlockCountdown } from "@/components/reader/unlock-countdown";
-import { isScheduledUnlock } from "@/lib/unlock-countdown";
+import { useUnlockCountdown } from "@/hooks/use-unlock-countdown";
 import type { ChapterListItem } from "@/types";
 
 export function ChapterLockBadge({
@@ -11,9 +12,17 @@ export function ChapterLockBadge({
 }: {
   chapter: Pick<ChapterListItem, "locked" | "coinCost" | "unlockAt">;
 }) {
-  if (!chapter.locked) return null;
+  const router = useRouter();
+  const { scheduled } = useUnlockCountdown(
+    chapter.locked ? chapter.unlockAt : null,
+    () => router.refresh(),
+    "day-hour",
+  );
 
-  if (chapter.unlockAt && isScheduledUnlock(chapter.unlockAt)) {
+  if (!chapter.locked) return null;
+  if (chapter.unlockAt && !scheduled) return null;
+
+  if (chapter.unlockAt && scheduled) {
     return (
       <span className="inline-flex shrink-0 items-center gap-1.5">
         {chapter.coinCost > 0 ? (

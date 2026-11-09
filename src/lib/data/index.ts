@@ -361,7 +361,19 @@ export async function getPublicChapterMeta(
   };
 }
 
-async function fetchDbChapterContent(
+function mapChapterBody(data: {
+  content?: string | null;
+  translator_note?: string | null;
+}): DbChapterBody {
+  const note = data.translator_note?.trim();
+  return {
+    content: data.content ?? null,
+    translatorNote: note ? note : null,
+  };
+}
+
+/** Shared cache is only for chapters published as free. Paid and timed text stay out. */
+async function fetchCachedFreeChapterBody(
   novelId: string,
   chapterNumber: number,
 ): Promise<DbChapterBody | null> {
@@ -374,19 +386,16 @@ async function fetchDbChapterContent(
         .eq("novel_id", novelId)
         .eq("number", chapterNumber)
         .eq("is_published", true)
+        .eq("is_free", true)
         .maybeSingle();
 
       if (error) {
         throw new Error("Could not load chapter content", { cause: error });
       }
       if (!data) return null;
-      const note = (data.translator_note as string | null | undefined)?.trim();
-      return {
-        content: (data.content as string | null | undefined) ?? null,
-        translatorNote: note ? note : null,
-      };
+      return mapChapterBody(data);
     },
-    ["chapter-body-v3", novelId, String(chapterNumber)],
+    ["chapter-free-body-v1", novelId, String(chapterNumber)],
     {
       revalidate: CHAPTER_REVALIDATE_SECONDS,
       tags: [
@@ -395,6 +404,27 @@ async function fetchDbChapterContent(
       ],
     },
   )();
+}
+
+/** Request-time read. Used after a lock check for paid and timed-release chapters. */
+async function fetchChapterBody(
+  novelId: string,
+  chapterNumber: number,
+): Promise<DbChapterBody | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("chapters")
+    .select("content, translator_note")
+    .eq("novel_id", novelId)
+    .eq("number", chapterNumber)
+    .eq("is_published", true)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Could not load chapter content", { cause: error });
+  }
+  if (!data) return null;
+  return mapChapterBody(data);
 }
 
 export const getNovels = cache(async (): Promise<Novel[]> => {
@@ -861,10 +891,10 @@ export type PublicChapterListPage = {
 };
 
 /**
- * One page of the public chapter list. No auth or unlock lookup.
- * The novel page renders the first oldest page; other pages load on demand.
+ * Stored list page. `locked` follows the is_free column only — a timer is not
+ * a cache input. Callers apply `openElapsedUnlocks` at request time.
  */
-export async function getPublicChapterListPage(
+async function readCachedPublicChapterListPage(
   slug: string,
   page: number,
   order: ChapterListOrder,
@@ -879,12 +909,51 @@ export async function getPublicChapterListPage(
   }
 
   const rows = await fetchDbChapterMetas(novel.id);
-  const unlocked = new Set<number>();
   return {
     chapters: sliceChapterMetas(rows, page, order).map((row) =>
-      toChapterListRow(mapChapterListItem(slug, row, unlocked, false)),
+      toChapterListRow({
+        id: row.id,
+        novelSlug: slug,
+        number: row.number,
+        title: row.title,
+        publishedAt: formatDate(row.published_at),
+        isFree: row.is_free,
+        isAdvanced: !row.is_free,
+        coinCost: row.coin_cost,
+        unlockAt: row.unlock_at,
+        locked: !row.is_free,
+        adminAccess: false,
+      }),
     ),
     totalCount: rows.length,
+  };
+}
+
+/** A scheduled release that has already opened is free for every visitor. */
+function openElapsedUnlocks(chapters: ChapterListRow[]): ChapterListRow[] {
+  const now = Date.now();
+  return chapters.map((chapter) => {
+    if (!chapter.locked || !chapter.unlockAt) return chapter;
+    if (new Date(chapter.unlockAt).getTime() > now) return chapter;
+    return { ...chapter, locked: false, isFree: true, adminAccess: false };
+  });
+}
+
+/**
+ * One page of the public chapter list. No auth or unlock lookup.
+ * The novel page renders the first oldest page; other pages load on demand.
+ * Titles stay cached. Whether a timer has opened is decided on this request.
+ */
+export async function getPublicChapterListPage(
+  slug: string,
+  page: number,
+  order: ChapterListOrder,
+): Promise<PublicChapterListPage> {
+  const cached = await readCachedPublicChapterListPage(slug, page, order);
+  await connection();
+  return {
+    totalCount: cached.totalCount,
+    chapters: openElapsedUnlocks(cached.chapters),
   };
 }
 
@@ -960,6 +1029,7 @@ export const getChapterListLockUpdates = cache(
 /** TOC rows with public lock state only. No auth or unlock lookup. */
 export const getPublicChapterSummaries = cache(
   async (slug: string): Promise<ChapterSummary[]> => {
+    await connection();
     const novel = await fetchNovelIdBySlug(slug);
     if (!novel) return [];
 
@@ -968,6 +1038,7 @@ export const getPublicChapterSummaries = cache(
       number: row.number,
       title: row.title,
       locked: !isNaturallyFree(row),
+      unlockAt: row.unlock_at,
     }));
   },
 );
@@ -1021,10 +1092,11 @@ export const getChapterAccess = cache(
 export const getChapterSummaries = cache(
   async (slug: string): Promise<ChapterSummary[]> => {
     const chapters = await getChapterListItems(slug);
-    return chapters.map(({ number, title, locked }) => ({
+    return chapters.map(({ number, title, locked, unlockAt }) => ({
       number,
       title,
       locked,
+      unlockAt,
     }));
   },
 );
@@ -1034,8 +1106,7 @@ export const getChapter = cache(
     slug: string,
     chapterNumber: number,
   ): Promise<Chapter | undefined> => {
-    // Never prerender an entitlement-dependent result, even when a purchased
-    // body is already present in the server's shared data cache.
+    // Lock state and paid text are decided on this request.
     await connection();
     const novel = await fetchNovelIdBySlug(slug);
     if (!novel) return undefined;
@@ -1043,11 +1114,10 @@ export const getChapter = cache(
     const row = await fetchDbChapterMeta(novel.id, chapterNumber);
     if (!row) return undefined;
 
-    // Free chapters are the same for every visitor. Skip auth and unlock
-    // lookups so a cached body does not touch Auth or Postgres.
-    if (isNaturallyFree(row)) {
+    // Explicitly free chapters are the same for every visitor.
+    if (row.is_free) {
       const listItem = mapChapterListItem(slug, row, new Set(), false);
-      const body = await fetchDbChapterContent(novel.id, chapterNumber);
+      const body = await fetchCachedFreeChapterBody(novel.id, chapterNumber);
       return toChapter(
         row,
         listItem,
@@ -1056,11 +1126,12 @@ export const getChapter = cache(
       );
     }
 
-    const currentUser = await getCurrentUser();
+    const naturallyFree = isNaturallyFree(row);
+    const currentUser = naturallyFree ? null : await getCurrentUser();
     const isPublisher =
       novel.publisher_id !== null && currentUser?.id === novel.publisher_id;
     const bypassLock = currentUser?.isAdmin === true || isPublisher;
-    const purchased = !bypassLock && currentUser
+    const purchased = !naturallyFree && !bypassLock && currentUser
       ? await hasChapterUnlock(slug, chapterNumber, currentUser.id)
       : false;
     const unlocked = new Set(purchased ? [chapterNumber] : []);
@@ -1069,7 +1140,7 @@ export const getChapter = cache(
       return toChapter(row, listItem);
     }
 
-    const body = await fetchDbChapterContent(novel.id, chapterNumber);
+    const body = await fetchChapterBody(novel.id, chapterNumber);
     return toChapter(
       row,
       listItem,
@@ -1096,7 +1167,7 @@ export async function getPublicFreeChapter(
   const row = await fetchDbChapterMeta(novel.id, chapterNumber);
   // Scheduled releases are deliberately evaluated by getChapter per request.
   if (!row?.is_free) return undefined;
-  const body = await fetchDbChapterContent(novel.id, chapterNumber);
+  const body = await fetchCachedFreeChapterBody(novel.id, chapterNumber);
   if (body?.content == null) return undefined;
   return toChapter(
     row,
