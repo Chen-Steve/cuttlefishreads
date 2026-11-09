@@ -1,9 +1,10 @@
 import { cache } from "react";
 
-import { adminEmailList, isAdminEmail } from "@/lib/admin";
+import { adminEmailList } from "@/lib/admin";
+import type { ProfileRole } from "@/lib/roles";
+import { getSessionProfile } from "@/lib/session-profile";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { getAuthClaims, getServerSupabase } from "@/utils/supabase/auth";
-import { isTranslatorRole, parseProfileRoles, type ProfileRole } from "@/lib/roles";
+import { getAuthClaims } from "@/utils/supabase/auth";
 
 export type AdminAccess = {
   userId: string;
@@ -50,57 +51,23 @@ export function ownsNovel(
 }
 
 /**
- * Current request's access from JWT + profile. Null when logged out.
- * Request-scoped via React cache so layout + page share one lookup.
+ * Workspace view of the request's signed-in profile. Same row as the header.
+ * Translator role is set when an application is approved, not on this read.
  */
 export const getAdminAccess = cache(async (): Promise<AdminAccess | null> => {
-  const claims = await getAuthClaims();
-  if (!claims) return null;
-
-  const userId = claims.sub as string;
-  const email = claims.email as string | undefined;
-  const isMasterAdmin = isAdminEmail(email);
+  const session = await getSessionProfile();
+  if (!session) return null;
 
   await syncAdminAllowlist();
-  const supabase = await getServerSupabase();
-  let { data: profile } = await supabase
-    .from("profiles")
-    .select("username, role")
-    .eq("id", userId)
-    .maybeSingle();
-
-  let isTranslator = isTranslatorRole(profile?.role as string | null | undefined);
-
-  // Approved applications can land before the profile role is set. The
-  // database promotes the caller only when that approved row exists.
-  if (!isMasterAdmin && !isTranslator) {
-    const { data: synced, error } = await supabase.rpc("sync_own_translator_role");
-    if (error) {
-      console.error("[getAdminAccess] failed to sync translator role:", error);
-    } else if (synced === true) {
-      isTranslator = true;
-      if (!profile?.username) {
-        const { data: refreshed } = await supabase
-          .from("profiles")
-          .select("username, role")
-          .eq("id", userId)
-          .maybeSingle();
-        profile = refreshed;
-      }
-    }
-  }
-
-  const roles = parseProfileRoles({
-    role: isTranslator ? "translator" : "user",
-  });
+  const claims = await getAuthClaims();
 
   return {
-    userId,
-    email,
-    username: profile?.username ?? null,
-    roles,
-    isMasterAdmin,
-    isTranslator,
-    hasWorkspace: isMasterAdmin || isTranslator,
+    userId: session.id,
+    email: typeof claims?.email === "string" ? claims.email : undefined,
+    username: session.username,
+    roles: session.roles,
+    isMasterAdmin: session.isAdmin,
+    isTranslator: session.isTranslator,
+    hasWorkspace: session.isAdmin || session.isTranslator,
   };
 });

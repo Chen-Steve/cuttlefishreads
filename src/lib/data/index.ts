@@ -194,7 +194,7 @@ type CurrentUser = {
   role: "user" | "translator";
 };
 
-/** Request-scoped current user (auth claims + profile roles). */
+/** Request-scoped view of the signed-in profile. Does not load the profile again. */
 const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const session = await getSessionProfile();
   if (!session) return null;
