@@ -5,22 +5,14 @@ import { WorkspaceSuspense } from "../_components/workspace-suspense";
 
 import { PageContainer } from "@/components/page-container";
 import { getAdminAccess } from "@/lib/access";
-import { getServerSupabase } from "@/utils/supabase/auth";
+import { getTranslatorApplications } from "@/lib/data/workspace";
 import { ReviewButtons } from "./_components/review-buttons";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-type ApplicationRow = {
-  id: string;
-  username: string;
-  email: string;
-  discord: string;
-  message: string;
-  status: "pending" | "approved" | "rejected";
-  created_at: string;
-};
+type ApplicationRow = Awaited<ReturnType<typeof getTranslatorApplications>>[number];
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString("en-US", {
@@ -79,13 +71,7 @@ async function Applications() {
   const access = await getAdminAccess();
   if (!access?.isMasterAdmin) notFound();
 
-  const supabase = await getServerSupabase();
-  const { data: translatorRows } = await supabase
-    .from("translator_applications")
-    .select("id, username, email, discord, message, status, created_at")
-    .order("created_at", { ascending: false });
-
-  const applications = (translatorRows ?? []) as ApplicationRow[];
+  const applications = await getTranslatorApplications();
   const pending = applications.filter((a) => a.status === "pending");
   const reviewed = applications.filter((a) => a.status !== "pending");
 

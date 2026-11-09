@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
+import type { Database } from "@/lib/database.types";
+
 // Service-role Supabase client for trusted server code only (e.g. crediting
 // coins after a verified PayPal payment). It bypasses RLS and can execute
 // SECURITY DEFINER functions, so it must NEVER be imported into client code.
@@ -13,7 +15,7 @@ export function createAdminClient() {
     );
   }
 
-  return createClient(url, secretKey, {
+  return createClient<Database>(url, secretKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

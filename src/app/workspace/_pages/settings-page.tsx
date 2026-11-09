@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/page-container";
 import { getAdminAccess } from "@/lib/access";
-import { getServerSupabase } from "@/utils/supabase/auth";
+import { getWorkspaceSettings } from "@/lib/data/workspace";
 import { SupportLinksForm } from "../_components/support-links-form";
 
 export async function WorkspaceSettingsPage() {
@@ -11,12 +11,7 @@ export async function WorkspaceSettingsPage() {
 
   const roleNoun = "translator";
 
-  const supabase = await getServerSupabase();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("translator_note, kofi_url, patreon_url")
-    .eq("id", access.userId)
-    .maybeSingle();
+  const profile = await getWorkspaceSettings(access);
 
   return (
     <PageContainer as="div" width="prose">
@@ -39,9 +34,9 @@ export async function WorkspaceSettingsPage() {
 
         <SupportLinksForm
           initial={{
-            globalNote: profile?.translator_note ?? null,
-            kofiUrl: profile?.kofi_url ?? null,
-            patreonUrl: profile?.patreon_url ?? null,
+            globalNote: profile.globalNote,
+            kofiUrl: profile.kofiUrl,
+            patreonUrl: profile.patreonUrl,
           }}
         />
       </div>

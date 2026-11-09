@@ -1,4 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+
+import type { Database } from "@/lib/database.types";
 import { cookies } from "next/headers";
 
 import {
@@ -31,7 +33,7 @@ export const createClient = (
 ) => {
   const host = defaultAuthHost();
 
-  return createServerClient(supabaseUrl!, supabaseKey!, {
+  return createServerClient<Database>(supabaseUrl!, supabaseKey!, {
     cookieOptions: authCookieOptionsForHost(host) as CookieOptions,
     cookies: {
       getAll() {

@@ -6,7 +6,10 @@ import { PageContainer } from "@/components/page-container";
 import { LoadingStatus, Skeleton } from "@/components/skeleton";
 import { TabPanelShell } from "@/components/tab-panel-shell";
 import { getAdminAccess } from "@/lib/access";
-import { getServerSupabase } from "@/utils/supabase/auth";
+import {
+  getWorkspaceDashboard,
+  RECENT_PURCHASES_LIMIT,
+} from "@/lib/data/workspace";
 import {
   getGoogleAnalyticsDashboard,
   isGoogleAnalyticsConfigured,
@@ -14,19 +17,6 @@ import {
   type ViewsMode,
 } from "@/lib/google-analytics";
 import { WORKSPACE_BASE } from "@/lib/workspace";
-
-type NovelStat = {
-  id: string;
-  slug: string;
-  title: string;
-  views: number;
-  bookmarks: number;
-  purchases: number;
-  coinsEarned: number;
-};
-
-/** Recent purchase rows shown under the stats table (newest first). */
-const RECENT_PURCHASES_LIMIT = 100;
 
 // Translator balances can be fractional (exact 70% split). Keep one decimal
 // place and drop a trailing ".0".
@@ -45,32 +35,20 @@ export async function WorkspaceDashboardPage({
   if (!access) notFound();
 
   const base = WORKSPACE_BASE;
-
-  const supabase = await getServerSupabase();
-
-  let novelsQuery = supabase
-    .from("novels")
-    .select("id, slug, title, library_add_count, view_count")
-    .eq("publication_type", "translation")
-    .order("updated_at", { ascending: false });
-
-  if (!access.isMasterAdmin) {
-    novelsQuery = novelsQuery.eq("publisher_id", access.userId);
-  }
-
-  const { data: novels } = await novelsQuery.returns<
-    {
-      id: string;
-      slug: string;
-      title: string;
-      library_add_count: number | null;
-      view_count: number | null;
-    }[]
-  >();
-
-  const rows = novels ?? [];
-  const novelIds = rows.map((n) => n.id);
-  const slugs = rows.map((n) => n.slug);
+  const dashboard = await getWorkspaceDashboard(access);
+  const {
+    stats,
+    totals,
+    totalViews,
+    novels: rows,
+    slugs,
+    allTimeViewsBySlug,
+    novelsWithPurchases,
+    purchasesByNovel,
+    purchasesBySlug,
+    earnedBySlug,
+    recentPurchasesTruncated,
+  } = dashboard;
 
   // Totals come from novels.view_count (same column as public pages).
   // Daily and monthly charts still ask Google Analytics, but they stream in
@@ -81,116 +59,6 @@ export async function WorkspaceDashboardPage({
     dailyViews: [],
     monthlyViews: [],
   };
-
-  type UnlockStatRow = {
-    novel_slug: string;
-    purchase_count: number;
-    coins_earned: number;
-  };
-  type UnlockDetailRow = {
-    novel_slug: string;
-    chapter_number: number;
-    translator_share: number;
-    created_at: string;
-    user_id: string;
-  };
-
-  let unlockStats: UnlockStatRow[] = [];
-  let unlockRows: UnlockDetailRow[] = [];
-  const allTimeViewsBySlug: Record<string, number> = {};
-  for (const novel of rows) {
-    allTimeViewsBySlug[novel.slug] = Number(novel.view_count ?? 0);
-  }
-
-  if (novelIds.length > 0) {
-    const [unlockStatsRes, recentUnlocksRes] = await Promise.all([
-      supabase.rpc("novel_unlock_stats", { p_slugs: slugs }),
-      supabase
-        .from("chapter_unlocks")
-        .select(
-          "novel_slug, chapter_number, translator_share, created_at, user_id",
-        )
-        .in("novel_slug", slugs)
-        .eq("hidden_from_translator", false)
-        .order("created_at", { ascending: false })
-        .limit(RECENT_PURCHASES_LIMIT),
-    ]);
-
-    unlockStats = (unlockStatsRes.data ?? []) as UnlockStatRow[];
-    unlockRows = (recentUnlocksRes.data ?? []) as UnlockDetailRow[];
-  }
-
-  const purchasesBySlug = new Map<string, number>();
-  const earnedBySlug = new Map<string, number>();
-  for (const row of unlockStats) {
-    purchasesBySlug.set(row.novel_slug, Number(row.purchase_count ?? 0));
-    earnedBySlug.set(row.novel_slug, Number(row.coins_earned ?? 0));
-  }
-
-  // Resolve buyer usernames for the recent-purchase list.
-  const buyerIds = [...new Set(unlockRows.map((r) => r.user_id))];
-  const usernameById = new Map<string, string>();
-  if (buyerIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, username")
-      .in("id", buyerIds);
-    for (const p of (profiles ?? []) as { id: string; username: string | null }[]) {
-      usernameById.set(p.id, p.username ?? "Unknown");
-    }
-  }
-
-  // Group recent purchases by novel, newest first (unlockRows is already
-  // ordered by created_at desc). Totals come from novel_unlock_stats.
-  type Purchase = {
-    chapterNumber: number;
-    buyer: string;
-    earned: number;
-    createdAt: string;
-  };
-  const purchasesByNovel = new Map<string, Purchase[]>();
-  for (const row of unlockRows) {
-    const list = purchasesByNovel.get(row.novel_slug) ?? [];
-    list.push({
-      chapterNumber: row.chapter_number,
-      buyer: usernameById.get(row.user_id) ?? "Unknown",
-      earned: row.translator_share,
-      createdAt: row.created_at,
-    });
-    purchasesByNovel.set(row.novel_slug, list);
-  }
-  const novelsWithPurchases = rows.filter(
-    (n) => (purchasesBySlug.get(n.slug) ?? 0) > 0,
-  );
-  const recentPurchasesTruncated =
-    unlockRows.length >= RECENT_PURCHASES_LIMIT;
-
-  // Earnings are the exact translator share credited per unlock (70% of list).
-  // Hidden every-4th purchases are excluded from the stats RPC above.
-  const stats: NovelStat[] = rows.map((n) => ({
-    id: n.id,
-    slug: n.slug,
-    title: n.title,
-    views: allTimeViewsBySlug[n.slug] ?? 0,
-    bookmarks: Number(n.library_add_count ?? 0),
-    purchases: purchasesBySlug.get(n.slug) ?? 0,
-    coinsEarned: earnedBySlug.get(n.slug) ?? 0,
-  }));
-
-  const totals = stats.reduce(
-    (acc, s) => ({
-      bookmarks: acc.bookmarks + s.bookmarks,
-      purchases: acc.purchases + s.purchases,
-      coinsEarned: acc.coinsEarned + s.coinsEarned,
-    }),
-    { bookmarks: 0, purchases: 0, coinsEarned: 0 },
-  );
-
-  // Same stored total the public novel pages show.
-  const totalViews = Object.values(allTimeViewsBySlug).reduce(
-    (sum, n) => sum + n,
-    0,
-  );
   const viewsLabel = "All-time views";
 
   return (
