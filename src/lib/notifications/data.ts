@@ -58,7 +58,8 @@ export async function notifyUsers(rows: NotifyRow[]) {
 
 /**
  * Notify bookmarkers about one or more chapter publish/release events.
- * Loads bookmarks once and inserts all notification rows in a single batch.
+ * The database inserts one row per reader (free and locked chapters stay
+ * separate) instead of one row per chapter.
  */
 export async function notifyBookmarkersOfChapters(opts: {
   novelId: string;
@@ -68,35 +69,16 @@ export async function notifyBookmarkersOfChapters(opts: {
   if (opts.chapters.length === 0) return;
 
   const admin = createAdminClient();
-  const { data: bookmarks, error } = await admin
-    .from("bookmarks")
-    .select("user_id")
-    .eq("novel_id", opts.novelId);
+  const { error } = await admin.rpc("notify_bookmarkers_of_chapters", {
+    p_novel_id: opts.novelId,
+    p_chapters: opts.chapters.map((chapter) => ({
+      number: chapter.chapterNumber,
+      released: chapter.released,
+    })),
+    p_exclude_user_id: opts.excludeUserId ?? undefined,
+  });
 
-  if (error) {
-    console.error("notifyBookmarkersOfChapters:", error);
-    return;
-  }
-
-  const recipients = [
-    ...new Set(
-      (bookmarks ?? [])
-        .map((row) => row.user_id as string)
-        .filter((id) => id && id !== opts.excludeUserId),
-    ),
-  ];
-  if (recipients.length === 0) return;
-
-  await notifyUsers(
-    opts.chapters.flatMap((chapter) =>
-      recipients.map((userId) => ({
-        user_id: userId,
-        type: chapter.released ? "chapter_released" : "chapter_published",
-        novel_id: opts.novelId,
-        chapter_number: chapter.chapterNumber,
-      })),
-    ),
-  );
+  if (error) console.error("notifyBookmarkersOfChapters:", error);
 }
 
 /**
@@ -126,7 +108,7 @@ export async function getNotifications(
   const { data, error } = await supabase
     .from("notifications")
     .select(
-      "id, type, comment_id, reply_id, novel_id, chapter_number, read_at, created_at, actor:profiles!notifications_actor_id_fkey(id, username, avatar_url), comment:novel_comments!notifications_comment_id_fkey(body, novel_slug, chapter_number), reply:novel_comments!notifications_reply_id_fkey(body), novel:novels!notifications_novel_id_fkey(slug, title)",
+      "id, type, comment_id, reply_id, novel_id, chapter_number, chapter_count, read_at, created_at, actor:profiles!notifications_actor_id_fkey(id, username, avatar_url), comment:novel_comments!notifications_comment_id_fkey(body, novel_slug, chapter_number), reply:novel_comments!notifications_reply_id_fkey(body), novel:novels!notifications_novel_id_fkey(slug, title)",
     )
     .eq("user_id", userId)
     .is("dismissed_at", null)
@@ -146,6 +128,7 @@ export async function getNotifications(
     reply_id: string | null;
     novel_id: string | null;
     chapter_number: number | null;
+    chapter_count: number | null;
     read_at: string | null;
     created_at: string;
     actor: {
@@ -170,6 +153,7 @@ export async function getNotifications(
       (row) =>
         row.novel_id &&
         row.chapter_number != null &&
+        (row.chapter_count ?? 1) <= 1 &&
         (row.type === "chapter_published" || row.type === "chapter_released"),
     )
     .map((row) => ({
@@ -223,6 +207,10 @@ export async function getNotifications(
       novelSlug,
       novelTitle,
       chapterNumber,
+      chapterCount:
+        row.type === "chapter_published" || row.type === "chapter_released"
+          ? Math.max(1, Number(row.chapter_count ?? 1))
+          : 1,
       chapterTitle,
       excerpt,
       actor: row.actor

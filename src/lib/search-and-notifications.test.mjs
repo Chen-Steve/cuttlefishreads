@@ -93,6 +93,35 @@ test("large notification jobs use bounded sequential batches", async () => {
   assert.deepEqual(sizes, [500, 500, 201]);
 });
 
+test("chapter alerts are one database call, not one row per chapter", async () => {
+  const requests = [];
+  const { notifyBookmarkersOfChapters } = notifications(async (name, args) => {
+    requests.push({ name, args });
+    return {};
+  });
+  await notifyBookmarkersOfChapters({ novelId: "n", chapters: [] });
+  await notifyBookmarkersOfChapters({
+    novelId: "n",
+    excludeUserId: "translator",
+    chapters: [
+      { chapterNumber: 3, released: false },
+      { chapterNumber: 4, released: true },
+      { chapterNumber: 8, released: true },
+    ],
+  });
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].name, "notify_bookmarkers_of_chapters");
+  assert.deepEqual(requests[0].args, {
+    p_novel_id: "n",
+    p_chapters: [
+      { number: 3, released: false },
+      { number: 4, released: true },
+      { number: 8, released: true },
+    ],
+    p_exclude_user_id: "translator",
+  });
+});
+
 test("a failed notification batch never fans out into per-recipient requests", async (t) => {
   t.mock.method(console, "error", () => {});
   let requests = 0;

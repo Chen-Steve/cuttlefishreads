@@ -41,6 +41,7 @@ function shortenNovelTitle(title: string): string {
 
 function locationLabel(notification: AppNotification) {
   const novelTitle = shortenNovelTitle(notification.novelTitle);
+  if (notification.chapterCount > 1) return novelTitle;
   if (notification.chapterNumber != null) {
     const chapter =
       notification.chapterTitle?.trim() ||
@@ -51,15 +52,20 @@ function locationLabel(notification: AppNotification) {
 }
 
 function describe(notification: AppNotification): string {
+  const count = notification.chapterCount;
   switch (notification.type) {
     case "like":
       return "liked your comment on";
     case "reply":
       return "replied to your comment on";
     case "chapter_published":
-      return "New chapter uploaded for";
+      return count > 1
+        ? `${count.toLocaleString()} new chapters uploaded for`
+        : "New chapter uploaded for";
     case "chapter_released":
-      return "New Chapter Release:";
+      return count > 1
+        ? `${count.toLocaleString()} new chapters released:`
+        : "New Chapter Release:";
     default:
       return "updated";
   }

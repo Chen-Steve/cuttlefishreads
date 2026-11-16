@@ -13,6 +13,8 @@ export type AppNotification = {
   novelSlug: string;
   novelTitle: string;
   chapterNumber: number | null;
+  /** Chapters included in this alert. 1 for a single chapter. */
+  chapterCount: number;
   chapterTitle: string | null;
   excerpt: string;
   actor: {

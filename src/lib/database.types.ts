@@ -222,6 +222,7 @@ export type Database = {
       notifications: {
         Row: {
           actor_id: string | null
+          chapter_count: number
           chapter_number: number | null
           comment_id: string | null
           created_at: string
@@ -235,6 +236,7 @@ export type Database = {
         }
         Insert: {
           actor_id?: string | null
+          chapter_count?: number
           chapter_number?: number | null
           comment_id?: string | null
           created_at?: string
@@ -248,6 +250,7 @@ export type Database = {
         }
         Update: {
           actor_id?: string | null
+          chapter_count?: number
           chapter_number?: number | null
           comment_id?: string | null
           created_at?: string
@@ -629,6 +632,14 @@ export type Database = {
       }
       materialize_due_chapter_releases: {
         Args: { p_user_id?: string }
+        Returns: number
+      }
+      notify_bookmarkers_of_chapters: {
+        Args: {
+          p_chapters: Json
+          p_exclude_user_id?: string
+          p_novel_id: string
+        }
         Returns: number
       }
       novel_rating_summaries: {
