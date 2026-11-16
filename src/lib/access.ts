@@ -29,6 +29,10 @@ let syncedAdminEmails: string | null = null;
  */
 export async function syncAdminAllowlist(): Promise<void> {
   const emails = adminEmailList();
+  // A missing allowlist must not wipe the database copy. Preview and local
+  // servers without ADMIN_EMAILS would otherwise clear master-admin access.
+  if (emails.length === 0) return;
+
   const key = emails.join("\n");
   if (syncedAdminEmails === key) return;
 

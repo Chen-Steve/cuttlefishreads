@@ -496,9 +496,10 @@ export async function getTranslatorApplications(): Promise<
   >[]
 > {
   const supabase = await getServerSupabase();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("translator_applications")
     .select("id, username, email, discord, message, status, created_at")
     .order("created_at", { ascending: false });
+  if (error) console.error("[getTranslatorApplications]", error);
   return data ?? [];
 }
