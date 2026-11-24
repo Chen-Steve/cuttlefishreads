@@ -65,7 +65,7 @@ function HomeCatalogFallback() {
 
 async function HomeCatalog() {
   "use cache";
-  cacheLife({ stale: 60, revalidate: 300, expire: 3600 });
+  cacheLife({ stale: 300, revalidate: 3600, expire: 86400 });
   cacheTag(NOVELS_CATALOG_CACHE_TAG, RECENTLY_UPDATED_NOVELS_CACHE_TAG);
   const [catalog, recentlyUpdated] = await Promise.all([
     getNovels(),

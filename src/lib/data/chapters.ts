@@ -83,7 +83,7 @@ export async function getPublicChapterMeta(
   "use cache";
   // A nonzero client lifetime lets a full next-chapter prefetch resolve this
   // metadata before navigation. Mutations still invalidate the chapter tag.
-  cacheLife({ stale: 300, revalidate: 300, expire: 3600 });
+  cacheLife({ stale: 300, revalidate: 3600, expire: 86400 });
   const novel = await fetchNovelIdBySlug(slug);
   if (!novel) return null;
   cacheTag(novelChaptersCacheTag(novel.id));
@@ -141,25 +141,41 @@ async function fetchCachedFreeChapterBody(
   )();
 }
 
-/** Request-time read. Used after a lock check for paid and timed-release chapters. */
-async function fetchChapterBody(
+/**
+ * Server cache for a published chapter body. Callers must already have
+ * decided the reader is allowed to see it. The public prerender path does
+ * not use this — it keeps the free-only loader above.
+ */
+async function fetchCachedChapterBody(
   novelId: string,
   chapterNumber: number,
 ): Promise<DbChapterBody | null> {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("chapters")
-    .select("content, translator_note")
-    .eq("novel_id", novelId)
-    .eq("number", chapterNumber)
-    .eq("is_published", true)
-    .maybeSingle();
+  return unstable_cache(
+    async () => {
+      const admin = createAdminClient();
+      const { data, error } = await admin
+        .from("chapters")
+        .select("content, translator_note")
+        .eq("novel_id", novelId)
+        .eq("number", chapterNumber)
+        .eq("is_published", true)
+        .maybeSingle();
 
-  if (error) {
-    throw new Error("Could not load chapter content", { cause: error });
-  }
-  if (!data) return null;
-  return mapChapterBody(data);
+      if (error) {
+        throw new Error("Could not load chapter content", { cause: error });
+      }
+      if (!data) return null;
+      return mapChapterBody(data);
+    },
+    ["chapter-body-v1", novelId, String(chapterNumber)],
+    {
+      revalidate: CHAPTER_REVALIDATE_SECONDS,
+      tags: [
+        chapterBodyCacheTag(novelId, chapterNumber),
+        novelChapterBodiesCacheTag(novelId),
+      ],
+    },
+  )();
 }
 
 function toChapterListRow(item: ChapterListItem): ChapterListRow {
@@ -203,7 +219,7 @@ async function readCachedPublicChapterListPage(
   order: ChapterListOrder,
 ): Promise<PublicChapterListPage> {
   "use cache";
-  cacheLife({ stale: 0, revalidate: 300, expire: 3600 });
+  cacheLife({ stale: 0, revalidate: 3600, expire: 86400 });
   const novel = await fetchNovelIdBySlug(slug);
   if (!novel) return { chapters: [], totalCount: 0 };
   cacheTag(novelChaptersCacheTag(novel.id));
@@ -443,7 +459,7 @@ export const getChapter = cache(
       return toChapter(row, listItem);
     }
 
-    const body = await fetchChapterBody(novel.id, chapterNumber);
+    const body = await fetchCachedChapterBody(novel.id, chapterNumber);
     return toChapter(
       row,
       listItem,

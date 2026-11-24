@@ -11,6 +11,7 @@ import {
   isChapterReadable,
   NOVEL_RATINGS_CACHE_TAG,
   novelCommentsCacheTag,
+  revalidateNovelsDataCache,
   userBookmarksCacheTag,
 } from "@/lib/data";
 import type { NovelComment } from "@/types";
@@ -148,6 +149,7 @@ export async function toggleBookmark(
     if (error) return { error: error.message };
 
     updateTag(userBookmarksCacheTag(userId));
+    revalidateNovelsDataCache();
     return { bookmarked: false };
   }
 
@@ -159,6 +161,7 @@ export async function toggleBookmark(
   if (error) return { error: error.message };
 
   updateTag(userBookmarksCacheTag(userId));
+  revalidateNovelsDataCache();
   return { bookmarked: true };
 }
 
@@ -188,6 +191,7 @@ export async function removeBookmarks(
   if (error) return { error: error.message };
 
   updateTag(userBookmarksCacheTag(claims.sub));
+  revalidateNovelsDataCache();
   return { removed: slugs.length };
 }
 

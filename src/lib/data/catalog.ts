@@ -503,7 +503,7 @@ export async function searchNovels(query: string): Promise<Novel[]> {
 /** A small, public-only index, shared by all autocomplete queries. */
 export async function getNovelSearchIndex(): Promise<NovelTitleMatch[]> {
   "use cache";
-  cacheLife({ stale: 60, revalidate: 300, expire: 3600 });
+  cacheLife({ stale: 300, revalidate: 3600, expire: 86400 });
   cacheTag(NOVELS_CATALOG_CACHE_TAG);
   return (await getNovels()).map(({ slug, title, coverUrl }) => ({ slug, title, coverUrl }));
 }

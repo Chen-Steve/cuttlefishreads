@@ -163,11 +163,22 @@ export async function getNotifications(
 
   const chapterTitles = new Map<string, string>();
   if (chapterKeys.length > 0) {
-    const novelIds = [...new Set(chapterKeys.map((key) => key.novelId))];
+    const uniqueKeys = [
+      ...new Map(
+        chapterKeys.map((key) => [`${key.novelId}:${key.number}`, key]),
+      ).values(),
+    ];
     const { data: chapters } = await supabase
       .from("chapters")
       .select("novel_id, number, title")
-      .in("novel_id", novelIds);
+      .or(
+        uniqueKeys
+          .map(
+            (key) =>
+              `and(novel_id.eq.${key.novelId},number.eq.${key.number})`,
+          )
+          .join(","),
+      );
     for (const chapter of chapters ?? []) {
       chapterTitles.set(
         `${chapter.novel_id}:${chapter.number}`,

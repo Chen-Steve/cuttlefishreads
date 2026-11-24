@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import cuttleLogo from "@/assets/cuttle-logo.webp";
+import cuttleLogo from "@/public/cuttle-logo.webp";
 import { SiteHeader } from "@/components/site-header";
 import { SITE } from "@/lib/constants";
 import { getSessionProfile } from "@/lib/session-profile";

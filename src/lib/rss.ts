@@ -77,7 +77,7 @@ export async function getFeedItems(
   limit = FEED_ITEM_LIMIT,
 ): Promise<FeedItem[]> {
   "use cache";
-  cacheLife({ stale: 60, revalidate: 300, expire: 3600 });
+  cacheLife({ stale: 300, revalidate: 3600, expire: 86400 });
   cacheTag(RECENTLY_UPDATED_NOVELS_CACHE_TAG);
   const admin = createAdminClient();
   // Fetch a headroom above `limit` because paid/locked chapters are filtered out.

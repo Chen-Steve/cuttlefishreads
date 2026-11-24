@@ -230,10 +230,13 @@ export function userBookmarksCacheTag(userId: string): string {
   return `bookmarks:${userId}`;
 }
 
-export const CATALOG_REVALIDATE_SECONDS = 60 * 5;
+// Publishes, edits, and the daily view-count cron bust these tags. The
+// interval is only a backstop, so it stays long enough that a busy novel is
+// not re-read from Postgres every few minutes.
+export const CATALOG_REVALIDATE_SECONDS = 60 * 60;
 // Chapters only change through workspace actions, which bust by tag.
 export const CHAPTER_REVALIDATE_SECONDS = 60 * 60 * 24;
-export const COMMENTS_REVALIDATE_SECONDS = 60 * 15;
+export const COMMENTS_REVALIDATE_SECONDS = 60 * 60;
 
 /**
  * Refresh public catalog caches. Chapter access and bodies are expired

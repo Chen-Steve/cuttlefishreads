@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Feather } from "lucide-react";
-import cuttleLogo from "@/assets/cuttle-logo.webp";
+import cuttleLogo from "@/public/cuttle-logo.webp";
 import { DiscordIcon } from "@/components/discord-icon";
 import { SITE } from "@/lib/constants";
 

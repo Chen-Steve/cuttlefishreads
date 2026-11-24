@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BookOpen, LogIn, Library, Search, ShoppingBag } from "lucide-react";
 
-import cuttleLogo from "@/assets/cuttle-logo.webp";
+import cuttleLogo from "@/public/cuttle-logo.webp";
 import { AccountDropdown } from "@/components/account-dropdown";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useImmersiveHidesSiteHeader } from "@/hooks/use-immersive-hides-site-header";
